@@ -1,0 +1,6 @@
+/*
+  loading.css
+  로딩 화면 전용 추가 스타일 (필요 시 LoadingScreen.tsx 에서 import)
+  현재는 Tailwind 유틸리티만으로 구현되어 비어있으며,
+  세부 애니메이션 튜닝이 필요할 때 이 파일에 작성합니다.
+*/
