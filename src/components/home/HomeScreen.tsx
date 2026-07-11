@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Bell, ChevronRight, Crown, Heart, Home, Pencil, User, Users } from "lucide-react";
+import { Bell, ChevronRight, Crown, Heart, Home, Pencil, Send, User, Users } from "lucide-react";
 import { MEMB_LIST } from "@/lib/data/memb_data";
 import ProfEditModal from "./ProfEditModal";
 
@@ -166,7 +166,7 @@ export default function HomeScreen() {
         <TabItem icon={<Home className="h-5 w-5" />} lbl_txt="홈" actv />
         <TabItem icon={<Heart className="h-5 w-5" />} lbl_txt="매칭" />
         <TabItem icon={<Users className="h-5 w-5" />} lbl_txt="마을" />
-        <TabItem icon={<Bell className="h-5 w-5" />} lbl_txt="알림" />
+        <TabItem icon={<Send className="h-5 w-5" />} lbl_txt="메시지" />
         <TabItem icon={<User className="h-5 w-5" />} lbl_txt="마이페이지" />
       </nav>
 
