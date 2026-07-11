@@ -1,0 +1,228 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { Bell, ChevronRight, Crown, Heart, Pencil, Users } from "lucide-react";
+import { MEMB_LIST } from "@/lib/data/memb_data";
+import ProfEditModal from "./ProfEditModal";
+
+type UserRole = "res" | "chief";
+
+const CHIEF_CNT = 8;
+const INTRO_CNT = 12;
+const RES_MATC = "3/5회";
+const CHIEF_MATC = "2/5";
+
+export default function HomeScreen() {
+  const rout_nav = useRouter();
+  const user_name = "민지";
+
+  const [user_img, setUserImg] = useState<string | null>(null);
+  const [user_bio, setUserBio] = useState("오늘도 좋은 인연을 만들어보세요.");
+  const [user_role, setUserRole] = useState<UserRole>("res");
+  const [edit_open, setEditOpen] = useState(false);
+
+  function do_togl_role() {
+    setUserRole((prev_val) => (prev_val === "res" ? "chief" : "res"));
+  }
+
+  function go_memb(memb_id: string) {
+    rout_nav.push(`/resident/${memb_id}`);
+  }
+
+  const role_lbl = user_role === "res" ? "주민" : "이장님";
+  const matc_lbl = user_role === "res" ? "남은 매칭 시도" : "진행중인 매칭";
+  const matc_val = user_role === "res" ? RES_MATC : CHIEF_MATC;
+
+  return (
+    <main className="min-h-dvh w-full bg-[#FFF8F3] pb-24">
+      {/* 상단 헤더 */}
+      <header className="flex items-center justify-between px-5 pb-2 pt-6">
+        <h1 className="text-2xl font-extrabold tracking-tight text-[#F26B12]">주변</h1>
+        <div className="flex items-center gap-3">
+          <Bell className="h-5 w-5 text-gray-500" />
+          <span className="flex items-center gap-1 rounded-full bg-[#FFE9D6] py-1 pl-1 pr-3 text-sm font-bold text-[#F26B12]">
+            <span className="flex h-4 w-4 items-center justify-center rounded-full bg-[#F26B12] text-[9px] text-white">
+              P
+            </span>
+            12,450
+          </span>
+        </div>
+      </header>
+
+      {/* 프로필 카드 */}
+      <section className="mx-5 mt-2 flex items-center gap-3 rounded-2xl bg-gradient-to-r from-[#FF9D5C] to-[#F26B12] p-4 text-white shadow-sm">
+        <div className="relative shrink-0">
+          <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-full bg-white/25">
+            {user_img ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={user_img} alt="프로필 사진" className="h-full w-full object-cover" />
+            ) : (
+              <FoxIcon className="h-9 w-9" />
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={() => setEditOpen(true)}
+            aria-label="프로필 수정"
+            className="absolute -bottom-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-full border-2 border-[#F26B12] bg-white text-[#F26B12]"
+          >
+            <Pencil className="h-2.5 w-2.5" strokeWidth={2.5} />
+          </button>
+        </div>
+        <div className="min-w-0">
+          <p className="text-[15px] font-bold">안녕하세요, {user_name}님! 👋</p>
+          <p className="mt-0.5 truncate text-xs text-white/85">{user_bio}</p>
+        </div>
+      </section>
+
+      {/* 내 역할 / 이장님 연락처 카드 */}
+      <section className="mx-5 mt-3 grid grid-cols-2 gap-3">
+        <button
+          type="button"
+          onClick={do_togl_role}
+          className="rounded-2xl bg-white p-4 text-left shadow-sm transition active:opacity-90"
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-gray-400">내 역할</span>
+            {user_role === "res" ? (
+              <Users className="h-5 w-5 text-[#F26B12]" />
+            ) : (
+              <Crown className="h-5 w-5 text-[#F26B12]" />
+            )}
+          </div>
+          <p className="mt-1 text-lg font-extrabold text-gray-900">{role_lbl}</p>
+          <div className="mt-3 flex items-center justify-between border-t border-gray-100 pt-3">
+            <span className="text-xs text-gray-400">{matc_lbl}</span>
+            <ChevronRight className="h-4 w-4 text-gray-300" />
+          </div>
+          <p className="text-base font-bold text-gray-900">{matc_val}</p>
+        </button>
+
+        <div className="rounded-2xl bg-white p-4 shadow-sm">
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-gray-400">이장님 연락처</span>
+            <Users className="h-5 w-5 text-[#F26B12]" />
+          </div>
+          <p className="mt-1 text-lg font-extrabold text-gray-900">{CHIEF_CNT}명</p>
+          <div className="mt-3 flex items-center justify-between border-t border-gray-100 pt-3">
+            <span className="text-xs text-gray-400">새로운 주민 소개</span>
+            <ChevronRight className="h-4 w-4 text-gray-300" />
+          </div>
+          <p className="text-base font-bold text-gray-900">{INTRO_CNT}명</p>
+        </div>
+      </section>
+
+      {/* 가이드 투어 */}
+      <section className="mx-5 mt-3 flex items-center justify-between rounded-2xl bg-white p-4 shadow-sm">
+        <div>
+          <p className="text-sm font-bold text-gray-900">주변 가이드 투어</p>
+          <p className="mt-1 text-xs text-gray-400">서비스 이용 방법을 한눈에 확인해보세요!</p>
+          <button
+            type="button"
+            className="mt-3 rounded-xl bg-[#F26B12] px-4 py-2 text-xs font-bold text-white transition active:opacity-90"
+          >
+            가이드 보기
+          </button>
+        </div>
+        <FoxReadIcon className="h-16 w-16 shrink-0" />
+      </section>
+
+      {/* 이장님 추천 주민 */}
+      <section className="mt-5">
+        <div className="flex items-center justify-between px-5">
+          <h2 className="text-[15px] font-bold text-gray-900">이장님 추천 주민</h2>
+          <span className="text-xs text-gray-400">더보기 &gt;</span>
+        </div>
+        <div className="mt-3 flex gap-3 overflow-x-auto px-5 pb-2">
+          {MEMB_LIST.map((m_item) => (
+            <button
+              key={m_item.memb_id}
+              type="button"
+              onClick={() => go_memb(m_item.memb_id)}
+              className="w-32 shrink-0 rounded-2xl bg-white p-3 text-left shadow-sm transition active:opacity-90"
+            >
+              <div
+                className="relative flex h-24 w-full items-center justify-center rounded-xl text-2xl font-bold text-white"
+                style={{ backgroundColor: m_item.ton_hex }}
+              >
+                {m_item.ini_char}
+                <Heart className="absolute right-1.5 top-1.5 h-4 w-4 text-white/90" strokeWidth={2} />
+              </div>
+              <p className="mt-2 text-sm font-bold text-gray-900">
+                {m_item.memb_name}, {m_item.memb_age}
+              </p>
+              <p className="text-[11px] text-gray-400">
+                {m_item.memb_job} · {m_item.memb_mbti}
+              </p>
+              <p className="mt-1 truncate text-[10px] text-[#F26B12]">{m_item.tag_list.join(" ")}</p>
+            </button>
+          ))}
+        </div>
+      </section>
+
+      {/* 하단 탭바 (추후 개발) */}
+      <nav className="fixed inset-x-0 bottom-0 z-10 flex justify-around border-t border-gray-100 bg-white py-2">
+        <TabItem lbl_txt="홈" actv />
+        <TabItem lbl_txt="매칭" />
+        <TabItem lbl_txt="마을" />
+        <TabItem lbl_txt="알림" />
+        <TabItem lbl_txt="마이페이지" />
+      </nav>
+
+      {edit_open && (
+        <ProfEditModal
+          init_img={user_img}
+          init_bio={user_bio}
+          onClose={() => setEditOpen(false)}
+          onSave={(next_img, next_bio) => {
+            setUserImg(next_img);
+            setUserBio(next_bio);
+            setEditOpen(false);
+          }}
+        />
+      )}
+    </main>
+  );
+}
+
+function TabItem({ lbl_txt, actv }: { lbl_txt: string; actv?: boolean }) {
+  return (
+    <button type="button" className="flex flex-col items-center gap-1 px-2 py-1">
+      <span className={`h-2 w-2 rounded-full ${actv ? "bg-[#F26B12]" : "bg-gray-300"}`} />
+      <span className={`text-[10px] ${actv ? "font-bold text-[#F26B12]" : "text-gray-400"}`}>
+        {lbl_txt}
+      </span>
+    </button>
+  );
+}
+
+function FoxIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 40 40" className={className} aria-hidden="true">
+      <path d="M8 6 L15 16 L10 16 Z" fill="#FFB37C" />
+      <path d="M32 6 L25 16 L30 16 Z" fill="#FFB37C" />
+      <circle cx="20" cy="22" r="14" fill="#FFF3E9" />
+      <circle cx="15" cy="21" r="1.6" fill="#3A2A20" />
+      <circle cx="25" cy="21" r="1.6" fill="#3A2A20" />
+      <path d="M20 25 L17 28 L23 28 Z" fill="#F26B12" />
+    </svg>
+  );
+}
+
+function FoxReadIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 80 80" className={className} aria-hidden="true">
+      <circle cx="40" cy="40" r="38" fill="#FFF3E9" />
+      <path d="M22 20 L30 32 L24 32 Z" fill="#FFB37C" />
+      <path d="M58 20 L50 32 L56 32 Z" fill="#FFB37C" />
+      <circle cx="40" cy="40" r="18" fill="#FFDCB8" />
+      <circle cx="34" cy="39" r="2" fill="#3A2A20" />
+      <circle cx="46" cy="39" r="2" fill="#3A2A20" />
+      <path d="M40 44 L36 48 L44 48 Z" fill="#F26B12" />
+      <rect x="24" y="56" width="32" height="10" rx="2" fill="white" stroke="#F26B12" strokeWidth="1.5" />
+      <line x1="30" y1="60" x2="50" y2="60" stroke="#F26B12" strokeWidth="1.2" />
+      <line x1="30" y1="63" x2="44" y2="63" stroke="#F26B12" strokeWidth="1.2" />
+    </svg>
+  );
+}

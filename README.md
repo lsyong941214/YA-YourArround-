@@ -27,7 +27,7 @@ jubyeon-web/
 모든 변수/상태명은 `단어_단어_...` 형태, 각 단어는 최대 4자로 제한합니다.
 예) `sess_id`, `init_stat`, `step_idx`, `done_flag`, `load_conf`
 
-## 현재 구현 범위 (2/3 페이지)
+## 현재 구현 범위 (3/3 페이지)
 - `/` (`src/app/page.tsx`) : 접속 시 최초로 뜨는 **로딩 화면**
   - 접속 시 사용자 세션/로컬 정보를 초기화(`clr_stor`)
   - 신규 세션 발급(`make_sid`) → 환경설정 로드(`load_conf`) → 리소스 예열(`warm_asst`)
@@ -41,7 +41,17 @@ jubyeon-web/
     - 버튼 클릭 → 처리 중 표시 → 완료 시 `/home`으로 이동하는 흐름은 동작함
   - 뒤로가기 시 이전 화면(로딩 화면)으로 이동
 
-- `/home` : 3번째 화면 자리표시 페이지 (다음 단계에서 구현 예정)
+- `/home` (`src/app/home/page.tsx`) : **홈 대시보드**
+  - `src/components/home/HomeScreen.tsx`: 상단 헤더(로고/알림/포인트), 프로필 카드, 내 역할·이장님 연락처 카드, 가이드 투어, 이장님 추천 주민 리스트, 하단 탭바
+  - 프로필 사진(작은 연필 버튼) 클릭 시 `ProfEditModal`에서 사진 업로드(로컬 미리보기) + 소개 문구 수정 가능
+    - TODO: 실제 서버(Supabase Storage 등) 업로드 연동
+  - "내 역할" 카드를 탭하면 주민 ↔ 이장님 전환, 매칭 관련 문구도 함께 변경
+  - "이장님 연락처" 카드는 역할과 무관하게 항상 동일하게 노출
+  - 가이드 투어 버튼, 하단 탭바는 디자인만 반영되어 있고 동작은 추후 개발 예정
+- `/resident/[memb_id]` (`src/app/resident/[memb_id]/page.tsx`) : **주민 상세 프로필**
+  - 홈 화면의 "이장님 추천 주민" 카드를 클릭하면 이동
+  - `src/components/resident/MembDetail.tsx`: 프로필/소개 정보 + 하단 "이장님께 요청하기" / "직접 매칭시도" 버튼(추후 업데이트 예정 안내)
+  - 목업 데이터는 `src/lib/data/memb_data.ts`에서 관리 (실제 서버 연동 전까지 사용)
 
 ## 실행 방법
 ```bash
@@ -49,10 +59,5 @@ npm install
 npm run dev
 ```
 
-## GitHub 업로드 안내
-프로젝트 기록용으로 남겨주신 정보(`tkddyd94@gmail.com`)는 GitHub **저장소 URL**이 아니라 이메일 주소 형식이에요.
-버전 기록을 위해서는 아래 둘 중 하나가 필요합니다.
-1. GitHub 저장소 URL (예: `https://github.com/아이디/jubyeon-web`)
-2. 또는 저장소가 아직 없다면, 위 이메일에 연결된 GitHub 계정의 아이디
-
-저장소 URL/아이디를 알려주시면 커밋 메시지 규칙까지 포함한 push 가이드를 이어서 정리해드릴게요.
+## GitHub 저장소
+[github.com/lsyong941214/YA-YourArround-](https://github.com/lsyong941214/YA-YourArround-)

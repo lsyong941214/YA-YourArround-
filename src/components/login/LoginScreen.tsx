@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, Heart, Lock, Phone, ShieldCheck, Users } from "lucide-react";
+import { ChevronLeft, Lock, Phone, ShieldCheck, Users } from "lucide-react";
 import { soc_lgin, SocProv } from "@/lib/auth/soc_auth";
 
 // 로그인 성공 후 이동할 경로 (3번째 페이지: 홈 대시보드)
@@ -44,7 +44,6 @@ export default function LoginScreen() {
       <section className="mt-6 flex flex-col items-center text-center">
         <div className="flex items-center gap-1">
           <h1 className="text-3xl font-extrabold tracking-tight text-[#F26B12]">주변</h1>
-          <Heart className="mb-3 h-4 w-4 fill-[#F26B12] text-[#F26B12]" strokeWidth={0} />
         </div>
 
         <p className="mt-6 text-xl font-bold leading-snug text-gray-900">

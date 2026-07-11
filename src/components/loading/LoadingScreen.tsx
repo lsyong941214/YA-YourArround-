@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Heart, ShieldCheck, Users, Sparkles } from "lucide-react";
+import { ShieldCheck, Users, Sparkles } from "lucide-react";
 import { init_app, InitProg } from "@/lib/init/sess_init";
 
 // 다음 화면 경로 (2번째 페이지: 로그인)
@@ -57,7 +57,6 @@ export default function LoadingScreen() {
       <section className="flex flex-1 flex-col items-center justify-center px-8 text-center">
         <div className="flex items-center gap-1">
           <h1 className="text-5xl font-extrabold tracking-tight text-white">주변</h1>
-          <Heart className="mb-4 h-6 w-6 fill-white text-white" strokeWidth={0} />
         </div>
 
         <p className="mt-6 text-lg font-medium leading-relaxed text-white/95">
