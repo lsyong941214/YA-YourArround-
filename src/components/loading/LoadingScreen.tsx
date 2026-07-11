@@ -19,14 +19,10 @@ export default function LoadingScreen() {
   useEffect(() => {
     let live_flag = true;
 
+    // 초기화는 백그라운드에서 계속 진행하되, 완료돼도 자동으로는 넘어가지 않는다.
+    // 화면 전환은 사용자가 아무 곳이나 탭했을 때(go_next)만 일어난다.
     init_app((prog_val) => {
       if (live_flag) setProgSt(prog_val);
-    }).then(() => {
-      if (!live_flag) return;
-      // 초기화 완료 후 짧은 텀을 두고 다음 화면으로 전환
-      setTimeout(() => {
-        if (live_flag) rout_nav.replace(NEXT_PATH);
-      }, 450);
     });
 
     return () => {
@@ -35,10 +31,28 @@ export default function LoadingScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  function go_next() {
+    rout_nav.replace(NEXT_PATH);
+  }
+
+  function on_key(ev_key: React.KeyboardEvent) {
+    if (ev_key.key === "Enter" || ev_key.key === " ") {
+      ev_key.preventDefault();
+      go_next();
+    }
+  }
+
   const dot_cnt = 4;
 
   return (
-    <main className="relative flex h-dvh w-full flex-col overflow-hidden bg-gradient-to-b from-[#FF9D5C] via-[#FB8A3C] to-[#F26B12]">
+    <main
+      role="button"
+      tabIndex={0}
+      aria-label="탭하여 계속하기"
+      onClick={go_next}
+      onKeyDown={on_key}
+      className="relative flex h-dvh w-full flex-col overflow-hidden bg-gradient-to-b from-[#FF9D5C] via-[#FB8A3C] to-[#F26B12] cursor-pointer select-none"
+    >
       {/* 상단 로고 영역 */}
       <section className="flex flex-1 flex-col items-center justify-center px-8 text-center">
         <div className="flex items-center gap-1">
@@ -107,6 +121,7 @@ export default function LoadingScreen() {
             ? "준비가 끝났어요"
             : prog_st.step_list[prog_st.step_idx]?.step_lbl ?? "시작하는 중..."}
         </p>
+        <p className="text-[11px] font-medium text-white/85">화면을 탭하면 시작해요</p>
       </section>
     </main>
   );
