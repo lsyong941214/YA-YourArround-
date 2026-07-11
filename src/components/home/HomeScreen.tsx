@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Bell, ChevronRight, Crown, Heart, Pencil, Users } from "lucide-react";
+import { Bell, ChevronRight, Crown, Heart, Home, Pencil, User, Users } from "lucide-react";
 import { MEMB_LIST } from "@/lib/data/memb_data";
 import ProfEditModal from "./ProfEditModal";
 
@@ -163,11 +163,11 @@ export default function HomeScreen() {
 
       {/* 하단 탭바 (추후 개발) */}
       <nav className="fixed inset-x-0 bottom-0 z-10 flex justify-around border-t border-gray-100 bg-white py-2">
-        <TabItem lbl_txt="홈" actv />
-        <TabItem lbl_txt="매칭" />
-        <TabItem lbl_txt="마을" />
-        <TabItem lbl_txt="알림" />
-        <TabItem lbl_txt="마이페이지" />
+        <TabItem icon={<Home className="h-5 w-5" />} lbl_txt="홈" actv />
+        <TabItem icon={<Heart className="h-5 w-5" />} lbl_txt="매칭" />
+        <TabItem icon={<Users className="h-5 w-5" />} lbl_txt="마을" />
+        <TabItem icon={<Bell className="h-5 w-5" />} lbl_txt="알림" />
+        <TabItem icon={<User className="h-5 w-5" />} lbl_txt="마이페이지" />
       </nav>
 
       {edit_open && (
@@ -186,10 +186,23 @@ export default function HomeScreen() {
   );
 }
 
-function TabItem({ lbl_txt, actv }: { lbl_txt: string; actv?: boolean }) {
+function TabItem({
+  icon,
+  lbl_txt,
+  actv,
+}: {
+  icon: React.ReactNode;
+  lbl_txt: string;
+  actv?: boolean;
+}) {
   return (
-    <button type="button" className="flex flex-col items-center gap-1 px-2 py-1">
-      <span className={`h-2 w-2 rounded-full ${actv ? "bg-[#F26B12]" : "bg-gray-300"}`} />
+    <button
+      type="button"
+      className={`flex flex-col items-center gap-1 px-2 py-1 ${
+        actv ? "text-[#F26B12]" : "text-gray-300"
+      }`}
+    >
+      {icon}
       <span className={`text-[10px] ${actv ? "font-bold text-[#F26B12]" : "text-gray-400"}`}>
         {lbl_txt}
       </span>
