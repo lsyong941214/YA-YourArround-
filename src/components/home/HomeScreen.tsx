@@ -99,7 +99,11 @@ export default function HomeScreen() {
           <p className="text-base font-bold text-gray-900">{matc_val}</p>
         </button>
 
-        <div className="rounded-2xl bg-white p-4 shadow-sm">
+        <button
+          type="button"
+          onClick={() => rout_nav.push("/chief")}
+          className="rounded-2xl bg-white p-4 text-left shadow-sm transition active:opacity-90"
+        >
           <div className="flex items-center justify-between">
             <span className="text-xs text-gray-400">이장님 연락처</span>
             <Users className="h-5 w-5 text-[#F26B12]" />
@@ -110,7 +114,7 @@ export default function HomeScreen() {
             <ChevronRight className="h-4 w-4 text-gray-300" />
           </div>
           <p className="text-base font-bold text-gray-900">{INTRO_CNT}명</p>
-        </div>
+        </button>
       </section>
 
       {/* 가이드 투어 */}
