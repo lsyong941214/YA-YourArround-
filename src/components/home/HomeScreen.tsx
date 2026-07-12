@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Bell, ChevronRight, Crown, Heart, Home, Pencil, Send, User, Users } from "lucide-react";
 import { MEMB_LIST } from "@/lib/data/memb_data";
+import { pend_cnt } from "@/lib/store/matc_store";
 import ProfEditModal from "./ProfEditModal";
 
 type UserRole = "res" | "chief";
@@ -11,7 +12,6 @@ type UserRole = "res" | "chief";
 const CHIEF_CNT = 8;
 const INTRO_CNT = 12;
 const RES_MATC = "3/5회";
-const CHIEF_MATC = "2/5";
 
 export default function HomeScreen() {
   const rout_nav = useRouter();
@@ -21,6 +21,11 @@ export default function HomeScreen() {
   const [user_bio, setUserBio] = useState("오늘도 좋은 인연을 만들어보세요.");
   const [user_role, setUserRole] = useState<UserRole>("res");
   const [edit_open, setEditOpen] = useState(false);
+  const [pend_val, setPendVal] = useState(0);
+
+  useEffect(() => {
+    setPendVal(pend_cnt());
+  }, []);
 
   function do_togl_role() {
     setUserRole((prev_val) => (prev_val === "res" ? "chief" : "res"));
@@ -30,9 +35,14 @@ export default function HomeScreen() {
     rout_nav.push(`/resident/${memb_id}`);
   }
 
+  function go_matc() {
+    if (user_role !== "chief") return;
+    rout_nav.push("/matching");
+  }
+
   const role_lbl = user_role === "res" ? "주민" : "이장님";
   const matc_lbl = user_role === "res" ? "남은 매칭 시도" : "진행중인 매칭";
-  const matc_val = user_role === "res" ? RES_MATC : CHIEF_MATC;
+  const matc_val = user_role === "res" ? RES_MATC : `${pend_val}건`;
 
   return (
     <main className="min-h-dvh w-full bg-[#FFF8F3] pb-24">
@@ -40,7 +50,12 @@ export default function HomeScreen() {
       <header className="flex items-center justify-between px-5 pb-2 pt-6">
         <h1 className="text-2xl font-extrabold tracking-tight text-[#F26B12]">주변</h1>
         <div className="flex items-center gap-3">
-          <Bell className="h-5 w-5 text-gray-500" />
+          <div className="relative">
+            <Bell className="h-5 w-5 text-gray-500" />
+            {user_role === "chief" && pend_val > 0 && (
+              <span className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-red-500" />
+            )}
+          </div>
           <span className="flex items-center gap-1 rounded-full bg-[#FFE9D6] py-1 pl-1 pr-3 text-sm font-bold text-[#F26B12]">
             <span className="flex h-4 w-4 items-center justify-center rounded-full bg-[#F26B12] text-[9px] text-white">
               P
@@ -78,26 +93,38 @@ export default function HomeScreen() {
 
       {/* 내 역할 / 이장님 연락처 카드 */}
       <section className="mx-5 mt-3 grid grid-cols-2 gap-3">
-        <button
-          type="button"
-          onClick={do_togl_role}
-          className="rounded-2xl bg-white p-4 text-left shadow-sm transition active:opacity-90"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-gray-400">내 역할</span>
-            {user_role === "res" ? (
-              <Users className="h-5 w-5 text-[#F26B12]" />
-            ) : (
-              <Crown className="h-5 w-5 text-[#F26B12]" />
-            )}
-          </div>
-          <p className="mt-1 text-lg font-extrabold text-gray-900">{role_lbl}</p>
-          <div className="mt-3 flex items-center justify-between border-t border-gray-100 pt-3">
-            <span className="text-xs text-gray-400">{matc_lbl}</span>
-            <ChevronRight className="h-4 w-4 text-gray-300" />
-          </div>
-          <p className="text-base font-bold text-gray-900">{matc_val}</p>
-        </button>
+        <div className="rounded-2xl bg-white p-4 shadow-sm">
+          <button type="button" onClick={do_togl_role} className="w-full text-left">
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-gray-400">내 역할</span>
+              {user_role === "res" ? (
+                <Users className="h-5 w-5 text-[#F26B12]" />
+              ) : (
+                <Crown className="h-5 w-5 text-[#F26B12]" />
+              )}
+            </div>
+            <p className="mt-1 text-lg font-extrabold text-gray-900">{role_lbl}</p>
+          </button>
+          <button
+            type="button"
+            onClick={go_matc}
+            disabled={user_role !== "chief"}
+            className="mt-3 w-full border-t border-gray-100 pt-3 text-left disabled:cursor-default"
+          >
+            <div className="flex items-center justify-between">
+              <span className="flex items-center gap-1 text-xs text-gray-400">
+                {matc_lbl}
+                {user_role === "chief" && pend_val > 0 && (
+                  <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white">
+                    {pend_val}
+                  </span>
+                )}
+              </span>
+              {user_role === "chief" && <ChevronRight className="h-4 w-4 text-gray-300" />}
+            </div>
+            <p className="text-base font-bold text-gray-900">{matc_val}</p>
+          </button>
+        </div>
 
         <button
           type="button"

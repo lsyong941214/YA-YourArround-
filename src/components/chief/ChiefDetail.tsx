@@ -1,12 +1,27 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Bell, ChevronLeft, Heart, Star, Users } from "lucide-react";
 import { find_jang } from "@/lib/data/jang_data";
+import { has_req } from "@/lib/store/matc_store";
+
+const NAV_DELAY = 250;
 
 export default function ChiefDetail({ jang_id }: { jang_id: string }) {
   const rout_nav = useRouter();
   const jang_item = find_jang(jang_id);
+  const [liked_set, setLikedSet] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (!jang_item) return;
+    const next_set = new Set<string>();
+    jang_item.resd_list.forEach((r_item) => {
+      if (has_req(jang_id, r_item.memb_id)) next_set.add(r_item.memb_id);
+    });
+    setLikedSet(next_set);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [jang_id]);
 
   // TODO: 알림 화면 연동
   function do_bell() {}
@@ -17,8 +32,11 @@ export default function ChiefDetail({ jang_id }: { jang_id: string }) {
   // TODO: 이장님에게 직접 요청하는 플로우 구현
   function do_req_jang() {}
 
-  function go_req(memb_id: string) {
-    rout_nav.push(`/chief/${jang_id}/request/${memb_id}`);
+  function do_hert(memb_id: string) {
+    setLikedSet((prev_set) => new Set(prev_set).add(memb_id));
+    setTimeout(() => {
+      rout_nav.push(`/chief/${jang_id}/request/${memb_id}`);
+    }, NAV_DELAY);
   }
 
   if (!jang_item) {
@@ -129,11 +147,18 @@ export default function ChiefDetail({ jang_id }: { jang_id: string }) {
             </div>
             <button
               type="button"
-              onClick={() => go_req(r_item.memb_id)}
+              onClick={() => do_hert(r_item.memb_id)}
               aria-label={`${r_item.memb_name}님과 연결 요청`}
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-gray-200 text-gray-300 transition active:opacity-80"
+              className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full border transition active:opacity-80 ${
+                liked_set.has(r_item.memb_id)
+                  ? "border-red-200 bg-red-50 text-red-500"
+                  : "border-gray-200 text-gray-300"
+              }`}
             >
-              <Heart className="h-4 w-4" />
+              <Heart
+                className="h-4 w-4"
+                fill={liked_set.has(r_item.memb_id) ? "currentColor" : "none"}
+              />
             </button>
           </div>
         ))}
