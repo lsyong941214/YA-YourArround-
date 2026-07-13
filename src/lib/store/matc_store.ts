@@ -33,7 +33,6 @@ export type MatcReq = {
   req_ton: string;
   msg_txt: string;
   stat: MatcStat;
-  rate_val?: number;
   acpt_cmt?: string;
   rjct_rsn?: string;
   rjct_msg?: string;

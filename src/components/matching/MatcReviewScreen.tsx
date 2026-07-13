@@ -2,25 +2,25 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, Info, Star } from "lucide-react";
+import { ChevronLeft, Info } from "lucide-react";
 import { find_req, MatcReq, updt_req } from "@/lib/store/matc_store";
-import RateModal from "./RateModal";
+import AcptModal from "./AcptModal";
 import RejectModal from "./RejectModal";
 
 export default function MatcReviewScreen({ req_id }: { req_id: string }) {
   const rout_nav = useRouter();
   const [req_item, setReqItem] = useState<MatcReq | undefined | null>(null);
-  const [rate_open, setRateOpen] = useState(false);
+  const [acpt_open, setAcptOpen] = useState(false);
   const [rjct_open, setRjctOpen] = useState(false);
 
   useEffect(() => {
     setReqItem(find_req(req_id) ?? undefined);
   }, [req_id]);
 
-  function do_acpt(rate_val: number, acpt_cmt: string) {
-    updt_req(req_id, { stat: "c_acpt", rate_val, acpt_cmt, seen_flag: false });
+  function do_acpt(acpt_cmt: string) {
+    updt_req(req_id, { stat: "c_acpt", acpt_cmt, seen_flag: false });
     setReqItem(find_req(req_id));
-    setRateOpen(false);
+    setAcptOpen(false);
   }
 
   function do_rjct(rjct_rsn: string, rjct_msg: string) {
@@ -115,15 +115,9 @@ export default function MatcReviewScreen({ req_id }: { req_id: string }) {
         ) : req_item.stat === "c_acpt" ? (
           <div className="mt-4 rounded-2xl bg-emerald-50 p-4">
             <p className="text-sm font-bold text-emerald-700">수락했어요 · 주민 응답 대기중</p>
-            <div className="mt-1 flex items-center gap-0.5">
-              {[1, 2, 3, 4, 5].map((n_val) => (
-                <Star
-                  key={n_val}
-                  className="h-4 w-4 text-emerald-600"
-                  fill={n_val <= (req_item.rate_val ?? 0) ? "currentColor" : "none"}
-                />
-              ))}
-            </div>
+            {req_item.acpt_cmt && (
+              <p className="mt-1 text-xs text-emerald-600">&ldquo;{req_item.acpt_cmt}&rdquo;</p>
+            )}
           </div>
         ) : req_item.stat === "r_acpt" ? (
           <div className="mt-4 rounded-2xl bg-emerald-50 p-4">
@@ -148,7 +142,7 @@ export default function MatcReviewScreen({ req_id }: { req_id: string }) {
         <div className="fixed inset-x-0 bottom-0 space-y-2 border-t border-gray-100 bg-white px-5 pb-8 pt-4">
           <button
             type="button"
-            onClick={() => setRateOpen(true)}
+            onClick={() => setAcptOpen(true)}
             className="w-full rounded-2xl bg-[#F26B12] py-3.5 text-sm font-bold text-white transition active:opacity-90"
           >
             수락하기
@@ -163,11 +157,10 @@ export default function MatcReviewScreen({ req_id }: { req_id: string }) {
         </div>
       )}
 
-      {rate_open && (
-        <RateModal
-          req_name={req_item.req_name}
+      {acpt_open && (
+        <AcptModal
           memb_name={req_item.memb_name}
-          onClose={() => setRateOpen(false)}
+          onClose={() => setAcptOpen(false)}
           onSubmit={do_acpt}
         />
       )}

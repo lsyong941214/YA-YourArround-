@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## v0.6.1 - 이장님 수락 단계에서 별점 평가 제거
+- 이장님이 제안을 수락할 때 더 이상 요청자를 별점으로 평가하지 않음
+- `RateModal.tsx`를 `AcptModal.tsx`로 교체: 수락 의견(선택) 입력만 남기고 별점 UI 제거
+- `matc_store.ts`에서 사용하지 않는 `rate_val` 필드 제거
+
 ## v0.6.0 - 주민 제안 확인 및 연결 성사 페이지 구현
 - 매칭 상태 세분화 (`src/lib/store/matc_store.ts`): `pend`(이장님 검토 대기) → `c_acpt`/`c_rjct`(이장님 수락/거절) → `r_acpt`/`r_rjct`(주민 수락/거절)
   - 이장님 수락 시 "수락 의견"(acpt_cmt)을 함께 입력해 주민에게 전달
