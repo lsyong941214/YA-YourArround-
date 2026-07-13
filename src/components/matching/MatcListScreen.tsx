@@ -72,14 +72,21 @@ export default function MatcListScreen() {
 }
 
 function StatBadge({ stat }: { stat: MatcReq["stat"] }) {
-  if (stat === "acpt") {
+  if (stat === "c_acpt") {
     return (
       <span className="shrink-0 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[10px] font-bold text-emerald-600">
-        수락함
+        이장님 수락
       </span>
     );
   }
-  if (stat === "rjct") {
+  if (stat === "r_acpt") {
+    return (
+      <span className="shrink-0 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[10px] font-bold text-emerald-600">
+        연결 성사
+      </span>
+    );
+  }
+  if (stat === "c_rjct" || stat === "r_rjct") {
     return (
       <span className="shrink-0 rounded-full bg-gray-100 px-1.5 py-0.5 text-[10px] font-bold text-gray-500">
         거절함

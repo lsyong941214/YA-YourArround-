@@ -17,14 +17,14 @@ export default function MatcReviewScreen({ req_id }: { req_id: string }) {
     setReqItem(find_req(req_id) ?? undefined);
   }, [req_id]);
 
-  function do_acpt(rate_val: number) {
-    updt_req(req_id, { stat: "acpt", rate_val });
+  function do_acpt(rate_val: number, acpt_cmt: string) {
+    updt_req(req_id, { stat: "c_acpt", rate_val, acpt_cmt, seen_flag: false });
     setReqItem(find_req(req_id));
     setRateOpen(false);
   }
 
   function do_rjct(rjct_rsn: string, rjct_msg: string) {
-    updt_req(req_id, { stat: "rjct", rjct_rsn, rjct_msg });
+    updt_req(req_id, { stat: "c_rjct", rjct_rsn, rjct_msg });
     setReqItem(find_req(req_id));
     setRjctOpen(false);
   }
@@ -112,9 +112,9 @@ export default function MatcReviewScreen({ req_id }: { req_id: string }) {
               거절하셔도 상대방은 알 수 없어요.
             </p>
           </div>
-        ) : req_item.stat === "acpt" ? (
+        ) : req_item.stat === "c_acpt" ? (
           <div className="mt-4 rounded-2xl bg-emerald-50 p-4">
-            <p className="text-sm font-bold text-emerald-700">수락한 요청이에요</p>
+            <p className="text-sm font-bold text-emerald-700">수락했어요 · 주민 응답 대기중</p>
             <div className="mt-1 flex items-center gap-0.5">
               {[1, 2, 3, 4, 5].map((n_val) => (
                 <Star
@@ -124,6 +124,14 @@ export default function MatcReviewScreen({ req_id }: { req_id: string }) {
                 />
               ))}
             </div>
+          </div>
+        ) : req_item.stat === "r_acpt" ? (
+          <div className="mt-4 rounded-2xl bg-emerald-50 p-4">
+            <p className="text-sm font-bold text-emerald-700">연결이 성사됐어요! 🎉</p>
+          </div>
+        ) : req_item.stat === "r_rjct" ? (
+          <div className="mt-4 rounded-2xl bg-gray-50 p-4">
+            <p className="text-sm font-bold text-gray-700">주민이 제안을 거절했어요</p>
           </div>
         ) : (
           <div className="mt-4 rounded-2xl bg-gray-50 p-4">
@@ -156,7 +164,12 @@ export default function MatcReviewScreen({ req_id }: { req_id: string }) {
       )}
 
       {rate_open && (
-        <RateModal req_name={req_item.req_name} onClose={() => setRateOpen(false)} onSubmit={do_acpt} />
+        <RateModal
+          req_name={req_item.req_name}
+          memb_name={req_item.memb_name}
+          onClose={() => setRateOpen(false)}
+          onSubmit={do_acpt}
+        />
       )}
       {rjct_open && <RejectModal onClose={() => setRjctOpen(false)} onSubmit={do_rjct} />}
     </main>

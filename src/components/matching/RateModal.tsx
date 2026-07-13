@@ -3,16 +3,21 @@
 import { useState } from "react";
 import { Star, X } from "lucide-react";
 
+const CMT_MAX = 60;
+
 export default function RateModal({
   req_name,
+  memb_name,
   onClose,
   onSubmit,
 }: {
   req_name: string;
+  memb_name: string;
   onClose: () => void;
-  onSubmit: (rate_val: number) => void;
+  onSubmit: (rate_val: number, acpt_cmt: string) => void;
 }) {
   const [rate_val, setRateVal] = useState(0);
+  const [acpt_cmt, setAcptCmt] = useState("");
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center">
@@ -45,11 +50,26 @@ export default function RateModal({
           ))}
         </div>
 
+        <label className="mt-5 block text-xs font-medium text-gray-500">
+          수락 의견 (선택, {memb_name}님에게 전달돼요)
+        </label>
+        <textarea
+          value={acpt_cmt}
+          onChange={(ev_chg) => setAcptCmt(ev_chg.target.value.slice(0, CMT_MAX))}
+          rows={2}
+          maxLength={CMT_MAX}
+          placeholder="두 분이 잘 맞을 것 같아 소개해드려요! 한 번 알아가보세요 😊"
+          className="mt-1 w-full resize-none rounded-xl border border-gray-200 p-3 text-sm text-gray-800 outline-none placeholder:text-gray-300 focus:border-[#F26B12]"
+        />
+        <p className="mt-1 text-right text-[11px] text-gray-300">
+          {acpt_cmt.length}/{CMT_MAX}
+        </p>
+
         <button
           type="button"
           disabled={rate_val === 0}
-          onClick={() => onSubmit(rate_val)}
-          className="mt-6 w-full rounded-2xl bg-[#F26B12] py-3 text-sm font-bold text-white transition active:opacity-90 disabled:opacity-40"
+          onClick={() => onSubmit(rate_val, acpt_cmt)}
+          className="mt-4 w-full rounded-2xl bg-[#F26B12] py-3 text-sm font-bold text-white transition active:opacity-90 disabled:opacity-40"
         >
           평가 완료하고 수락하기
         </button>

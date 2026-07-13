@@ -6,7 +6,9 @@
  * - TODO: Supabase 연동 시 실제 매칭 요청 테이블 CRUD로 교체
  */
 
-export type MatcStat = "pend" | "acpt" | "rjct";
+// pend: 이장님 검토 대기 / c_acpt: 이장님 수락(주민 응답 대기) / c_rjct: 이장님 거절
+// r_acpt: 주민 수락(연결 성사) / r_rjct: 주민 거절
+export type MatcStat = "pend" | "c_acpt" | "c_rjct" | "r_acpt" | "r_rjct";
 
 export type MatcReq = {
   req_id: string;
@@ -32,8 +34,10 @@ export type MatcReq = {
   msg_txt: string;
   stat: MatcStat;
   rate_val?: number;
+  acpt_cmt?: string;
   rjct_rsn?: string;
   rjct_msg?: string;
+  seen_flag?: boolean;
   made_at: number;
 };
 
@@ -88,4 +92,16 @@ export function pend_cnt(): number {
 
 export function has_req(jang_id: string, memb_id: string): boolean {
   return load_list().some((r_item) => r_item.jang_id === jang_id && r_item.memb_id === memb_id);
+}
+
+// 주민(연결 희망 대상)이 아직 확인하지 않은, 이장님이 수락한 제안 수
+export function prop_cnt(): number {
+  return load_list().filter((r_item) => r_item.stat === "c_acpt" && !r_item.seen_flag).length;
+}
+
+export function mark_seen_all(): void {
+  const list_val = load_list().map((r_item) =>
+    r_item.stat === "c_acpt" && !r_item.seen_flag ? { ...r_item, seen_flag: true } : r_item
+  );
+  save_list(list_val);
 }
