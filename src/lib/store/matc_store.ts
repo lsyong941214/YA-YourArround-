@@ -37,6 +37,7 @@ export type MatcReq = {
   rjct_rsn?: string;
   rjct_msg?: string;
   seen_flag?: boolean;
+  rvwd_flag?: boolean;
   made_at: number;
 };
 

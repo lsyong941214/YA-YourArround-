@@ -3,15 +3,37 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, Handshake, Home } from "lucide-react";
-import { find_req, MatcReq } from "@/lib/store/matc_store";
+import { find_req, MatcReq, updt_req } from "@/lib/store/matc_store";
+import { add_revw } from "@/lib/store/revw_store";
+import RevwModal from "./RevwModal";
 
 export default function MatchedScreen({ req_id }: { req_id: string }) {
   const rout_nav = useRouter();
   const [req_item, setReqItem] = useState<MatcReq | undefined | null>(null);
+  const [revw_open, setRevwOpen] = useState(false);
 
   useEffect(() => {
-    setReqItem(find_req(req_id) ?? undefined);
+    const next_item = find_req(req_id) ?? undefined;
+    setReqItem(next_item);
+    if (next_item && next_item.stat === "r_acpt" && !next_item.rvwd_flag) {
+      setRevwOpen(true);
+    }
   }, [req_id]);
+
+  function do_revw(scr_val: number, rvw_txt: string) {
+    if (!req_item) return;
+    add_revw({
+      jang_id: req_item.jang_id,
+      rvwr_name: req_item.memb_name,
+      rvwr_ini: req_item.ini_char,
+      rvwr_ton: req_item.ton_hex,
+      scr_val,
+      rvw_txt,
+    });
+    updt_req(req_id, { rvwd_flag: true });
+    setReqItem(find_req(req_id));
+    setRevwOpen(false);
+  }
 
   // TODO: 프로필 다시 보기 상세 뷰 연동
   function do_prof() {}
@@ -123,6 +145,14 @@ export default function MatchedScreen({ req_id }: { req_id: string }) {
           채팅 시작하기
         </button>
       </div>
+
+      {revw_open && (
+        <RevwModal
+          jang_name={req_item.jang_name}
+          onClose={() => setRevwOpen(false)}
+          onSubmit={do_revw}
+        />
+      )}
     </main>
   );
 }

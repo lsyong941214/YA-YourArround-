@@ -95,17 +95,21 @@ export default function ChiefDetail({ jang_id }: { jang_id: string }) {
 
       {/* 통계 카드 */}
       <section className="mt-4 grid grid-cols-2 gap-3 px-5">
-        <div className="rounded-2xl bg-white p-4 shadow-sm">
+        <button
+          type="button"
+          onClick={() => rout_nav.push(`/chief/${jang_id}/reviews`)}
+          className="rounded-2xl bg-white p-4 text-left shadow-sm transition active:opacity-90"
+        >
           <div className="flex items-center gap-1 text-xs text-gray-400">
             <Users className="h-3.5 w-3.5 text-[#F26B12]" />
-            연결 성사
+            성공한 만남
           </div>
           <p className="mt-1 text-lg font-extrabold text-gray-900">{jang_item.matc_cnt}쌍</p>
-        </div>
+        </button>
         <div className="rounded-2xl bg-white p-4 shadow-sm">
           <div className="flex items-center gap-1 text-xs text-gray-400">
             <Users className="h-3.5 w-3.5 text-[#F26B12]" />
-            활동 주민
+            등록된 주민
           </div>
           <p className="mt-1 text-lg font-extrabold text-gray-900">{jang_item.resd_cnt}명</p>
         </div>
@@ -118,7 +122,7 @@ export default function ChiefDetail({ jang_id }: { jang_id: string }) {
           onClick={do_tab}
           className="border-b-2 border-gray-900 pb-2 text-sm font-bold text-gray-900"
         >
-          주민 목록
+          공개된 주민 목록
         </button>
         <button type="button" onClick={do_tab} className="pb-2 text-sm text-gray-400">
           연결 내역
@@ -171,7 +175,7 @@ export default function ChiefDetail({ jang_id }: { jang_id: string }) {
           onClick={do_req_jang}
           className="w-full rounded-2xl bg-[#F26B12] py-3.5 text-sm font-bold text-white transition active:opacity-90"
         >
-          이장님에게 직접 요청하기
+          이장님에게 새로운 만남 요청하기
         </button>
       </div>
     </main>
