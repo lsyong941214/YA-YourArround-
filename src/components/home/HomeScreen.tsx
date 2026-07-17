@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Bell, ChevronRight, Crown, Heart, Home, Pencil, Send, User, Users } from "lucide-react";
 import { MEMB_LIST } from "@/lib/data/memb_data";
 import { pend_cnt, prop_cnt } from "@/lib/store/matc_store";
+import { pend_cnt as blnd_pend_cnt } from "@/lib/store/blnd_store";
 import ProfEditModal from "./ProfEditModal";
 
 type UserRole = "res" | "chief";
@@ -26,7 +27,7 @@ export default function HomeScreen() {
 
   useEffect(() => {
     setPendVal(pend_cnt());
-    setPropVal(prop_cnt());
+    setPropVal(prop_cnt() + blnd_pend_cnt());
   }, []);
 
   function do_togl_role() {

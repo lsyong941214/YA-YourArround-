@@ -136,7 +136,7 @@ export default function ReqSendScreen({
         </div>
       </div>
 
-      <div className="fixed inset-x-0 bottom-0 border-t border-gray-100 bg-white px-5 pb-8 pt-4">
+      <div className="fixed inset-x-0 bottom-0 grid grid-cols-2 gap-3 border-t border-gray-100 bg-white px-5 pb-8 pt-4">
         <button
           type="button"
           onClick={do_send}
@@ -144,6 +144,13 @@ export default function ReqSendScreen({
           className="w-full rounded-2xl bg-[#F26B12] py-3.5 text-sm font-bold text-white transition active:opacity-90 disabled:opacity-60"
         >
           연결 요청 보내기
+        </button>
+        <button
+          type="button"
+          onClick={() => rout_nav.push(`/chief/${jang_id}/blind/${memb_id}`)}
+          className="w-full rounded-2xl bg-[#6C63E0] py-3.5 text-sm font-bold text-white transition active:opacity-90"
+        >
+          주변인 테스트
         </button>
       </div>
     </main>
