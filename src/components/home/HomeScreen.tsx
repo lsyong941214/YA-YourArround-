@@ -4,11 +4,10 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Bell, ChevronRight, Crown, Heart, Home, Pencil, Send, User, Users } from "lucide-react";
 import { MEMB_LIST } from "@/lib/data/memb_data";
-import { pend_cnt, prop_cnt } from "@/lib/store/matc_store";
-import { pend_cnt as blnd_pend_cnt } from "@/lib/store/blnd_store";
+import { jang_pend_cnt, memb_prop_cnt } from "@/lib/store/matc_store";
+import { memb_pend_cnt } from "@/lib/store/blnd_store";
+import { AuthRole, AuthUser, curr_user, updt_curr } from "@/lib/store/auth_store";
 import ProfEditModal from "./ProfEditModal";
-
-type UserRole = "res" | "chief";
 
 const CHIEF_CNT = 8;
 const INTRO_CNT = 12;
@@ -16,22 +15,41 @@ const RES_MATC = "3/5회";
 
 export default function HomeScreen() {
   const rout_nav = useRouter();
-  const user_name = "민지";
 
-  const [user_img, setUserImg] = useState<string | null>(null);
-  const [user_bio, setUserBio] = useState("오늘도 좋은 인연을 만들어보세요.");
-  const [user_role, setUserRole] = useState<UserRole>("res");
+  const [me_item, setMeItem] = useState<AuthUser | null | undefined>(undefined);
+  const [user_role, setUserRole] = useState<AuthRole>("res");
   const [edit_open, setEditOpen] = useState(false);
   const [pend_val, setPendVal] = useState(0);
   const [prop_val, setPropVal] = useState(0);
 
   useEffect(() => {
-    setPendVal(pend_cnt());
-    setPropVal(prop_cnt() + blnd_pend_cnt());
+    const user_now = curr_user();
+    if (!user_now) {
+      rout_nav.replace("/login");
+      return;
+    }
+    setMeItem(user_now);
+    setUserRole(user_now.user_role);
+    setPendVal(user_now.jang_id ? jang_pend_cnt(user_now.jang_id) : 0);
+    setPropVal(
+      (user_now.memb_id ? memb_prop_cnt(user_now.memb_id) : 0) +
+        (user_now.memb_id ? memb_pend_cnt(user_now.memb_id) : 0)
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  if (me_item === undefined) {
+    return <main className="h-dvh w-full bg-[#FFF8F3]" />;
+  }
+
+  if (!me_item) {
+    return null;
+  }
+
   function do_togl_role() {
-    setUserRole((prev_val) => (prev_val === "res" ? "chief" : "res"));
+    const next_role = user_role === "res" ? "chief" : "res";
+    setUserRole(next_role);
+    updt_curr({ user_role: next_role });
   }
 
   function go_memb(memb_id: string) {
@@ -39,12 +57,19 @@ export default function HomeScreen() {
   }
 
   function go_matc() {
-    if (user_role !== "chief") return;
-    rout_nav.push("/matching");
+    if (user_role === "chief") {
+      rout_nav.push("/matching");
+    } else {
+      rout_nav.push("/sent");
+    }
   }
 
   function go_prop() {
     rout_nav.push("/proposal");
+  }
+
+  function go_mypage() {
+    rout_nav.push("/mypage");
   }
 
   const role_lbl = user_role === "res" ? "주민" : "이장님";
@@ -75,9 +100,9 @@ export default function HomeScreen() {
       <section className="mx-5 mt-2 flex items-center gap-3 rounded-2xl bg-gradient-to-r from-[#FF9D5C] to-[#F26B12] p-4 text-white shadow-sm">
         <div className="relative shrink-0">
           <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-full bg-white/25">
-            {user_img ? (
+            {me_item.user_img ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={user_img} alt="프로필 사진" className="h-full w-full object-cover" />
+              <img src={me_item.user_img} alt="프로필 사진" className="h-full w-full object-cover" />
             ) : (
               <FoxIcon className="h-9 w-9" />
             )}
@@ -92,8 +117,10 @@ export default function HomeScreen() {
           </button>
         </div>
         <div className="min-w-0">
-          <p className="text-[15px] font-bold">안녕하세요, {user_name}님! 👋</p>
-          <p className="mt-0.5 truncate text-xs text-white/85">{user_bio}</p>
+          <p className="text-[15px] font-bold">안녕하세요, {me_item.user_name}님! 👋</p>
+          <p className="mt-0.5 truncate text-xs text-white/85">
+            {me_item.user_bio || "오늘도 좋은 인연을 만들어보세요."}
+          </p>
         </div>
       </section>
 
@@ -114,8 +141,7 @@ export default function HomeScreen() {
           <button
             type="button"
             onClick={go_matc}
-            disabled={user_role !== "chief"}
-            className="mt-3 w-full border-t border-gray-100 pt-3 text-left disabled:cursor-default"
+            className="mt-3 w-full border-t border-gray-100 pt-3 text-left"
           >
             <div className="flex items-center justify-between">
               <span className="flex items-center gap-1 text-xs text-gray-400">
@@ -126,7 +152,7 @@ export default function HomeScreen() {
                   </span>
                 )}
               </span>
-              {user_role === "chief" && <ChevronRight className="h-4 w-4 text-gray-300" />}
+              <ChevronRight className="h-4 w-4 text-gray-300" />
             </div>
             <p className="text-base font-bold text-gray-900">{matc_val}</p>
           </button>
@@ -204,17 +230,17 @@ export default function HomeScreen() {
         <TabItem icon={<Heart className="h-5 w-5" />} lbl_txt="매칭" badge_cnt={prop_val} onBadge={go_prop} />
         <TabItem icon={<Users className="h-5 w-5" />} lbl_txt="마을" />
         <TabItem icon={<Send className="h-5 w-5" />} lbl_txt="메시지" />
-        <TabItem icon={<User className="h-5 w-5" />} lbl_txt="마이페이지" />
+        <TabItem icon={<User className="h-5 w-5" />} lbl_txt="마이페이지" onTap={go_mypage} />
       </nav>
 
       {edit_open && (
         <ProfEditModal
-          init_img={user_img}
-          init_bio={user_bio}
+          init_img={me_item.user_img}
+          init_bio={me_item.user_bio}
           onClose={() => setEditOpen(false)}
           onSave={(next_img, next_bio) => {
-            setUserImg(next_img);
-            setUserBio(next_bio);
+            updt_curr({ user_img: next_img, user_bio: next_bio });
+            setMeItem((prev_item) => (prev_item ? { ...prev_item, user_img: next_img, user_bio: next_bio } : prev_item));
             setEditOpen(false);
           }}
         />
@@ -229,17 +255,20 @@ function TabItem({
   actv,
   badge_cnt,
   onBadge,
+  onTap,
 }: {
   icon: React.ReactNode;
   lbl_txt: string;
   actv?: boolean;
   badge_cnt?: number;
   onBadge?: () => void;
+  onTap?: () => void;
 }) {
   return (
     <div className="relative flex flex-col items-center gap-1 px-2 py-1">
       <button
         type="button"
+        onClick={onTap}
         className={`flex flex-col items-center gap-1 ${actv ? "text-[#F26B12]" : "text-gray-300"}`}
       >
         {icon}

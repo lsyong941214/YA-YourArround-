@@ -12,6 +12,7 @@ export type MatcStat = "pend" | "c_acpt" | "c_rjct" | "r_acpt" | "r_rjct";
 
 export type MatcReq = {
   req_id: string;
+  req_uid: string;
   jang_id: string;
   jang_name: string;
   memb_id: string;
@@ -86,22 +87,40 @@ export function updt_req(req_id: string, patch: Partial<MatcReq>): void {
   save_list(list_val);
 }
 
-export function pend_cnt(): number {
-  return load_list().filter((r_item) => r_item.stat === "pend").length;
-}
-
 export function has_req(jang_id: string, memb_id: string): boolean {
   return load_list().some((r_item) => r_item.jang_id === jang_id && r_item.memb_id === memb_id);
 }
 
-// 주민(연결 희망 대상)이 아직 확인하지 않은, 이장님이 수락한 제안 수
-export function prop_cnt(): number {
-  return load_list().filter((r_item) => r_item.stat === "c_acpt" && !r_item.seen_flag).length;
+// 특정 이장님(jang_id)이 검토해야 할 대기중 요청
+export function jang_pend_list(jang_id: string): MatcReq[] {
+  return load_list().filter((r_item) => r_item.jang_id === jang_id && r_item.stat === "pend");
 }
 
-export function mark_seen_all(): void {
+export function jang_pend_cnt(jang_id: string): number {
+  return jang_pend_list(jang_id).length;
+}
+
+// 특정 주민(memb_id)이 아직 확인하지 않은, 이장님이 수락한 제안
+export function memb_prop_list(memb_id: string): MatcReq[] {
+  return load_list().filter((r_item) => r_item.memb_id === memb_id && r_item.stat === "c_acpt");
+}
+
+export function memb_prop_cnt(memb_id: string): number {
+  return memb_prop_list(memb_id).filter((r_item) => !r_item.seen_flag).length;
+}
+
+export function mark_seen_memb(memb_id: string): void {
   const list_val = load_list().map((r_item) =>
-    r_item.stat === "c_acpt" && !r_item.seen_flag ? { ...r_item, seen_flag: true } : r_item
+    r_item.memb_id === memb_id && r_item.stat === "c_acpt" && !r_item.seen_flag
+      ? { ...r_item, seen_flag: true }
+      : r_item
   );
   save_list(list_val);
+}
+
+// 특정 유저(req_uid)가 보낸 요청 전체 (상태 무관)
+export function sent_list(req_uid: string): MatcReq[] {
+  return load_list()
+    .filter((r_item) => r_item.req_uid === req_uid)
+    .sort((a_item, b_item) => b_item.made_at - a_item.made_at);
 }

@@ -3,12 +3,9 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { load_list, mark_seen_all, MatcReq, updt_req } from "@/lib/store/matc_store";
-import {
-  BlndReq,
-  load_list as load_blnd_list,
-  mark_seen_all as mark_blnd_seen,
-} from "@/lib/store/blnd_store";
+import { mark_seen_memb, memb_prop_list, MatcReq, updt_req } from "@/lib/store/matc_store";
+import { BlndReq, mark_seen_memb as mark_blnd_seen, memb_pend_list } from "@/lib/store/blnd_store";
+import { curr_user } from "@/lib/store/auth_store";
 import ProposalModal from "./ProposalModal";
 
 export default function ProposalListScreen() {
@@ -18,10 +15,12 @@ export default function ProposalListScreen() {
   const [sel_id, setSelId] = useState<string | null>(null);
 
   useEffect(() => {
-    mark_seen_all();
-    mark_blnd_seen();
-    setPropList(load_list().filter((r_item) => r_item.stat === "c_acpt"));
-    setBlndList(load_blnd_list().filter((b_item) => b_item.stat === "pend"));
+    const memb_id = curr_user()?.memb_id;
+    if (!memb_id) return;
+    mark_seen_memb(memb_id);
+    mark_blnd_seen(memb_id);
+    setPropList(memb_prop_list(memb_id));
+    setBlndList(memb_pend_list(memb_id));
   }, []);
 
   const sel_item = prop_list.find((r_item) => r_item.req_id === sel_id) ?? null;

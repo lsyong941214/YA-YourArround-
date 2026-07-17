@@ -27,7 +27,7 @@ export default function LoginScreen() {
   }
 
   function do_phon() {
-    setNoteMsg("휴대폰 번호 로그인은 아직 준비 중이에요.");
+    rout_nav.push("/login/local");
   }
 
   return (

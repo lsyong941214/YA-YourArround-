@@ -10,6 +10,7 @@ export type BlndStat = "pend" | "acpt" | "rjct";
 
 export type BlndReq = {
   blnd_id: string;
+  req_uid: string;
   jang_id: string;
   jang_name: string;
   memb_id: string;
@@ -81,13 +82,27 @@ export function updt_req(blnd_id: string, patch: Partial<BlndReq>): void {
   save_list(list_val);
 }
 
-export function pend_cnt(): number {
-  return load_list().filter((b_item) => b_item.stat === "pend" && !b_item.seen_flag).length;
+// 특정 주민(memb_id)이 받은 대기중 주변인 테스트 요청
+export function memb_pend_list(memb_id: string): BlndReq[] {
+  return load_list().filter((b_item) => b_item.memb_id === memb_id && b_item.stat === "pend");
 }
 
-export function mark_seen_all(): void {
+export function memb_pend_cnt(memb_id: string): number {
+  return memb_pend_list(memb_id).filter((b_item) => !b_item.seen_flag).length;
+}
+
+export function mark_seen_memb(memb_id: string): void {
   const list_val = load_list().map((b_item) =>
-    b_item.stat === "pend" && !b_item.seen_flag ? { ...b_item, seen_flag: true } : b_item
+    b_item.memb_id === memb_id && b_item.stat === "pend" && !b_item.seen_flag
+      ? { ...b_item, seen_flag: true }
+      : b_item
   );
   save_list(list_val);
+}
+
+// 특정 유저(req_uid)가 보낸 주변인 테스트 요청 전체
+export function sent_list(req_uid: string): BlndReq[] {
+  return load_list()
+    .filter((b_item) => b_item.req_uid === req_uid)
+    .sort((a_item, b_item) => b_item.made_at - a_item.made_at);
 }

@@ -1,15 +1,21 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, Star } from "lucide-react";
 import { find_jang } from "@/lib/data/jang_data";
-import { avg_scr, jang_revw_list } from "@/lib/store/revw_store";
+import { avg_scr, jang_revw_list, RevwItem } from "@/lib/store/revw_store";
 
 export default function ChiefReviews({ jang_id }: { jang_id: string }) {
   const rout_nav = useRouter();
   const jang_item = find_jang(jang_id);
-  const revw_list = jang_revw_list(jang_id);
-  const scr_val = avg_scr(jang_id);
+  const [revw_list, setRevwList] = useState<RevwItem[]>([]);
+  const [scr_val, setScrVal] = useState(0);
+
+  useEffect(() => {
+    setRevwList(jang_revw_list(jang_id));
+    setScrVal(avg_scr(jang_id));
+  }, [jang_id]);
 
   if (!jang_item) {
     return (

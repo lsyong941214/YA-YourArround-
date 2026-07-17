@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, Info } from "lucide-react";
 import { find_jang } from "@/lib/data/jang_data";
-import { ME_INFO } from "@/lib/data/me_data";
+import { AuthUser, curr_user } from "@/lib/store/auth_store";
 import { add_req } from "@/lib/store/blnd_store";
 
 const MSG_MAX = 80;
@@ -29,26 +29,31 @@ export default function BlndReqScreen({
 
   const [msg_txt, setMsgTxt] = useState("");
   const [busy_flag, setBusyFlag] = useState(false);
+  const [me_item, setMeItem] = useState<AuthUser | null | undefined>(undefined);
 
-  if (!jang_item || !resd_item) {
-    return (
-      <main className="flex h-dvh flex-col items-center justify-center gap-3 bg-white px-6 text-center">
-        <p className="text-sm text-gray-400">존재하지 않는 요청 정보예요.</p>
-        <button
-          type="button"
-          onClick={() => rout_nav.back()}
-          className="text-sm font-bold text-[#6C63E0]"
-        >
-          돌아가기
-        </button>
-      </main>
-    );
+  useEffect(() => {
+    const user_now = curr_user();
+    if (!user_now) {
+      rout_nav.replace("/login");
+      return;
+    }
+    setMeItem(user_now);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  if (!jang_item || !resd_item || me_item === undefined) {
+    return <main className="h-dvh w-full bg-white" />;
+  }
+
+  if (!me_item) {
+    return null;
   }
 
   function do_send() {
-    if (busy_flag) return;
+    if (busy_flag || !me_item) return;
     setBusyFlag(true);
     add_req({
+      req_uid: me_item.user_id,
       jang_id,
       jang_name: jang_item!.jang_name,
       memb_id: resd_item!.memb_id,
@@ -60,14 +65,14 @@ export default function BlndReqScreen({
       tag_list: resd_item!.tag_list,
       ini_char: resd_item!.ini_char,
       ton_hex: resd_item!.ton_hex,
-      req_name: ME_INFO.memb_name,
-      req_age: ME_INFO.memb_age,
-      req_job: ME_INFO.memb_job,
-      req_mbti: ME_INFO.memb_mbti,
-      req_reg: ME_INFO.memb_reg,
-      req_tags: ME_INFO.tag_list,
-      req_ini: ME_INFO.ini_char,
-      req_ton: ME_INFO.ton_hex,
+      req_name: me_item.user_name,
+      req_age: me_item.user_age ?? 0,
+      req_job: me_item.user_job ?? "",
+      req_mbti: me_item.user_mbti ?? "",
+      req_reg: me_item.user_reg ?? "",
+      req_tags: me_item.tag_list,
+      req_ini: me_item.ini_char,
+      req_ton: me_item.ton_hex,
       msg_txt,
     });
     rout_nav.replace("/home");

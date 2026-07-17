@@ -4,13 +4,16 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { load_list, MatcReq } from "@/lib/store/matc_store";
+import { curr_user } from "@/lib/store/auth_store";
 
 export default function MatcListScreen() {
   const rout_nav = useRouter();
   const [req_list, setReqList] = useState<MatcReq[]>([]);
 
   useEffect(() => {
-    setReqList(load_list());
+    const user_now = curr_user();
+    const jang_id = user_now?.jang_id;
+    setReqList(jang_id ? load_list().filter((r_item) => r_item.jang_id === jang_id) : []);
   }, []);
 
   function go_req(req_id: string) {
