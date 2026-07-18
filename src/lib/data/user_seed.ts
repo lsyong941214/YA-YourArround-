@@ -15,13 +15,21 @@ import { gen_uid } from "@/lib/data/uid_rule";
 const SEED_YMD = "20260718";
 const SEED_BASE_MS = new Date(2026, 6, 18, 9, 0, 0).getTime();
 const SEED_PASS = "1234";
+const SEED_MATC_MAX = 5;
 
-function seed_user(seq_no: number, base: Omit<AuthUser, "user_id" | "login_id" | "passwd" | "made_at">): AuthUser {
+type SeedInp = Omit<
+  AuthUser,
+  "user_id" | "login_id" | "passwd" | "made_at" | "matc_done" | "matc_max"
+>;
+
+function seed_user(seq_no: number, base: SeedInp): AuthUser {
   return {
     ...base,
     user_id: gen_uid(seq_no, SEED_YMD),
     login_id: `tkddyd${seq_no}`,
     passwd: SEED_PASS,
+    matc_done: 0,
+    matc_max: SEED_MATC_MAX,
     made_at: SEED_BASE_MS + seq_no,
   };
 }

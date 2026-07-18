@@ -54,11 +54,11 @@ export default function SentListScreen() {
         >
           <ChevronLeft className="h-6 w-6" />
         </button>
-        <h1 className="text-base font-bold text-gray-900">내가 보낸 요청</h1>
+        <h1 className="text-base font-bold text-gray-900">매칭 현황</h1>
       </header>
 
       {sent_list.length === 0 ? (
-        <p className="px-5 pt-10 text-center text-sm text-gray-400">아직 보낸 요청이 없어요.</p>
+        <p className="px-5 pt-10 text-center text-sm text-gray-400">아직 진행중인 매칭이 없어요.</p>
       ) : (
         <div className="flex flex-col gap-3 px-5 pt-2">
           {sent_list.map((sent_item) => (

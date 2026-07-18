@@ -3,15 +3,11 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Bell, ChevronRight, Crown, Heart, Home, Pencil, Send, User, Users } from "lucide-react";
-import { MEMB_LIST } from "@/lib/data/memb_data";
 import { jang_pend_cnt, memb_prop_cnt } from "@/lib/store/matc_store";
 import { memb_pend_cnt } from "@/lib/store/blnd_store";
 import { AuthRole, AuthUser, curr_user, updt_curr } from "@/lib/store/auth_store";
+import { list_chf_of, list_res_of } from "@/lib/store/cntc_store";
 import ProfEditModal from "./ProfEditModal";
-
-const CHIEF_CNT = 8;
-const INTRO_CNT = 12;
-const RES_MATC = "3/5회";
 
 export default function HomeScreen() {
   const rout_nav = useRouter();
@@ -21,6 +17,11 @@ export default function HomeScreen() {
   const [edit_open, setEditOpen] = useState(false);
   const [pend_val, setPendVal] = useState(0);
   const [prop_val, setPropVal] = useState(0);
+  const [cntc_list, setCntcList] = useState<AuthUser[]>([]);
+
+  function load_cntc(uid_val: string, role_val: AuthRole) {
+    setCntcList(role_val === "chief" ? list_res_of(uid_val) : list_chf_of(uid_val));
+  }
 
   useEffect(() => {
     const user_now = curr_user();
@@ -35,6 +36,7 @@ export default function HomeScreen() {
       (user_now.memb_id ? memb_prop_cnt(user_now.memb_id) : 0) +
         (user_now.memb_id ? memb_pend_cnt(user_now.memb_id) : 0)
     );
+    load_cntc(user_now.user_id, user_now.user_role);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -50,10 +52,11 @@ export default function HomeScreen() {
     const next_role = user_role === "res" ? "chief" : "res";
     setUserRole(next_role);
     updt_curr({ user_role: next_role });
+    load_cntc(me_item!.user_id, next_role);
   }
 
-  function go_memb(memb_id: string) {
-    rout_nav.push(`/resident/${memb_id}`);
+  function go_cntc() {
+    rout_nav.push("/chief");
   }
 
   function go_matc() {
@@ -73,9 +76,12 @@ export default function HomeScreen() {
   }
 
   const role_lbl = user_role === "res" ? "주민" : "이장님";
-  const matc_lbl = user_role === "res" ? "남은 매칭 시도" : "진행중인 매칭";
-  const matc_val = user_role === "res" ? RES_MATC : `${pend_val}건`;
+  const matc_lbl = user_role === "res" ? "매칭 현황" : "진행중인 매칭";
+  const matc_val = user_role === "res" ? `${me_item.matc_done}/${me_item.matc_max}` : `${pend_val}건`;
   const bell_dot = (user_role === "chief" && pend_val > 0) || prop_val > 0;
+
+  const cntc_lbl = user_role === "res" ? "이장님 연락처" : "연결된 주민";
+  const cntc_main = `${cntc_list.length}명`;
 
   return (
     <main className="min-h-dvh w-full bg-[#FFF8F3] pb-24">
@@ -158,22 +164,25 @@ export default function HomeScreen() {
           </button>
         </div>
 
-        <button
-          type="button"
-          onClick={() => rout_nav.push("/chief")}
-          className="rounded-2xl bg-white p-4 text-left shadow-sm transition active:opacity-90"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-gray-400">이장님 연락처</span>
-            <Users className="h-5 w-5 text-[#F26B12]" />
+        <div className="rounded-2xl bg-white p-4 shadow-sm">
+          <div className="w-full text-left">
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-gray-400">{cntc_lbl}</span>
+              <Users className="h-5 w-5 text-[#F26B12]" />
+            </div>
+            <p className="mt-1 text-lg font-extrabold text-gray-900">{cntc_main}</p>
           </div>
-          <p className="mt-1 text-lg font-extrabold text-gray-900">{CHIEF_CNT}명</p>
-          <div className="mt-3 flex items-center justify-between border-t border-gray-100 pt-3">
-            <span className="text-xs text-gray-400">새로운 주민 소개</span>
-            <ChevronRight className="h-4 w-4 text-gray-300" />
-          </div>
-          <p className="text-base font-bold text-gray-900">{INTRO_CNT}명</p>
-        </button>
+          <button
+            type="button"
+            onClick={go_cntc}
+            className="mt-3 w-full border-t border-gray-100 pt-3 text-left"
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-gray-400">전체 연락처 보기</span>
+              <ChevronRight className="h-4 w-4 text-gray-300" />
+            </div>
+          </button>
+        </div>
       </section>
 
       {/* 가이드 투어 */}
@@ -191,38 +200,37 @@ export default function HomeScreen() {
         <FoxReadIcon className="h-16 w-16 shrink-0" />
       </section>
 
-      {/* 이장님 추천 주민 */}
-      <section className="mt-5">
-        <div className="flex items-center justify-between px-5">
-          <h2 className="text-[15px] font-bold text-gray-900">이장님 추천 주민</h2>
-          <span className="text-xs text-gray-400">더보기 &gt;</span>
-        </div>
-        <div className="mt-3 flex gap-3 overflow-x-auto px-5 pb-2">
-          {MEMB_LIST.map((m_item) => (
-            <button
-              key={m_item.memb_id}
-              type="button"
-              onClick={() => go_memb(m_item.memb_id)}
-              className="w-32 shrink-0 rounded-2xl bg-white p-3 text-left shadow-sm transition active:opacity-90"
-            >
-              <div
-                className="relative flex h-24 w-full items-center justify-center rounded-xl text-2xl font-bold text-white"
-                style={{ backgroundColor: m_item.ton_hex }}
-              >
-                {m_item.ini_char}
-                <Heart className="absolute right-1.5 top-1.5 h-4 w-4 text-white/90" strokeWidth={2} />
-              </div>
-              <p className="mt-2 text-sm font-bold text-gray-900">
-                {m_item.memb_name}, {m_item.memb_age}
-              </p>
-              <p className="text-[11px] text-gray-400">
-                {m_item.memb_job} · {m_item.memb_mbti}
-              </p>
-              <p className="mt-1 truncate text-[10px] text-[#F26B12]">{m_item.tag_list.join(" ")}</p>
-            </button>
-          ))}
-        </div>
-      </section>
+      {/* 연결된 주민 (이장님 역할일 때만 노출) */}
+      {user_role === "chief" && (
+        <section className="mt-5">
+          <div className="flex items-center justify-between px-5">
+            <h2 className="text-[15px] font-bold text-gray-900">연결된 주민</h2>
+          </div>
+          {cntc_list.length === 0 ? (
+            <p className="px-5 pt-3 text-xs text-gray-400">아직 연결된 주민이 없어요.</p>
+          ) : (
+            <div className="mt-3 flex gap-3 overflow-x-auto px-5 pb-2">
+              {cntc_list.map((r_item) => (
+                <div
+                  key={r_item.user_id}
+                  className="w-28 shrink-0 rounded-2xl bg-white p-3 text-left shadow-sm"
+                >
+                  <div
+                    className="flex h-20 w-full items-center justify-center rounded-xl text-2xl font-bold text-white"
+                    style={{ backgroundColor: r_item.ton_hex }}
+                  >
+                    {r_item.ini_char}
+                  </div>
+                  <p className="mt-2 truncate text-sm font-bold text-gray-900">{r_item.user_name}</p>
+                  <p className="truncate text-[11px] text-gray-400">
+                    {r_item.user_job || "-"} {r_item.user_mbti ? `· ${r_item.user_mbti}` : ""}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
 
       {/* 하단 탭바 (추후 개발) */}
       <nav className="fixed inset-x-0 bottom-0 z-10 flex justify-around border-t border-gray-100 bg-white py-2">

@@ -32,8 +32,12 @@ export type AuthUser = {
   user_bio: string;
   ini_char: string;
   ton_hex: string;
+  matc_done: number;
+  matc_max: number;
   made_at: number;
 };
+
+const DEF_MATC_MAX = 5;
 
 const LIST_KEY = "auth_users";
 const CURR_KEY = "auth_curr";
@@ -155,6 +159,8 @@ export function login_new(inp: {
     user_bio: inp.user_bio ?? "",
     ini_char: inp.user_name.slice(0, 1) || "?",
     ton_hex: pick_ton(inp.user_name + Date.now()),
+    matc_done: 0,
+    matc_max: DEF_MATC_MAX,
     made_at: Date.now(),
   };
   const list_val = list_users();
