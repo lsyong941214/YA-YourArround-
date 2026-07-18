@@ -30,9 +30,11 @@ function wait_ms(ms_val: number): Promise<void> {
 }
 
 // 1) 로컬/세션 스토리지에 남아있는 이전 접속정보 초기화
+// - 로그인 세션(auth_curr)은 매 접속마다 새로 로그인하도록 초기화하지만,
+//   유저 정보(auth_users/auth_init)는 "DB 테이블"에 해당하므로 접속과 무관하게 유지한다
 function clr_stor(): void {
   if (typeof window === "undefined") return;
-  const keep_list = ["theme_pref"]; // 유지할 키(있다면)
+  const keep_list = ["theme_pref", "auth_users", "auth_init"];
   Object.keys(window.localStorage).forEach((key_str) => {
     if (!keep_list.includes(key_str)) {
       window.localStorage.removeItem(key_str);

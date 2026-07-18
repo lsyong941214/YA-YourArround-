@@ -1,5 +1,21 @@
 # CHANGELOG
 
+## v0.10.0 - 유저 ID 채번 규칙 도입 및 초기 유저 데이터, 로그인ID/비밀번호 로그인
+- 유저 ID 채번 규칙 신규 구현 (`src/lib/data/uid_rule.ts`): 날짜(8자, YYYYMMDD) + 일련번호(10자, 0 lpad)
+  - `gen_uid(seq_no, ymd_str?)` - 같은 날짜 내에서는 `next_seq`로 마지막 일련번호 다음 번호를 채번
+  - TODO: DB 연동 시 일련번호는 DB 시퀀스/자동증가 컬럼으로 대체, prefix 규칙만 유지
+- 유저 초기 시드 데이터 신규 추가 (`src/lib/data/user_seed.ts`)
+  - 채번 순서대로 상용(주민) → 민정(주민) → 민지(주민) → 성연(이장) 4개 계정을 생성해둠
+  - 각 계정의 로그인ID는 tkddyd1~tkddyd4 순서대로 부여, 비밀번호는 전부 1234로 통일
+  - 앱 최초 실행 시 `auth_store.ts`가 1회만 자동으로 적재(`ensure_seed`), 이후 재적재하지 않음
+- `AuthUser`에 `login_id`/`passwd` 필드 추가, `auth_store.ts`에 `login_cred(login_id, passwd)` 추가
+  - user_id(내부 채번 식별자)가 아닌 login_id/passwd 조합으로 로그인, 신규 계정 생성 시에도 user_id는 계속 채번 규칙으로 자동 발급
+  - TODO: 실제 DB 연동 시 passwd 평문 저장/비교를 해시 비교로 교체
+- 임시 로그인 화면(`LocalLoginScreen.tsx`): "로그인ID + 비밀번호" 입력 폼으로 일반 로그인 구현, "새 계정 만들기" 폼에도 로그인ID/비밀번호 입력 추가(중복 로그인ID 체크 포함), 저장된 계정 목록에 각 계정의 login_id 노출
+- `sess_init.ts`의 `clr_stor`가 매 접속마다 유저 데이터(`auth_users`/`auth_init`)까지 지우던 문제 수정
+  - 로그인 세션(`auth_curr`)만 접속 시 초기화하고, 유저 정보는 "DB 테이블"처럼 접속과 무관하게 유지되도록 변경
+  - TODO: 실제 DB 연동 시 `auth_store.ts`의 저장소 구현을 API/DB 호출로 교체 (함수 시그니처는 유지)
+
 ## v0.9.0 - 임시 로그인/세션 도입, 다중 유저 데이터 분리
 - 로그인 세션 저장소 추가 (`src/lib/store/auth_store.ts`)
   - 실제 로그인 API 연동 전까지, 텍스트 입력으로 계정(이름/역할/담당 마을 또는 연결 주민/나이/직업/MBTI/지역/소개/프로필 사진)을 만들고 전환

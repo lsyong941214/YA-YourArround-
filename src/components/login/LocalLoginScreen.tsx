@@ -4,7 +4,15 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import { JANG_LIST } from "@/lib/data/jang_data";
-import { AuthRole, AuthUser, do_login, list_users, login_new } from "@/lib/store/auth_store";
+import {
+  AuthRole,
+  AuthUser,
+  do_login,
+  find_by_login,
+  list_users,
+  login_cred,
+  login_new,
+} from "@/lib/store/auth_store";
 
 const RESD_OPTS = JANG_LIST.flatMap((j_item) =>
   j_item.resd_list.map((r_item) => ({ jang_id: j_item.jang_id, jang_name: j_item.jang_name, ...r_item }))
@@ -29,6 +37,13 @@ export default function LocalLoginScreen() {
   const [user_reg, setUserReg] = useState("");
   const [user_bio, setUserBio] = useState("");
   const [user_img, setUserImg] = useState<string | null>(null);
+  const [new_lgid, setNewLgid] = useState("");
+  const [new_pass, setNewPass] = useState("");
+  const [new_err, setNewErr] = useState("");
+
+  const [lgin_inp, setLginInp] = useState("");
+  const [pass_inp, setPassInp] = useState("");
+  const [lgin_err, setLginErr] = useState("");
 
   function go_home() {
     rout_nav.replace("/home");
@@ -37,6 +52,14 @@ export default function LocalLoginScreen() {
   function do_swch(user_id: string) {
     do_login(user_id);
     go_home();
+  }
+
+  function do_cred_login() {
+    if (login_cred(lgin_inp, pass_inp)) {
+      go_home();
+      return;
+    }
+    setLginErr("로그인ID 또는 비밀번호가 올바르지 않아요.");
   }
 
   function do_pick() {
@@ -61,9 +84,15 @@ export default function LocalLoginScreen() {
   }
 
   function do_submit() {
-    if (!user_name.trim()) return;
+    if (!user_name.trim() || !new_lgid.trim() || !new_pass.trim()) return;
+    if (find_by_login(new_lgid.trim())) {
+      setNewErr("이미 사용 중인 로그인ID예요.");
+      return;
+    }
     const resd_item = RESD_OPTS.find((r_item) => `${r_item.jang_id}:${r_item.memb_id}` === resd_key);
     login_new({
+      login_id: new_lgid.trim(),
+      passwd: new_pass.trim(),
       user_name: user_name.trim(),
       user_role,
       jang_id: user_role === "chief" ? jang_id : undefined,
@@ -97,6 +126,39 @@ export default function LocalLoginScreen() {
         실제 로그인 연동 전까지, 텍스트로 계정을 만들어 여러 유저를 테스트할 수 있어요.
       </p>
 
+      <section className="mt-4 px-5">
+        <p className="text-xs font-medium text-gray-500">로그인</p>
+        <input
+          value={lgin_inp}
+          onChange={(ev_chg) => {
+            setLginInp(ev_chg.target.value);
+            setLginErr("");
+          }}
+          placeholder="로그인ID (예: tkddyd1)"
+          autoCapitalize="none"
+          className="mt-2 w-full rounded-xl border border-gray-200 p-3 text-sm text-gray-800 outline-none focus:border-[#F26B12]"
+        />
+        <input
+          value={pass_inp}
+          onChange={(ev_chg) => {
+            setPassInp(ev_chg.target.value);
+            setLginErr("");
+          }}
+          type="password"
+          placeholder="비밀번호"
+          className="mt-2 w-full rounded-xl border border-gray-200 p-3 text-sm text-gray-800 outline-none focus:border-[#F26B12]"
+        />
+        <button
+          type="button"
+          onClick={do_cred_login}
+          disabled={!lgin_inp.trim() || !pass_inp.trim()}
+          className="mt-2 w-full rounded-xl bg-[#F26B12] py-3 text-sm font-bold text-white transition active:opacity-90 disabled:opacity-40"
+        >
+          로그인
+        </button>
+        {lgin_err && <p className="mt-1.5 text-xs text-red-400">{lgin_err}</p>}
+      </section>
+
       {save_list.length > 0 && (
         <section className="mt-4 px-5">
           <p className="text-xs font-medium text-gray-500">저장된 계정으로 로그인</p>
@@ -121,6 +183,7 @@ export default function LocalLoginScreen() {
                     {u_item.jang_id ? ` · ${JANG_LIST.find((j) => j.jang_id === u_item.jang_id)?.jang_name ?? ""}` : ""}
                     {u_item.memb_id ? " · 연결된 주민 프로필 있음" : ""}
                   </p>
+                  <p className="truncate font-mono text-[11px] text-gray-300">{u_item.login_id}</p>
                 </div>
               </button>
             ))}
@@ -154,6 +217,36 @@ export default function LocalLoginScreen() {
           placeholder="예) 주민1"
           className="mt-1 w-full rounded-xl border border-gray-200 p-3 text-sm text-gray-800 outline-none focus:border-[#F26B12]"
         />
+
+        <div className="mt-4 grid grid-cols-2 gap-2">
+          <div>
+            <label className="block text-xs font-medium text-gray-500">로그인ID</label>
+            <input
+              value={new_lgid}
+              onChange={(ev_chg) => {
+                setNewLgid(ev_chg.target.value);
+                setNewErr("");
+              }}
+              placeholder="예) tkddyd5"
+              autoCapitalize="none"
+              className="mt-1 w-full rounded-xl border border-gray-200 p-3 text-sm text-gray-800 outline-none focus:border-[#F26B12]"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-500">비밀번호</label>
+            <input
+              value={new_pass}
+              onChange={(ev_chg) => {
+                setNewPass(ev_chg.target.value);
+                setNewErr("");
+              }}
+              type="password"
+              placeholder="예) 1234"
+              className="mt-1 w-full rounded-xl border border-gray-200 p-3 text-sm text-gray-800 outline-none focus:border-[#F26B12]"
+            />
+          </div>
+        </div>
+        {new_err && <p className="mt-1.5 text-xs text-red-400">{new_err}</p>}
 
         <label className="mt-4 block text-xs font-medium text-gray-500">역할</label>
         <div className="mt-1 grid grid-cols-2 gap-2">
@@ -266,10 +359,10 @@ export default function LocalLoginScreen() {
         <button
           type="button"
           onClick={do_submit}
-          disabled={!user_name.trim()}
+          disabled={!user_name.trim() || !new_lgid.trim() || !new_pass.trim()}
           className="mt-6 w-full rounded-2xl bg-[#F26B12] py-3.5 text-sm font-bold text-white transition active:opacity-90 disabled:opacity-40"
         >
-          로그인
+          계정 만들고 로그인
         </button>
       </section>
     </main>
