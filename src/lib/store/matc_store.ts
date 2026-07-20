@@ -100,6 +100,13 @@ export function jang_pend_cnt(jang_id: string): number {
   return jang_pend_list(jang_id).length;
 }
 
+// 특정 이장님(jang_id)의 "진행중"(대기중 + 수락 대기중) 요청 - 홈 화면 건수 표시용
+export function jang_prog_cnt(jang_id: string): number {
+  return load_list().filter(
+    (r_item) => r_item.jang_id === jang_id && (r_item.stat === "pend" || r_item.stat === "c_acpt")
+  ).length;
+}
+
 // 특정 주민(memb_id)이 아직 확인하지 않은, 이장님이 수락한 제안
 export function memb_prop_list(memb_id: string): MatcReq[] {
   return load_list().filter((r_item) => r_item.memb_id === memb_id && r_item.stat === "c_acpt");
@@ -123,4 +130,28 @@ export function sent_list(req_uid: string): MatcReq[] {
   return load_list()
     .filter((r_item) => r_item.req_uid === req_uid)
     .sort((a_item, b_item) => b_item.made_at - a_item.made_at);
+}
+
+// 특정 유저(req_uid)가 보낸 요청 중 "진행중"(대기중 + 수락 대기중) 건수 - 홈 화면 매칭 현황 표시용
+export function sent_prog_cnt(req_uid: string): number {
+  return sent_list(req_uid).filter((r_item) => r_item.stat === "pend" || r_item.stat === "c_acpt").length;
+}
+
+// 매칭 요청 단계별 표시 문구/톤
+// 대기중(pend) -> 수락 대기중(c_acpt) -> 요청거부(c_rjct/r_rjct) 또는 수락완료(r_acpt)
+export function matc_stat_lbl(stat: MatcStat): string {
+  if (stat === "pend") return "대기중";
+  if (stat === "c_acpt") return "수락 대기중";
+  if (stat === "r_acpt") return "수락완료";
+  return "요청거부";
+}
+
+export function matc_stat_tone(stat: MatcStat): "wait" | "ok" | "off" {
+  if (stat === "r_acpt") return "ok";
+  if (stat === "c_rjct" || stat === "r_rjct") return "off";
+  return "wait";
+}
+
+export function matc_is_prog(stat: MatcStat): boolean {
+  return stat === "pend" || stat === "c_acpt";
 }

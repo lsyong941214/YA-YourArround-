@@ -2,14 +2,18 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, Crown, Users } from "lucide-react";
+import { ChevronLeft, Crown, Heart, Users } from "lucide-react";
 import { AuthUser, curr_user, find_user } from "@/lib/store/auth_store";
 import { list_chf_of, list_res_of } from "@/lib/store/cntc_store";
+import { has_req } from "@/lib/store/matc_store";
+
+const NAV_DELAY = 250;
 
 export default function CntcDetail({ uid }: { uid: string }) {
   const rout_nav = useRouter();
   const [user_item, setUserItem] = useState<AuthUser | null | undefined>(undefined);
   const [link_list, setLinkList] = useState<AuthUser[]>([]);
+  const [liked_set, setLikedSet] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     const found = find_user(uid) ?? null;
@@ -17,9 +21,25 @@ export default function CntcDetail({ uid }: { uid: string }) {
     if (found) {
       const me_uid = curr_user()?.user_id;
       const raw_list = found.user_role === "chief" ? list_res_of(found.user_id) : list_chf_of(found.user_id);
-      setLinkList(raw_list.filter((l_item) => l_item.user_id !== me_uid));
+      const next_list = raw_list.filter((l_item) => l_item.user_id !== me_uid);
+      setLinkList(next_list);
+      if (found.user_role === "chief") {
+        const next_set = new Set<string>();
+        next_list.forEach((r_item) => {
+          if (has_req(found.user_id, r_item.user_id)) next_set.add(r_item.user_id);
+        });
+        setLikedSet(next_set);
+      }
     }
   }, [uid]);
+
+  function do_hert(memb_id: string) {
+    if (!user_item) return;
+    setLikedSet((prev_set) => new Set(prev_set).add(memb_id));
+    setTimeout(() => {
+      rout_nav.push(`/chief/${user_item.user_id}/request/${memb_id}`);
+    }, NAV_DELAY);
+  }
 
   if (user_item === undefined) {
     return <main className="h-dvh w-full bg-white" />;
@@ -103,6 +123,20 @@ export default function CntcDetail({ uid }: { uid: string }) {
                     {l_item.user_job || "-"} {l_item.user_mbti ? `· ${l_item.user_mbti}` : ""}
                   </p>
                 </div>
+                {user_item.user_role === "chief" && (
+                  <button
+                    type="button"
+                    onClick={() => do_hert(l_item.user_id)}
+                    aria-label={`${l_item.user_name}님과 연결 요청`}
+                    className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full border transition active:opacity-80 ${
+                      liked_set.has(l_item.user_id)
+                        ? "border-red-200 bg-red-50 text-red-500"
+                        : "border-gray-200 text-gray-300"
+                    }`}
+                  >
+                    <Heart className="h-4 w-4" fill={liked_set.has(l_item.user_id) ? "currentColor" : "none"} />
+                  </button>
+                )}
               </div>
             ))}
           </div>

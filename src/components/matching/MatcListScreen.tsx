@@ -3,21 +3,36 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { load_list, MatcReq } from "@/lib/store/matc_store";
+import { load_list, matc_is_prog, matc_stat_lbl, matc_stat_tone, MatcReq } from "@/lib/store/matc_store";
 import { curr_user } from "@/lib/store/auth_store";
+import MatcDetailModal from "./MatcDetailModal";
 
 export default function MatcListScreen() {
   const rout_nav = useRouter();
   const [req_list, setReqList] = useState<MatcReq[]>([]);
+  const [sel_id, setSelId] = useState<string | null>(null);
+  const [jang_id, setJangId] = useState<string | undefined>(undefined);
+
+  function refresh(jid: string | undefined) {
+    setReqList(jid ? load_list().filter((r_item) => r_item.jang_id === jid) : []);
+  }
 
   useEffect(() => {
     const user_now = curr_user();
-    const jang_id = user_now?.jang_id;
-    setReqList(jang_id ? load_list().filter((r_item) => r_item.jang_id === jang_id) : []);
+    const jid = user_now?.jang_id;
+    setJangId(jid);
+    refresh(jid);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  function go_req(req_id: string) {
-    rout_nav.push(`/matching/${req_id}`);
+  const sel_item = req_list.find((r_item) => r_item.req_id === sel_id) ?? null;
+
+  function go_req(r_item: MatcReq) {
+    if (matc_is_prog(r_item.stat)) {
+      setSelId(r_item.req_id);
+    } else {
+      rout_nav.push(`/matching/${r_item.req_id}`);
+    }
   }
 
   return (
@@ -44,7 +59,7 @@ export default function MatcListScreen() {
             <button
               key={r_item.req_id}
               type="button"
-              onClick={() => go_req(r_item.req_id)}
+              onClick={() => go_req(r_item)}
               className="flex items-center gap-3 rounded-2xl bg-white p-4 text-left shadow-sm transition active:opacity-90"
             >
               <div
@@ -70,35 +85,28 @@ export default function MatcListScreen() {
           ))}
         </div>
       )}
+
+      {sel_item && (
+        <MatcDetailModal
+          req_item={sel_item}
+          onClose={() => setSelId(null)}
+          onChanged={() => refresh(jang_id)}
+        />
+      )}
     </main>
   );
 }
 
 function StatBadge({ stat }: { stat: MatcReq["stat"] }) {
-  if (stat === "c_acpt") {
-    return (
-      <span className="shrink-0 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[10px] font-bold text-emerald-600">
-        이장님 수락
-      </span>
-    );
-  }
-  if (stat === "r_acpt") {
-    return (
-      <span className="shrink-0 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[10px] font-bold text-emerald-600">
-        연결 성사
-      </span>
-    );
-  }
-  if (stat === "c_rjct" || stat === "r_rjct") {
-    return (
-      <span className="shrink-0 rounded-full bg-gray-100 px-1.5 py-0.5 text-[10px] font-bold text-gray-500">
-        거절함
-      </span>
-    );
-  }
+  const tone_cls =
+    matc_stat_tone(stat) === "ok"
+      ? "bg-emerald-50 text-emerald-600"
+      : matc_stat_tone(stat) === "off"
+        ? "bg-gray-100 text-gray-500"
+        : "bg-[#FFE9D6] text-[#F26B12]";
   return (
-    <span className="shrink-0 rounded-full bg-[#FFE9D6] px-1.5 py-0.5 text-[10px] font-bold text-[#F26B12]">
-      대기중
+    <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-bold ${tone_cls}`}>
+      {matc_stat_lbl(stat)}
     </span>
   );
 }

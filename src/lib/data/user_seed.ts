@@ -22,10 +22,14 @@ type SeedInp = Omit<
   "user_id" | "login_id" | "passwd" | "made_at" | "matc_done" | "matc_max"
 >;
 
+function self_uid(seq_no: number): string {
+  return gen_uid(seq_no, SEED_YMD);
+}
+
 function seed_user(seq_no: number, base: SeedInp): AuthUser {
   return {
     ...base,
-    user_id: gen_uid(seq_no, SEED_YMD),
+    user_id: self_uid(seq_no),
     login_id: `tkddyd${seq_no}`,
     passwd: SEED_PASS,
     matc_done: 0,
@@ -34,10 +38,13 @@ function seed_user(seq_no: number, base: SeedInp): AuthUser {
   };
 }
 
+// 주민/이장 매칭 요청 파이프라인(matc_store)은 jang_id/memb_id 로 대상을 구분하므로,
+// 실제 계정은 자기 자신의 user_id 를 jang_id(이장)/memb_id(주민)로도 사용한다.
 export const USER_SEED: AuthUser[] = [
   seed_user(1, {
     user_name: "상용",
     user_role: "res",
+    memb_id: self_uid(1),
     tag_list: [],
     user_img: null,
     user_bio: "",
@@ -47,6 +54,7 @@ export const USER_SEED: AuthUser[] = [
   seed_user(2, {
     user_name: "민정",
     user_role: "res",
+    memb_id: self_uid(2),
     tag_list: [],
     user_img: null,
     user_bio: "",
@@ -56,6 +64,7 @@ export const USER_SEED: AuthUser[] = [
   seed_user(3, {
     user_name: "민지",
     user_role: "res",
+    memb_id: self_uid(3),
     tag_list: [],
     user_img: null,
     user_bio: "",
@@ -65,6 +74,7 @@ export const USER_SEED: AuthUser[] = [
   seed_user(4, {
     user_name: "성연",
     user_role: "chief",
+    jang_id: self_uid(4),
     tag_list: [],
     user_img: null,
     user_bio: "",

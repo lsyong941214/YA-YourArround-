@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, Info } from "lucide-react";
-import { find_jang } from "@/lib/data/jang_data";
+import { find_req_target } from "@/lib/data/req_target";
 import { AuthUser, curr_user } from "@/lib/store/auth_store";
 import { add_req } from "@/lib/store/blnd_store";
 
@@ -24,8 +24,7 @@ export default function BlndReqScreen({
   memb_id: string;
 }) {
   const rout_nav = useRouter();
-  const jang_item = find_jang(jang_id);
-  const resd_item = jang_item?.resd_list.find((r_item) => r_item.memb_id === memb_id);
+  const resd_item = find_req_target(jang_id, memb_id);
 
   const [msg_txt, setMsgTxt] = useState("");
   const [busy_flag, setBusyFlag] = useState(false);
@@ -41,7 +40,7 @@ export default function BlndReqScreen({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  if (!jang_item || !resd_item || me_item === undefined) {
+  if (!resd_item || me_item === undefined) {
     return <main className="h-dvh w-full bg-white" />;
   }
 
@@ -55,7 +54,7 @@ export default function BlndReqScreen({
     add_req({
       req_uid: me_item.user_id,
       jang_id,
-      jang_name: jang_item!.jang_name,
+      jang_name: resd_item!.jang_name,
       memb_id: resd_item!.memb_id,
       memb_name: resd_item!.memb_name,
       memb_age: resd_item!.memb_age,

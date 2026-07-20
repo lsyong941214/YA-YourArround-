@@ -4,8 +4,9 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { curr_user } from "@/lib/store/auth_store";
-import { MatcReq, sent_list as matc_sent_list } from "@/lib/store/matc_store";
+import { matc_stat_lbl, matc_stat_tone, MatcReq, sent_list as matc_sent_list } from "@/lib/store/matc_store";
 import { BlndReq, sent_list as blnd_sent_list } from "@/lib/store/blnd_store";
+import SentPeekModal from "./SentPeekModal";
 
 type SentItem =
   | { kind: "matc"; item: MatcReq }
@@ -14,6 +15,7 @@ type SentItem =
 export default function SentListScreen() {
   const rout_nav = useRouter();
   const [sent_list, setSentList] = useState<SentItem[]>([]);
+  const [sel_id, setSelId] = useState<string | null>(null);
 
   useEffect(() => {
     const user_now = curr_user();
@@ -31,12 +33,16 @@ export default function SentListScreen() {
     );
   }, []);
 
+  const sel_item = sent_list.find(
+    (s_item) => s_item.kind === "matc" && s_item.item.req_id === sel_id
+  ) as { kind: "matc"; item: MatcReq } | undefined;
+
   function go_item(sent_item: SentItem) {
     if (sent_item.kind === "matc") {
       if (sent_item.item.stat === "r_acpt") {
         rout_nav.push(`/matched/${sent_item.item.req_id}`);
       } else {
-        rout_nav.push(`/matching/${sent_item.item.req_id}`);
+        setSelId(sent_item.item.req_id);
       }
     } else {
       rout_nav.push(`/blind/${sent_item.item.blnd_id}`);
@@ -89,16 +95,25 @@ export default function SentListScreen() {
           ))}
         </div>
       )}
+
+      {sel_item && <SentPeekModal req_item={sel_item.item} onClose={() => setSelId(null)} />}
     </main>
   );
 }
 
 function StatBadge({ kind, stat }: { kind: "matc" | "blnd"; stat: string }) {
   if (kind === "matc") {
-    if (stat === "pend") return <Badge tone="wait">대기중</Badge>;
-    if (stat === "c_acpt") return <Badge tone="wait">이장님 수락 · 응답 대기</Badge>;
-    if (stat === "r_acpt") return <Badge tone="ok">연결 성사</Badge>;
-    return <Badge tone="off">거절됨</Badge>;
+    const tone_cls =
+      matc_stat_tone(stat as MatcReq["stat"]) === "ok"
+        ? "bg-emerald-50 text-emerald-600"
+        : matc_stat_tone(stat as MatcReq["stat"]) === "off"
+          ? "bg-gray-100 text-gray-500"
+          : "bg-[#FFE9D6] text-[#F26B12]";
+    return (
+      <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-bold ${tone_cls}`}>
+        {matc_stat_lbl(stat as MatcReq["stat"])}
+      </span>
+    );
   }
   if (stat === "pend") return <Badge tone="wait">대기중</Badge>;
   if (stat === "acpt") return <Badge tone="ok">수락됨</Badge>;

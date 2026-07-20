@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Bell, ChevronRight, Crown, Heart, Home, Pencil, Send, User, Users } from "lucide-react";
-import { jang_pend_cnt, memb_prop_cnt } from "@/lib/store/matc_store";
+import { jang_pend_cnt, jang_prog_cnt, memb_prop_cnt, sent_prog_cnt } from "@/lib/store/matc_store";
 import { memb_pend_cnt } from "@/lib/store/blnd_store";
 import { AuthRole, AuthUser, curr_user, updt_curr } from "@/lib/store/auth_store";
 import { list_chf_of, list_res_of } from "@/lib/store/cntc_store";
@@ -16,6 +16,8 @@ export default function HomeScreen() {
   const [user_role, setUserRole] = useState<AuthRole>("res");
   const [edit_open, setEditOpen] = useState(false);
   const [pend_val, setPendVal] = useState(0);
+  const [prog_val, setProgVal] = useState(0);
+  const [sent_prog_val, setSentProgVal] = useState(0);
   const [prop_val, setPropVal] = useState(0);
   const [cntc_list, setCntcList] = useState<AuthUser[]>([]);
 
@@ -32,6 +34,8 @@ export default function HomeScreen() {
     setMeItem(user_now);
     setUserRole(user_now.user_role);
     setPendVal(user_now.jang_id ? jang_pend_cnt(user_now.jang_id) : 0);
+    setProgVal(user_now.jang_id ? jang_prog_cnt(user_now.jang_id) : 0);
+    setSentProgVal(sent_prog_cnt(user_now.user_id));
     setPropVal(
       (user_now.memb_id ? memb_prop_cnt(user_now.memb_id) : 0) +
         (user_now.memb_id ? memb_pend_cnt(user_now.memb_id) : 0)
@@ -67,6 +71,10 @@ export default function HomeScreen() {
     }
   }
 
+  function go_sent() {
+    rout_nav.push("/sent");
+  }
+
   function go_prop() {
     rout_nav.push("/proposal");
   }
@@ -77,7 +85,7 @@ export default function HomeScreen() {
 
   const role_lbl = user_role === "res" ? "주민" : "이장님";
   const matc_lbl = user_role === "res" ? "매칭 현황" : "진행중인 매칭";
-  const matc_val = user_role === "res" ? `${me_item.matc_done}/${me_item.matc_max}` : `${pend_val}건`;
+  const matc_val = user_role === "res" ? `${sent_prog_val}/${me_item.matc_max}` : `${prog_val}건`;
   const bell_dot = (user_role === "chief" && pend_val > 0) || prop_val > 0;
 
   const cntc_lbl = user_role === "res" ? "이장님 연락처" : "연결된 주민";
@@ -235,7 +243,13 @@ export default function HomeScreen() {
       {/* 하단 탭바 (추후 개발) */}
       <nav className="fixed inset-x-0 bottom-0 z-10 flex justify-around border-t border-gray-100 bg-white py-2">
         <TabItem icon={<Home className="h-5 w-5" />} lbl_txt="홈" actv />
-        <TabItem icon={<Heart className="h-5 w-5" />} lbl_txt="매칭" badge_cnt={prop_val} onBadge={go_prop} />
+        <TabItem
+          icon={<Heart className="h-5 w-5" />}
+          lbl_txt="매칭"
+          badge_cnt={prop_val}
+          onBadge={go_prop}
+          onTap={go_sent}
+        />
         <TabItem icon={<Users className="h-5 w-5" />} lbl_txt="마을" />
         <TabItem icon={<Send className="h-5 w-5" />} lbl_txt="메시지" />
         <TabItem icon={<User className="h-5 w-5" />} lbl_txt="마이페이지" onTap={go_mypage} />

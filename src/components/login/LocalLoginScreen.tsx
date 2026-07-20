@@ -163,30 +163,36 @@ export default function LocalLoginScreen() {
         <section className="mt-4 px-5">
           <p className="text-xs font-medium text-gray-500">저장된 계정으로 로그인</p>
           <div className="mt-2 flex flex-col gap-2">
-            {save_list.map((u_item) => (
-              <button
-                key={u_item.user_id}
-                type="button"
-                onClick={() => do_swch(u_item.user_id)}
-                className="flex items-center gap-3 rounded-2xl border border-gray-100 p-3 text-left transition active:opacity-80"
-              >
-                <div
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white"
-                  style={{ backgroundColor: u_item.ton_hex }}
+            {save_list.map((u_item) => {
+              const jang_found = u_item.jang_id ? JANG_LIST.find((j) => j.jang_id === u_item.jang_id) : undefined;
+              const memb_found = u_item.memb_id
+                ? RESD_OPTS.some((r) => r.memb_id === u_item.memb_id)
+                : false;
+              return (
+                <button
+                  key={u_item.user_id}
+                  type="button"
+                  onClick={() => do_swch(u_item.user_id)}
+                  className="flex items-center gap-3 rounded-2xl border border-gray-100 p-3 text-left transition active:opacity-80"
                 >
-                  {u_item.ini_char}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-bold text-gray-900">{u_item.user_name}</p>
-                  <p className="text-xs text-gray-400">
-                    {u_item.user_role === "chief" ? "이장님" : "주민"}
-                    {u_item.jang_id ? ` · ${JANG_LIST.find((j) => j.jang_id === u_item.jang_id)?.jang_name ?? ""}` : ""}
-                    {u_item.memb_id ? " · 연결된 주민 프로필 있음" : ""}
-                  </p>
-                  <p className="truncate font-mono text-[11px] text-gray-300">{u_item.login_id}</p>
-                </div>
-              </button>
-            ))}
+                  <div
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white"
+                    style={{ backgroundColor: u_item.ton_hex }}
+                  >
+                    {u_item.ini_char}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-bold text-gray-900">{u_item.user_name}</p>
+                    <p className="text-xs text-gray-400">
+                      {u_item.user_role === "chief" ? "이장님" : "주민"}
+                      {jang_found ? ` · ${jang_found.jang_name}` : ""}
+                      {memb_found ? " · 연결된 주민 프로필 있음" : ""}
+                    </p>
+                    <p className="truncate font-mono text-[11px] text-gray-300">{u_item.login_id}</p>
+                  </div>
+                </button>
+              );
+            })}
           </div>
         </section>
       )}
