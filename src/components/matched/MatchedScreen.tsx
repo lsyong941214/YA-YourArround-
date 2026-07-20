@@ -5,12 +5,17 @@ import { useRouter } from "next/navigation";
 import { ChevronLeft, Handshake, Home } from "lucide-react";
 import { find_req, MatcReq, updt_req } from "@/lib/store/matc_store";
 import { add_revw } from "@/lib/store/revw_store";
+import { curr_user } from "@/lib/store/auth_store";
+import ProfileViewModal, { ProfileViewData } from "@/components/profile/ProfileViewModal";
 import RevwModal from "./RevwModal";
+
+type ProfWho = "req" | "memb" | null;
 
 export default function MatchedScreen({ req_id }: { req_id: string }) {
   const rout_nav = useRouter();
   const [req_item, setReqItem] = useState<MatcReq | undefined | null>(null);
   const [revw_open, setRevwOpen] = useState(false);
+  const [prof_who, setProfWho] = useState<ProfWho>(null);
 
   useEffect(() => {
     const next_item = find_req(req_id) ?? undefined;
@@ -35,8 +40,11 @@ export default function MatchedScreen({ req_id }: { req_id: string }) {
     setRevwOpen(false);
   }
 
-  // TODO: 프로필 다시 보기 상세 뷰 연동
-  function do_prof() {}
+  function do_prof_agn() {
+    if (!req_item) return;
+    const me_uid = curr_user()?.user_id;
+    setProfWho(me_uid === req_item.req_uid ? "memb" : "req");
+  }
 
   // TODO: 채팅 기능 연동
   function do_chat() {}
@@ -59,6 +67,35 @@ export default function MatchedScreen({ req_id }: { req_id: string }) {
       </main>
     );
   }
+
+  const prof_data: ProfileViewData | null =
+    prof_who === "req"
+      ? {
+          ini_char: req_item.req_ini,
+          ton_hex: req_item.req_ton,
+          phot_list: req_item.req_phts,
+          user_name: req_item.req_name,
+          user_age: req_item.req_age,
+          user_job: req_item.req_job,
+          user_mbti: req_item.req_mbti,
+          user_reg: req_item.req_reg,
+          user_bio: req_item.req_bio,
+          tag_list: req_item.req_tags,
+        }
+      : prof_who === "memb"
+        ? {
+            ini_char: req_item.ini_char,
+            ton_hex: req_item.ton_hex,
+            phot_list: req_item.memb_phts,
+            user_name: req_item.memb_name,
+            user_age: req_item.memb_age,
+            user_job: req_item.memb_job,
+            user_mbti: req_item.memb_mbti,
+            user_reg: req_item.memb_reg,
+            user_bio: req_item.memb_bio,
+            tag_list: req_item.tag_list,
+          }
+        : null;
 
   return (
     <main className="flex min-h-dvh w-full flex-col bg-white">
@@ -114,7 +151,7 @@ export default function MatchedScreen({ req_id }: { req_id: string }) {
             memb_name={req_item.req_name}
             memb_age={req_item.req_age}
             memb_job={req_item.req_job}
-            onView={do_prof}
+            onView={() => setProfWho("req")}
           />
           <PersonMini
             ini_char={req_item.ini_char}
@@ -122,7 +159,7 @@ export default function MatchedScreen({ req_id }: { req_id: string }) {
             memb_name={req_item.memb_name}
             memb_age={req_item.memb_age}
             memb_job={req_item.memb_job}
-            onView={do_prof}
+            onView={() => setProfWho("memb")}
           />
         </div>
 
@@ -132,7 +169,7 @@ export default function MatchedScreen({ req_id }: { req_id: string }) {
       <div className="space-y-2 px-6 pb-8 pt-4">
         <button
           type="button"
-          onClick={do_prof}
+          onClick={do_prof_agn}
           className="w-full rounded-2xl border border-gray-200 py-3.5 text-sm font-bold text-gray-700 transition active:opacity-90"
         >
           프로필 다시 보기
@@ -153,6 +190,8 @@ export default function MatchedScreen({ req_id }: { req_id: string }) {
           onSubmit={do_revw}
         />
       )}
+
+      {prof_data && <ProfileViewModal prof_item={prof_data} onClose={() => setProfWho(null)} />}
     </main>
   );
 }

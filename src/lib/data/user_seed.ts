@@ -19,7 +19,7 @@ const SEED_MATC_MAX = 5;
 
 type SeedInp = Omit<
   AuthUser,
-  "user_id" | "login_id" | "passwd" | "made_at" | "matc_done" | "matc_max"
+  "user_id" | "login_id" | "passwd" | "made_at" | "matc_done" | "matc_max" | "phot_list"
 >;
 
 function self_uid(seq_no: number): string {
@@ -32,6 +32,7 @@ function seed_user(seq_no: number, base: SeedInp): AuthUser {
     user_id: self_uid(seq_no),
     login_id: `tkddyd${seq_no}`,
     passwd: SEED_PASS,
+    phot_list: [],
     matc_done: 0,
     matc_max: SEED_MATC_MAX,
     made_at: SEED_BASE_MS + seq_no,

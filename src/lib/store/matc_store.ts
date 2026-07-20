@@ -21,6 +21,8 @@ export type MatcReq = {
   memb_job: string;
   memb_mbti: string;
   memb_reg: string;
+  memb_bio: string;
+  memb_phts: string[];
   tag_list: string[];
   ini_char: string;
   ton_hex: string;
@@ -29,6 +31,8 @@ export type MatcReq = {
   req_job: string;
   req_mbti: string;
   req_reg: string;
+  req_bio: string;
+  req_phts: string[];
   req_tags: string[];
   req_ini: string;
   req_ton: string;

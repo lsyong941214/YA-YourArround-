@@ -26,7 +26,7 @@ export default function ProposalModal({
         </div>
 
         <div className="px-5 pt-2">
-          <PhotoCrsl ini_char={req_item.req_ini} ton_hex={req_item.req_ton} />
+          <PhotoCrsl ini_char={req_item.req_ini} ton_hex={req_item.req_ton} phot_list={req_item.req_phts} />
         </div>
 
         <div className="px-5 pt-4">
@@ -47,6 +47,13 @@ export default function ProposalModal({
               </span>
             ))}
           </div>
+
+          {req_item.req_bio && (
+            <div className="mt-4 rounded-2xl bg-[#FFF8F3] p-3.5">
+              <p className="text-xs font-bold text-gray-900">소개</p>
+              <p className="mt-1 text-sm leading-relaxed text-gray-600">{req_item.req_bio}</p>
+            </div>
+          )}
 
           {req_item.acpt_cmt && (
             <div className="mt-4 rounded-2xl bg-[#FFF8F3] p-3.5">

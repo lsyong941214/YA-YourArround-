@@ -15,6 +15,8 @@ export type ReqTarget = {
   memb_job: string;
   memb_mbti: string;
   memb_reg: string;
+  memb_bio: string;
+  memb_phts: string[];
   tag_list: string[];
   ini_char: string;
   ton_hex: string;
@@ -32,6 +34,8 @@ export function find_req_target(jang_id: string, memb_id: string): ReqTarget | u
       memb_job: resd_item.memb_job,
       memb_mbti: resd_item.memb_mbti,
       memb_reg: resd_item.memb_reg,
+      memb_bio: "",
+      memb_phts: [],
       tag_list: resd_item.tag_list,
       ini_char: resd_item.ini_char,
       ton_hex: resd_item.ton_hex,
@@ -49,6 +53,8 @@ export function find_req_target(jang_id: string, memb_id: string): ReqTarget | u
       memb_job: res_user.user_job ?? "-",
       memb_mbti: res_user.user_mbti ?? "-",
       memb_reg: res_user.user_reg ?? "-",
+      memb_bio: res_user.user_bio,
+      memb_phts: res_user.phot_list,
       tag_list: res_user.tag_list,
       ini_char: res_user.ini_char,
       ton_hex: res_user.ton_hex,

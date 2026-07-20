@@ -1,10 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { X } from "lucide-react";
+import { ChevronRight, X } from "lucide-react";
 import { MatcReq, updt_req } from "@/lib/store/matc_store";
+import ProfileViewModal, { ProfileViewData } from "@/components/profile/ProfileViewModal";
 import AcptModal from "./AcptModal";
 import RejectModal from "./RejectModal";
+
+type ProfWho = "req" | "memb" | null;
 
 export default function MatcDetailModal({
   req_item,
@@ -17,6 +20,7 @@ export default function MatcDetailModal({
 }) {
   const [acpt_open, setAcptOpen] = useState(false);
   const [rjct_open, setRjctOpen] = useState(false);
+  const [prof_who, setProfWho] = useState<ProfWho>(null);
 
   function do_acpt(acpt_cmt: string) {
     updt_req(req_item.req_id, { stat: "c_acpt", acpt_cmt, seen_flag: false });
@@ -31,6 +35,35 @@ export default function MatcDetailModal({
     onChanged();
     onClose();
   }
+
+  const prof_data: ProfileViewData | null =
+    prof_who === "req"
+      ? {
+          ini_char: req_item.req_ini,
+          ton_hex: req_item.req_ton,
+          phot_list: req_item.req_phts,
+          user_name: req_item.req_name,
+          user_age: req_item.req_age,
+          user_job: req_item.req_job,
+          user_mbti: req_item.req_mbti,
+          user_reg: req_item.req_reg,
+          user_bio: req_item.req_bio,
+          tag_list: req_item.req_tags,
+        }
+      : prof_who === "memb"
+        ? {
+            ini_char: req_item.ini_char,
+            ton_hex: req_item.ton_hex,
+            phot_list: req_item.memb_phts,
+            user_name: req_item.memb_name,
+            user_age: req_item.memb_age,
+            user_job: req_item.memb_job,
+            user_mbti: req_item.memb_mbti,
+            user_reg: req_item.memb_reg,
+            user_bio: req_item.memb_bio,
+            tag_list: req_item.tag_list,
+          }
+        : null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center">
@@ -57,6 +90,7 @@ export default function MatcDetailModal({
             memb_mbti={req_item.req_mbti}
             memb_reg={req_item.req_reg}
             tag_list={req_item.req_tags}
+            onView={() => setProfWho("req")}
           />
 
           <p className="mt-3 text-xs font-medium text-gray-500">연결 희망 주민</p>
@@ -69,6 +103,7 @@ export default function MatcDetailModal({
             memb_mbti={req_item.memb_mbti}
             memb_reg={req_item.memb_reg}
             tag_list={req_item.tag_list}
+            onView={() => setProfWho("memb")}
           />
 
           {req_item.msg_txt && (
@@ -112,6 +147,7 @@ export default function MatcDetailModal({
         <AcptModal memb_name={req_item.memb_name} onClose={() => setAcptOpen(false)} onSubmit={do_acpt} />
       )}
       {rjct_open && <RejectModal onClose={() => setRjctOpen(false)} onSubmit={do_rjct} />}
+      {prof_data && <ProfileViewModal prof_item={prof_data} onClose={() => setProfWho(null)} />}
     </div>
   );
 }
@@ -125,6 +161,7 @@ function PersonCard({
   memb_mbti,
   memb_reg,
   tag_list,
+  onView,
 }: {
   ini_char: string;
   ton_hex: string;
@@ -134,16 +171,21 @@ function PersonCard({
   memb_mbti: string;
   memb_reg: string;
   tag_list: string[];
+  onView: () => void;
 }) {
   return (
-    <div className="mt-1 flex items-center gap-3 rounded-2xl border border-gray-100 bg-[#FFF8F3] p-3">
+    <button
+      type="button"
+      onClick={onView}
+      className="mt-1 flex w-full items-center gap-3 rounded-2xl border border-gray-100 bg-[#FFF8F3] p-3 text-left transition active:opacity-80"
+    >
       <div
         className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-base font-bold text-white"
         style={{ backgroundColor: ton_hex }}
       >
         {ini_char}
       </div>
-      <div className="min-w-0">
+      <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-bold text-gray-900">
           {memb_name} <span className="font-normal text-gray-400">{memb_age}</span>
           <span className="font-normal text-gray-400"> · {memb_job}</span>
@@ -153,6 +195,7 @@ function PersonCard({
         </p>
         <p className="mt-0.5 truncate text-xs text-gray-400">{tag_list.join(", ")}</p>
       </div>
-    </div>
+      <ChevronRight className="h-4 w-4 shrink-0 text-gray-300" />
+    </button>
   );
 }

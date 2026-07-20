@@ -2,6 +2,7 @@
 
 import { X } from "lucide-react";
 import { MatcReq, matc_stat_lbl } from "@/lib/store/matc_store";
+import PhotoCrsl from "@/components/proposal/PhotoCrsl";
 
 export default function SentPeekModal({ req_item, onClose }: { req_item: MatcReq; onClose: () => void }) {
   return (
@@ -12,6 +13,10 @@ export default function SentPeekModal({ req_item, onClose }: { req_item: MatcReq
           <button type="button" onClick={onClose} aria-label="닫기">
             <X className="h-5 w-5 text-gray-400" />
           </button>
+        </div>
+
+        <div className="px-5 pt-2">
+          <PhotoCrsl ini_char={req_item.ini_char} ton_hex={req_item.ton_hex} phot_list={req_item.memb_phts} />
         </div>
 
         <div className="px-5 pt-3">
@@ -34,6 +39,13 @@ export default function SentPeekModal({ req_item, onClose }: { req_item: MatcReq
               <p className="mt-0.5 truncate text-xs text-gray-400">{req_item.tag_list.join(", ")}</p>
             </div>
           </div>
+
+          {req_item.memb_bio && (
+            <div className="mt-3 rounded-2xl bg-[#FFF8F3] p-3.5">
+              <p className="text-xs font-bold text-gray-900">소개</p>
+              <p className="mt-1 text-sm leading-relaxed text-gray-600">{req_item.memb_bio}</p>
+            </div>
+          )}
 
           {(req_item.stat === "c_rjct" || req_item.stat === "r_rjct") && (
             <div className="mt-3 rounded-2xl bg-gray-50 p-3.5">

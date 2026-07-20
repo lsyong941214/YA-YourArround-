@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, Crown, Heart, Users } from "lucide-react";
+import { ChevronLeft, ChevronRight, Crown, Heart, Users } from "lucide-react";
 import { AuthUser, curr_user, find_user } from "@/lib/store/auth_store";
 import { list_chf_of, list_res_of } from "@/lib/store/cntc_store";
 import { has_req } from "@/lib/store/matc_store";
+import ProfileViewModal, { auth_to_prof } from "@/components/profile/ProfileViewModal";
 
 const NAV_DELAY = 250;
 
@@ -14,6 +15,7 @@ export default function CntcDetail({ uid }: { uid: string }) {
   const [user_item, setUserItem] = useState<AuthUser | null | undefined>(undefined);
   const [link_list, setLinkList] = useState<AuthUser[]>([]);
   const [liked_set, setLikedSet] = useState<Set<string>>(new Set());
+  const [prof_item, setProfItem] = useState<AuthUser | null>(null);
 
   useEffect(() => {
     const found = find_user(uid) ?? null;
@@ -72,7 +74,11 @@ export default function CntcDetail({ uid }: { uid: string }) {
         <h1 className="text-base font-bold text-gray-900">연락처 정보</h1>
       </header>
 
-      <section className="mx-5 mt-2 flex items-center gap-3 rounded-2xl bg-white p-4 shadow-sm">
+      <button
+        type="button"
+        onClick={() => setProfItem(user_item)}
+        className="mx-5 mt-2 flex w-[calc(100%-2.5rem)] items-center gap-3 rounded-2xl bg-white p-4 text-left shadow-sm transition active:opacity-90"
+      >
         <div
           className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full text-xl font-bold text-white"
           style={{ backgroundColor: user_item.ton_hex }}
@@ -92,11 +98,16 @@ export default function CntcDetail({ uid }: { uid: string }) {
             </span>
           </div>
           <p className="mt-0.5 truncate text-xs text-gray-400">
-            {user_item.user_bio ||
-              `${user_item.user_job || "-"} ${user_item.user_mbti ? `· ${user_item.user_mbti}` : ""}`}
+            {user_item.user_age ? `${user_item.user_age}세 · ` : ""}
+            {user_item.user_job || "-"} {user_item.user_mbti ? `· ${user_item.user_mbti}` : ""}{" "}
+            {user_item.user_reg ? `· ${user_item.user_reg}` : ""}
           </p>
+          {user_item.user_bio && (
+            <p className="mt-0.5 truncate text-xs text-gray-500">{user_item.user_bio}</p>
+          )}
         </div>
-      </section>
+        <ChevronRight className="h-4 w-4 shrink-0 text-gray-300" />
+      </button>
 
       <section className="mt-5">
         <h2 className="px-5 text-[15px] font-bold text-gray-900">{link_lbl}</h2>
@@ -111,18 +122,25 @@ export default function CntcDetail({ uid }: { uid: string }) {
                 key={l_item.user_id}
                 className="flex items-center gap-3 rounded-2xl bg-white p-4 shadow-sm"
               >
-                <div
-                  className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-base font-bold text-white"
-                  style={{ backgroundColor: l_item.ton_hex }}
+                <button
+                  type="button"
+                  onClick={() => setProfItem(l_item)}
+                  className="flex min-w-0 flex-1 items-center gap-3 text-left"
                 >
-                  {l_item.ini_char}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-bold text-gray-900">{l_item.user_name}</p>
-                  <p className="truncate text-xs text-gray-400">
-                    {l_item.user_job || "-"} {l_item.user_mbti ? `· ${l_item.user_mbti}` : ""}
-                  </p>
-                </div>
+                  <div
+                    className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-base font-bold text-white"
+                    style={{ backgroundColor: l_item.ton_hex }}
+                  >
+                    {l_item.ini_char}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-bold text-gray-900">{l_item.user_name}</p>
+                    <p className="truncate text-xs text-gray-400">
+                      {l_item.user_age ? `${l_item.user_age}세 · ` : ""}
+                      {l_item.user_job || "-"} {l_item.user_mbti ? `· ${l_item.user_mbti}` : ""}
+                    </p>
+                  </div>
+                </button>
                 {user_item.user_role === "chief" && (
                   <button
                     type="button"
@@ -142,6 +160,8 @@ export default function CntcDetail({ uid }: { uid: string }) {
           </div>
         )}
       </section>
+
+      {prof_item && <ProfileViewModal prof_item={auth_to_prof(prof_item)} onClose={() => setProfItem(null)} />}
     </main>
   );
 }

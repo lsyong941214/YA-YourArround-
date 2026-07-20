@@ -29,6 +29,7 @@ export type AuthUser = {
   user_reg?: string;
   tag_list: string[];
   user_img: string | null;
+  phot_list: string[];
   user_bio: string;
   ini_char: string;
   ton_hex: string;
@@ -156,6 +157,7 @@ export function login_new(inp: {
     user_reg: inp.user_reg,
     tag_list: inp.tag_list ?? [],
     user_img: inp.user_img ?? null,
+    phot_list: [],
     user_bio: inp.user_bio ?? "",
     ini_char: inp.user_name.slice(0, 1) || "?",
     ton_hex: pick_ton(inp.user_name + Date.now()),

@@ -257,12 +257,11 @@ export default function HomeScreen() {
 
       {edit_open && (
         <ProfEditModal
-          init_img={me_item.user_img}
-          init_bio={me_item.user_bio}
+          init_user={me_item}
           onClose={() => setEditOpen(false)}
-          onSave={(next_img, next_bio) => {
-            updt_curr({ user_img: next_img, user_bio: next_bio });
-            setMeItem((prev_item) => (prev_item ? { ...prev_item, user_img: next_img, user_bio: next_bio } : prev_item));
+          onSave={(patch) => {
+            updt_curr(patch);
+            setMeItem((prev_item) => (prev_item ? { ...prev_item, ...patch } : prev_item));
             setEditOpen(false);
           }}
         />
