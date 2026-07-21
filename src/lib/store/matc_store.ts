@@ -136,6 +136,18 @@ export function sent_list(req_uid: string): MatcReq[] {
     .sort((a_item, b_item) => b_item.made_at - a_item.made_at);
 }
 
+// 특정 주민(memb_id)이 "요청받은" 매칭 이력 (이장님 검토 단계인 pend/c_rjct는
+// 주민에게 노출된 적이 없는 요청이므로 제외 - c_acpt 이후 단계만 조회)
+export function memb_hist_list(memb_id: string): MatcReq[] {
+  return load_list()
+    .filter(
+      (r_item) =>
+        r_item.memb_id === memb_id &&
+        (r_item.stat === "c_acpt" || r_item.stat === "r_acpt" || r_item.stat === "r_rjct")
+    )
+    .sort((a_item, b_item) => b_item.made_at - a_item.made_at);
+}
+
 // 특정 유저(req_uid)가 보낸 요청 중 "진행중"(대기중 + 수락 대기중) 건수 - 홈 화면 매칭 현황 표시용
 export function sent_prog_cnt(req_uid: string): number {
   return sent_list(req_uid).filter((r_item) => r_item.stat === "pend" || r_item.stat === "c_acpt").length;

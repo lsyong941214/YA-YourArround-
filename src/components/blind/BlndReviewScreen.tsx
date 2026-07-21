@@ -3,7 +3,9 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
-import { BlndReq, find_req, updt_req } from "@/lib/store/blnd_store";
+import { BlndReq, find_req, side_of, updt_req } from "@/lib/store/blnd_store";
+import { curr_user } from "@/lib/store/auth_store";
+import BlndGameScreen from "./BlndGameScreen";
 
 export default function BlndReviewScreen({ blnd_id }: { blnd_id: string }) {
   const rout_nav = useRouter();
@@ -40,6 +42,13 @@ export default function BlndReviewScreen({ blnd_id }: { blnd_id: string }) {
         </button>
       </main>
     );
+  }
+
+  if (blnd_item.stat === "acpt") {
+    const my_side = side_of(blnd_item, curr_user());
+    if (my_side) {
+      return <BlndGameScreen blnd_id={blnd_id} item={blnd_item} side={my_side} />;
+    }
   }
 
   return (
