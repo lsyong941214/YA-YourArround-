@@ -13,8 +13,8 @@ export default function ChiefReviews({ jang_id }: { jang_id: string }) {
   const [scr_val, setScrVal] = useState(0);
 
   useEffect(() => {
-    setRevwList(jang_revw_list(jang_id));
-    setScrVal(avg_scr(jang_id));
+    jang_revw_list(jang_id).then(setRevwList);
+    avg_scr(jang_id).then(setScrVal);
   }, [jang_id]);
 
   if (!jang_item) {

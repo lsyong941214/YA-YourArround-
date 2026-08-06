@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowDown, ChevronLeft, Info } from "lucide-react";
-import { find_req_target } from "@/lib/data/req_target";
+import { find_req_target, ReqTarget } from "@/lib/data/req_target";
 import { AuthUser, curr_user } from "@/lib/store/auth_store";
 import { add_req } from "@/lib/store/matc_store";
 
@@ -17,58 +17,40 @@ export default function ReqSendScreen({
   memb_id: string;
 }) {
   const rout_nav = useRouter();
-  const resd_item = find_req_target(jang_id, memb_id);
+  const [resd_item, setResdItem] = useState<ReqTarget | null | undefined>(undefined);
 
   const [msg_txt, setMsgTxt] = useState("");
   const [busy_flag, setBusyFlag] = useState(false);
   const [me_item, setMeItem] = useState<AuthUser | null | undefined>(undefined);
 
   useEffect(() => {
-    const user_now = curr_user();
-    if (!user_now) {
-      rout_nav.replace("/login");
-      return;
-    }
-    setMeItem(user_now);
+    (async () => {
+      const user_now = await curr_user();
+      if (!user_now) {
+        rout_nav.replace("/login");
+        return;
+      }
+      setMeItem(user_now);
+      setResdItem((await find_req_target(jang_id, memb_id)) ?? null);
+    })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  if (!resd_item || me_item === undefined) {
+  if (resd_item === undefined || me_item === undefined) {
     return <main className="h-dvh w-full bg-white" />;
   }
 
-  if (!me_item) {
+  if (!me_item || !resd_item) {
     return null;
   }
 
-  function do_send() {
+  async function do_send() {
     if (busy_flag || !me_item) return;
     setBusyFlag(true);
-    add_req({
+    await add_req({
       req_uid: me_item.user_id,
       jang_id,
-      jang_name: resd_item!.jang_name,
-      memb_id: resd_item!.memb_id,
-      memb_name: resd_item!.memb_name,
-      memb_age: resd_item!.memb_age,
-      memb_job: resd_item!.memb_job,
-      memb_mbti: resd_item!.memb_mbti,
-      memb_reg: resd_item!.memb_reg,
-      memb_bio: resd_item!.memb_bio,
-      memb_phts: resd_item!.memb_phts,
-      tag_list: resd_item!.tag_list,
-      ini_char: resd_item!.ini_char,
-      ton_hex: resd_item!.ton_hex,
-      req_name: me_item.user_name,
-      req_age: me_item.user_age ?? 0,
-      req_job: me_item.user_job ?? "-",
-      req_mbti: me_item.user_mbti ?? "-",
-      req_reg: me_item.user_reg ?? "-",
-      req_bio: me_item.user_bio,
-      req_phts: me_item.phot_list,
-      req_tags: me_item.tag_list,
-      req_ini: me_item.ini_char,
-      req_ton: me_item.ton_hex,
+      memb_id,
       msg_txt,
     });
     rout_nav.replace("/home");

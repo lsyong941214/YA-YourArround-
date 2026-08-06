@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { load_list, matc_is_prog, matc_stat_lbl, matc_stat_tone, MatcReq } from "@/lib/store/matc_store";
+import { jang_list, matc_is_prog, matc_stat_lbl, matc_stat_tone, MatcReq } from "@/lib/store/matc_store";
 import { curr_user } from "@/lib/store/auth_store";
 import MatcDetailModal from "./MatcDetailModal";
 
@@ -13,15 +13,17 @@ export default function MatcListScreen() {
   const [sel_id, setSelId] = useState<string | null>(null);
   const [jang_id, setJangId] = useState<string | undefined>(undefined);
 
-  function refresh(jid: string | undefined) {
-    setReqList(jid ? load_list().filter((r_item) => r_item.jang_id === jid) : []);
+  async function refresh(jid: string | undefined) {
+    setReqList(jid ? await jang_list(jid) : []);
   }
 
   useEffect(() => {
-    const user_now = curr_user();
-    const jid = user_now?.jang_id;
-    setJangId(jid);
-    refresh(jid);
+    (async () => {
+      const user_now = await curr_user();
+      const jid = user_now?.user_role === "chief" ? user_now.user_id : undefined;
+      setJangId(jid);
+      refresh(jid);
+    })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

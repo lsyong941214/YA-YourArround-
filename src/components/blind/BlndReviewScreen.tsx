@@ -11,18 +11,21 @@ export default function BlndReviewScreen({ blnd_id }: { blnd_id: string }) {
   const rout_nav = useRouter();
   const [blnd_item, setBlndItem] = useState<BlndReq | undefined | null>(null);
 
+  const [my_user, setMyUser] = useState<{ user_id: string } | null | undefined>(undefined);
+
   useEffect(() => {
-    setBlndItem(find_req(blnd_id) ?? undefined);
+    find_req(blnd_id).then((found) => setBlndItem(found ?? undefined));
+    curr_user().then(setMyUser);
   }, [blnd_id]);
 
-  function do_acpt() {
-    updt_req(blnd_id, { stat: "acpt" });
-    setBlndItem(find_req(blnd_id));
+  async function do_acpt() {
+    await updt_req(blnd_id, { stat: "acpt" });
+    setBlndItem(await find_req(blnd_id));
   }
 
-  function do_rjct() {
-    updt_req(blnd_id, { stat: "rjct" });
-    setBlndItem(find_req(blnd_id));
+  async function do_rjct() {
+    await updt_req(blnd_id, { stat: "rjct" });
+    setBlndItem(await find_req(blnd_id));
   }
 
   if (blnd_item === null) {
@@ -45,7 +48,7 @@ export default function BlndReviewScreen({ blnd_id }: { blnd_id: string }) {
   }
 
   if (blnd_item.stat === "acpt") {
-    const my_side = side_of(blnd_item, curr_user());
+    const my_side = side_of(blnd_item, my_user);
     if (my_side) {
       return <BlndGameScreen blnd_id={blnd_id} item={blnd_item} side={my_side} />;
     }

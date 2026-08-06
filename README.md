@@ -5,8 +5,14 @@
 ## 기술 스택
 - IDE: Cursor
 - Frontend: Next.js (App Router) + Tailwind CSS
-- Backend/DB (예정): Supabase
+- Backend/DB/Auth: Supabase (`@supabase/supabase-js`)
 - Icon: lucide-react
+
+## Supabase 설정
+1. [supabase.com](https://supabase.com)에서 프로젝트를 생성한다.
+2. Project Settings > API에서 Project URL / anon key를 확인해 `.env.local.example`을 `.env.local`로 복사하고 채운다.
+3. SQL Editor에서 [supabase/schema.sql](supabase/schema.sql)을 실행해 테이블(`profiles`/`village_contacts`/`match_requests`/`blind_test_requests`/`blind_test_picks`/`chief_reviews`)과 RLS 정책을 생성한다.
+4. Authentication > Providers > Email에서 **"Confirm email"을 끈다** — 이 앱은 로그인ID를 합성 이메일(`{login_id}@jubyeon.local`)로 변환해 쓰기 때문에 실제 메일함이 없다. 켜져 있으면 가입 후 로그인이 막힌다.
 
 ## 폴더 구조 (확장자별 대분류)
 ```

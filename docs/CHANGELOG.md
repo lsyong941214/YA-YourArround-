@@ -1,5 +1,25 @@
 # CHANGELOG
 
+## v0.19.0 - Supabase 연동 (localStorage 저장소 전면 교체)
+- `@supabase/supabase-js` 추가, `src/lib/supabase/client.ts`에 단일 클라이언트 인스턴스 구성 (`.env.local`의 `NEXT_PUBLIC_SUPABASE_URL`/`NEXT_PUBLIC_SUPABASE_ANON_KEY` 필요, `.env.local.example` 참고)
+- `auth_store.ts`: Supabase Auth(이메일+비밀번호, 로그인ID는 합성 이메일로 변환) + `profiles` 테이블로 전면 교체. `AuthUser`에서 `login_id`/`passwd`/`jang_id`/`memb_id` 제거 - `profiles.id`(=auth.users.id) 하나가 역할과 무관하게 이장/주민 식별자를 겸함
+  - `LocalLoginScreen.tsx`: 목업 마을(JANG_LIST) 기반 "담당 마을 선택"/"연결된 주민 프로필 선택", 저장된 계정 목록 전환 UI 제거(실제 인증에서는 의미 없는 데모 전용 기능) - 로그인/회원가입 폼만 남기고 비동기 처리 + 로딩/에러 상태 추가
+- `cntc_store.ts`: `village_contacts` 테이블로 교체 (주민-이장 연락처)
+- `matc_store.ts`: `match_requests` 테이블로 교체 - 신청자/이장/대상 주민 프로필을 스냅샷으로 복사하던 방식을 버리고 매번 `profiles`를 JOIN해서 채우도록 정규화 (화면 쪽 필드 이름은 동일하게 유지해 변경 최소화). `add_req` 입력이 프로필 통째 복사에서 `{req_uid, jang_id, memb_id, msg_txt}`로 대폭 단순화됨
+- `blnd_store.ts`: `blind_test_requests` + `blind_test_picks`(밸런스 게임 카드별 선택, 회차 보존) 테이블로 교체, 같은 정규화 패턴 적용
+- `revw_store.ts`: `chief_reviews` 테이블로 교체, 리뷰어 프로필 스냅샷 대신 FK JOIN
+- 위 5개 store를 쓰는 25개 화면 컴포넌트를 모두 비동기 호출로 전환 (`curr_user()` 등이 이제 Promise를 반환)
+- `uid_rule.ts`/`user_seed.ts`/`cntc_seed.ts` 삭제 (로컬 채번/시드 데이터, Supabase로 대체되어 더 이상 쓰이지 않음)
+- `npx tsc --noEmit` / `npm run build` 통과 확인. 아직 실제 Supabase 프로젝트에 연결해 런타임 동작까지 검증하지는 않음 - 프로젝트 생성 후 `.env.local` 설정 + `supabase/schema.sql` 적용이 필요 (README.md의 "Supabase 설정" 절 참고)
+
+## v0.18.0 - Supabase 스키마 설계 (구현 전 초안)
+- Supabase 연동을 위한 테이블 스키마 초안 작성 (`supabase/schema.sql`) - 지금까지 각 `src/lib/store/*.ts`가 localStorage로 흉내내던 5개 엔티티를 실제 Postgres 테이블로 정의
+  - `profiles` (유저, auth.users 1:1), `village_contacts` (주민-이장 연락처), `match_requests` (연결 요청), `blind_test_requests`/`blind_test_picks` (주변인 테스트 + 카드 선택), `chief_reviews` (이장님 리뷰)
+  - 인증은 자체 login_id/passwd 테이블 대신 **Supabase Auth**로 전환하기로 결정 - `AuthUser`의 `jang_id`/`memb_id`(둘 다 "자기 자신의 user_id"를 가리키던 필드)는 제거, `profiles.id`(=auth.users.id) 하나가 역할과 무관하게 이장/주민 식별자를 겸함
+  - `match_requests`/`blind_test_requests`는 기존처럼 신청자·대상 프로필을 스냅샷으로 복사하지 않고 FK로 `profiles`를 참조하도록 정규화 (프로필이 바뀌면 과거 요청도 항상 최신 프로필을 보여줌 - localStorage 버전과의 의도적인 차이)
+  - RLS 정책까지 스키마에 함께 정의 (서버 백엔드 없이 브라우저가 Supabase에 직접 붙는 구조라 RLS가 유일한 보안 경계)
+- 아직 Supabase 프로젝트에 실제로 적용/연동은 하지 않은 초안 단계 - 다음 단계는 프로젝트 생성, `@supabase/supabase-js` 연동, 각 store 파일을 실제 쿼리로 교체하는 작업
+
 ## v0.17.0 - 매칭 현황 받은 요청 문구 정리 및 주변인 테스트 요청자 화면 버그 수정
 - 받은 요청 문구를 보낸 요청과 동일한 명사구 톤으로 통일: "OOO님이 연결을 요청했어요" → "OOO님으로부터 연결 요청" / "OOO님으로부터 주변인 테스트" (`SentListScreen.tsx`)
 - 버그 수정: 매칭 현황에서 내가 보낸 주변인 테스트(아직 상대가 결정 안 함/거절됨)를 누르면 상대방(수신자)이 보는 수락/거절 화면(`/blind/[blnd_id]`, `BlndReviewScreen.tsx`)이 잘못 보이던 문제

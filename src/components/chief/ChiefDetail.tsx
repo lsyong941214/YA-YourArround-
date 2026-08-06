@@ -15,11 +15,16 @@ export default function ChiefDetail({ jang_id }: { jang_id: string }) {
 
   useEffect(() => {
     if (!jang_item) return;
-    const next_set = new Set<string>();
-    jang_item.resd_list.forEach((r_item) => {
-      if (has_req(jang_id, r_item.memb_id)) next_set.add(r_item.memb_id);
-    });
-    setLikedSet(next_set);
+    (async () => {
+      const hit_list = await Promise.all(
+        jang_item.resd_list.map((r_item) => has_req(jang_id, r_item.memb_id))
+      );
+      const next_set = new Set<string>();
+      jang_item.resd_list.forEach((r_item, idx_val) => {
+        if (hit_list[idx_val]) next_set.add(r_item.memb_id);
+      });
+      setLikedSet(next_set);
+    })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [jang_id]);
 

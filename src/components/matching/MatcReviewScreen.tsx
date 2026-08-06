@@ -14,18 +14,18 @@ export default function MatcReviewScreen({ req_id }: { req_id: string }) {
   const [rjct_open, setRjctOpen] = useState(false);
 
   useEffect(() => {
-    setReqItem(find_req(req_id) ?? undefined);
+    find_req(req_id).then((found) => setReqItem(found ?? undefined));
   }, [req_id]);
 
-  function do_acpt(acpt_cmt: string) {
-    updt_req(req_id, { stat: "c_acpt", acpt_cmt, seen_flag: false });
-    setReqItem(find_req(req_id));
+  async function do_acpt(acpt_cmt: string) {
+    await updt_req(req_id, { stat: "c_acpt", acpt_cmt, seen_flag: false });
+    setReqItem(await find_req(req_id));
     setAcptOpen(false);
   }
 
-  function do_rjct(rjct_rsn: string, rjct_msg: string) {
-    updt_req(req_id, { stat: "c_rjct", rjct_rsn, rjct_msg });
-    setReqItem(find_req(req_id));
+  async function do_rjct(rjct_rsn: string, rjct_msg: string) {
+    await updt_req(req_id, { stat: "c_rjct", rjct_rsn, rjct_msg });
+    setReqItem(await find_req(req_id));
     setRjctOpen(false);
   }
 

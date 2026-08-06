@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, ChevronRight, LogOut, Pencil } from "lucide-react";
-import { find_jang } from "@/lib/data/jang_data";
 import { AuthUser, curr_user, do_logout, updt_curr } from "@/lib/store/auth_store";
 import ProfEditModal from "@/components/home/ProfEditModal";
 
@@ -13,11 +12,11 @@ export default function MyPageScreen() {
   const [edit_open, setEditOpen] = useState(false);
 
   useEffect(() => {
-    setUserItem(curr_user());
+    curr_user().then(setUserItem);
   }, []);
 
-  function do_out() {
-    do_logout();
+  async function do_out() {
+    await do_logout();
     rout_nav.replace("/login");
   }
 
@@ -39,8 +38,6 @@ export default function MyPageScreen() {
       </main>
     );
   }
-
-  const jang_item = user_item.jang_id ? find_jang(user_item.jang_id) : undefined;
 
   return (
     <main className="min-h-dvh w-full bg-[#FFF8F3] pb-10">
@@ -69,7 +66,6 @@ export default function MyPageScreen() {
           <p className="truncate text-base font-bold text-gray-900">{user_item.user_name}</p>
           <p className="mt-0.5 text-xs text-gray-400">
             {user_item.user_role === "chief" ? "이장님" : "주민"}
-            {jang_item ? ` · ${jang_item.jang_name}` : ""}
           </p>
           {user_item.user_bio && (
             <p className="mt-1 truncate text-xs text-gray-500">{user_item.user_bio}</p>
@@ -146,8 +142,8 @@ export default function MyPageScreen() {
         <ProfEditModal
           init_user={user_item}
           onClose={() => setEditOpen(false)}
-          onSave={(patch) => {
-            updt_curr(patch);
+          onSave={async (patch) => {
+            await updt_curr(patch);
             setUserItem((prev_item) => (prev_item ? { ...prev_item, ...patch } : prev_item));
             setEditOpen(false);
           }}

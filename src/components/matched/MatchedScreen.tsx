@@ -18,32 +18,32 @@ export default function MatchedScreen({ req_id }: { req_id: string }) {
   const [prof_who, setProfWho] = useState<ProfWho>(null);
 
   useEffect(() => {
-    const next_item = find_req(req_id) ?? undefined;
-    setReqItem(next_item);
-    if (next_item && next_item.stat === "r_acpt" && !next_item.rvwd_flag) {
-      setRevwOpen(true);
-    }
+    find_req(req_id).then((next_item) => {
+      setReqItem(next_item ?? undefined);
+      if (next_item && next_item.stat === "r_acpt" && !next_item.rvwd_flag) {
+        setRevwOpen(true);
+      }
+    });
   }, [req_id]);
 
-  function do_revw(scr_val: number, rvw_txt: string) {
+  async function do_revw(scr_val: number, rvw_txt: string) {
     if (!req_item) return;
-    add_revw({
+    await add_revw({
       jang_id: req_item.jang_id,
-      rvwr_name: req_item.memb_name,
-      rvwr_ini: req_item.ini_char,
-      rvwr_ton: req_item.ton_hex,
+      reviewer_id: req_item.memb_id,
+      match_request_id: req_item.req_id,
       scr_val,
       rvw_txt,
     });
-    updt_req(req_id, { rvwd_flag: true });
-    setReqItem(find_req(req_id));
+    await updt_req(req_id, { rvwd_flag: true });
+    setReqItem(await find_req(req_id));
     setRevwOpen(false);
   }
 
-  function do_prof_agn() {
+  async function do_prof_agn() {
     if (!req_item) return;
-    const me_uid = curr_user()?.user_id;
-    setProfWho(me_uid === req_item.req_uid ? "memb" : "req");
+    const me_now = await curr_user();
+    setProfWho(me_now?.user_id === req_item.req_uid ? "memb" : "req");
   }
 
   // TODO: 채팅 기능 연동

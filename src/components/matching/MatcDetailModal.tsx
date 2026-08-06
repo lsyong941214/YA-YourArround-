@@ -22,15 +22,15 @@ export default function MatcDetailModal({
   const [rjct_open, setRjctOpen] = useState(false);
   const [prof_who, setProfWho] = useState<ProfWho>(null);
 
-  function do_acpt(acpt_cmt: string) {
-    updt_req(req_item.req_id, { stat: "c_acpt", acpt_cmt, seen_flag: false });
+  async function do_acpt(acpt_cmt: string) {
+    await updt_req(req_item.req_id, { stat: "c_acpt", acpt_cmt, seen_flag: false });
     setAcptOpen(false);
     onChanged();
     onClose();
   }
 
-  function do_rjct(rjct_rsn: string, rjct_msg: string) {
-    updt_req(req_item.req_id, { stat: "c_rjct", rjct_rsn, rjct_msg });
+  async function do_rjct(rjct_rsn: string, rjct_msg: string) {
+    await updt_req(req_item.req_id, { stat: "c_rjct", rjct_rsn, rjct_msg });
     setRjctOpen(false);
     onChanged();
     onClose();

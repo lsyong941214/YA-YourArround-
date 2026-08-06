@@ -15,25 +15,28 @@ export default function ProposalListScreen() {
   const [sel_id, setSelId] = useState<string | null>(null);
 
   useEffect(() => {
-    const memb_id = curr_user()?.memb_id;
-    if (!memb_id) return;
-    mark_seen_memb(memb_id);
-    mark_blnd_seen(memb_id);
-    setPropList(memb_prop_list(memb_id));
-    setBlndList(memb_pend_list(memb_id));
+    (async () => {
+      const user_now = await curr_user();
+      if (!user_now) return;
+      const memb_id = user_now.user_id;
+      await Promise.all([mark_seen_memb(memb_id), mark_blnd_seen(memb_id)]);
+      const [prop_now, blnd_now] = await Promise.all([memb_prop_list(memb_id), memb_pend_list(memb_id)]);
+      setPropList(prop_now);
+      setBlndList(blnd_now);
+    })();
   }, []);
 
   const sel_item = prop_list.find((r_item) => r_item.req_id === sel_id) ?? null;
 
-  function do_acpt() {
+  async function do_acpt() {
     if (!sel_item) return;
-    updt_req(sel_item.req_id, { stat: "r_acpt" });
+    await updt_req(sel_item.req_id, { stat: "r_acpt" });
     rout_nav.push(`/matched/${sel_item.req_id}`);
   }
 
-  function do_rjct() {
+  async function do_rjct() {
     if (!sel_item) return;
-    updt_req(sel_item.req_id, { stat: "r_rjct" });
+    await updt_req(sel_item.req_id, { stat: "r_rjct" });
     setPropList((prev_list) => prev_list.filter((r_item) => r_item.req_id !== sel_item.req_id));
     setSelId(null);
   }

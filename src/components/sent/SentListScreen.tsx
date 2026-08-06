@@ -33,19 +33,21 @@ export default function SentListScreen() {
   const [sel_id, setSelId] = useState<string | null>(null);
   const [blnd_sel_id, setBlndSelId] = useState<string | null>(null);
 
-  function load_all() {
-    const user_now = curr_user();
+  async function load_all() {
+    const user_now = await curr_user();
     if (!user_now) return;
 
+    const [sent_matc, sent_blnd, recv_matc, recv_blnd] = await Promise.all([
+      matc_sent_list(user_now.user_id),
+      blnd_sent_list(user_now.user_id),
+      memb_hist_list(user_now.user_id),
+      blnd_memb_list(user_now.user_id),
+    ]);
     const list_val: SentItem[] = [
-      ...matc_sent_list(user_now.user_id).map((item): SentItem => ({ kind: "matc", dir: "sent", item })),
-      ...blnd_sent_list(user_now.user_id).map((item): SentItem => ({ kind: "blnd", dir: "sent", item })),
-      ...(user_now.memb_id
-        ? memb_hist_list(user_now.memb_id).map((item): SentItem => ({ kind: "matc", dir: "recv", item }))
-        : []),
-      ...(user_now.memb_id
-        ? blnd_memb_list(user_now.memb_id).map((item): SentItem => ({ kind: "blnd", dir: "recv", item }))
-        : []),
+      ...sent_matc.map((item): SentItem => ({ kind: "matc", dir: "sent", item })),
+      ...sent_blnd.map((item): SentItem => ({ kind: "blnd", dir: "sent", item })),
+      ...recv_matc.map((item): SentItem => ({ kind: "matc", dir: "recv", item })),
+      ...recv_blnd.map((item): SentItem => ({ kind: "blnd", dir: "recv", item })),
     ];
     setSentList(list_val.sort((a_item, b_item) => b_item.item.made_at - a_item.item.made_at));
   }
@@ -84,16 +86,16 @@ export default function SentListScreen() {
     setSelId(sent_item.item.req_id);
   }
 
-  function do_acpt() {
+  async function do_acpt() {
     if (!sel_entry) return;
-    updt_req(sel_entry.item.req_id, { stat: "r_acpt" });
+    await updt_req(sel_entry.item.req_id, { stat: "r_acpt" });
     setSelId(null);
     rout_nav.push(`/matched/${sel_entry.item.req_id}`);
   }
 
-  function do_rjct() {
+  async function do_rjct() {
     if (!sel_entry) return;
-    updt_req(sel_entry.item.req_id, { stat: "r_rjct" });
+    await updt_req(sel_entry.item.req_id, { stat: "r_rjct" });
     setSelId(null);
     load_all();
   }

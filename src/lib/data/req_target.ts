@@ -22,7 +22,7 @@ export type ReqTarget = {
   ton_hex: string;
 };
 
-export function find_req_target(jang_id: string, memb_id: string): ReqTarget | undefined {
+export async function find_req_target(jang_id: string, memb_id: string): Promise<ReqTarget | undefined> {
   const jang_item = find_jang(jang_id);
   const resd_item = jang_item?.resd_list.find((r_item) => r_item.memb_id === memb_id);
   if (jang_item && resd_item) {
@@ -42,8 +42,7 @@ export function find_req_target(jang_id: string, memb_id: string): ReqTarget | u
     };
   }
 
-  const chf_user = find_user(jang_id);
-  const res_user = find_user(memb_id);
+  const [chf_user, res_user] = await Promise.all([find_user(jang_id), find_user(memb_id)]);
   if (chf_user && res_user) {
     return {
       jang_name: `${chf_user.user_name} 이장님`,

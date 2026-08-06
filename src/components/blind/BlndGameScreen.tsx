@@ -40,14 +40,15 @@ export default function BlndGameScreen({
   useEffect(() => {
     if (!my_done || both_done) return;
     const timer_id = window.setInterval(() => {
-      const latest_item = find_req(blnd_id);
-      if (latest_item) setCurItem(latest_item);
+      find_req(blnd_id).then((latest_item) => {
+        if (latest_item) setCurItem(latest_item);
+      });
     }, 1200);
     return () => window.clearInterval(timer_id);
   }, [my_done, both_done, blnd_id]);
 
-  function do_pick(pick_val: BlndPick) {
-    const updt_item = submit_pick(blnd_id, side, pick_val);
+  async function do_pick(pick_val: BlndPick) {
+    const updt_item = await submit_pick(blnd_id, side, pick_val);
     if (updt_item) setCurItem(updt_item);
     setPhase("deck");
   }

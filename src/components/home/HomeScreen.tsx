@@ -21,26 +21,32 @@ export default function HomeScreen() {
   const [prop_val, setPropVal] = useState(0);
   const [cntc_list, setCntcList] = useState<AuthUser[]>([]);
 
-  function load_cntc(uid_val: string, role_val: AuthRole) {
-    setCntcList(role_val === "chief" ? list_res_of(uid_val) : list_chf_of(uid_val));
+  async function load_cntc(uid_val: string, role_val: AuthRole) {
+    setCntcList(await (role_val === "chief" ? list_res_of(uid_val) : list_chf_of(uid_val)));
   }
 
   useEffect(() => {
-    const user_now = curr_user();
-    if (!user_now) {
-      rout_nav.replace("/login");
-      return;
-    }
-    setMeItem(user_now);
-    setUserRole(user_now.user_role);
-    setPendVal(user_now.jang_id ? jang_pend_cnt(user_now.jang_id) : 0);
-    setProgVal(user_now.jang_id ? jang_prog_cnt(user_now.jang_id) : 0);
-    setSentProgVal(sent_prog_cnt(user_now.user_id));
-    setPropVal(
-      (user_now.memb_id ? memb_prop_cnt(user_now.memb_id) : 0) +
-        (user_now.memb_id ? memb_pend_cnt(user_now.memb_id) : 0)
-    );
-    load_cntc(user_now.user_id, user_now.user_role);
+    (async () => {
+      const user_now = await curr_user();
+      if (!user_now) {
+        rout_nav.replace("/login");
+        return;
+      }
+      setMeItem(user_now);
+      setUserRole(user_now.user_role);
+      const [pend_cnt, prog_cnt, sent_cnt, prop_cnt, blnd_cnt] = await Promise.all([
+        jang_pend_cnt(user_now.user_id),
+        jang_prog_cnt(user_now.user_id),
+        sent_prog_cnt(user_now.user_id),
+        memb_prop_cnt(user_now.user_id),
+        memb_pend_cnt(user_now.user_id),
+      ]);
+      setPendVal(pend_cnt);
+      setProgVal(prog_cnt);
+      setSentProgVal(sent_cnt);
+      setPropVal(prop_cnt + blnd_cnt);
+      load_cntc(user_now.user_id, user_now.user_role);
+    })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

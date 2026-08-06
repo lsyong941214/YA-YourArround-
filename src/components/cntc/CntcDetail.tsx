@@ -18,21 +18,28 @@ export default function CntcDetail({ uid }: { uid: string }) {
   const [prof_item, setProfItem] = useState<AuthUser | null>(null);
 
   useEffect(() => {
-    const found = find_user(uid) ?? null;
-    setUserItem(found);
-    if (found) {
-      const me_uid = curr_user()?.user_id;
-      const raw_list = found.user_role === "chief" ? list_res_of(found.user_id) : list_chf_of(found.user_id);
-      const next_list = raw_list.filter((l_item) => l_item.user_id !== me_uid);
-      setLinkList(next_list);
-      if (found.user_role === "chief") {
-        const next_set = new Set<string>();
-        next_list.forEach((r_item) => {
-          if (has_req(found.user_id, r_item.user_id)) next_set.add(r_item.user_id);
-        });
-        setLikedSet(next_set);
+    (async () => {
+      const found = (await find_user(uid)) ?? null;
+      setUserItem(found);
+      if (found) {
+        const [me_now, raw_list] = await Promise.all([
+          curr_user(),
+          found.user_role === "chief" ? list_res_of(found.user_id) : list_chf_of(found.user_id),
+        ]);
+        const next_list = raw_list.filter((l_item) => l_item.user_id !== me_now?.user_id);
+        setLinkList(next_list);
+        if (found.user_role === "chief") {
+          const hit_list = await Promise.all(
+            next_list.map((r_item) => has_req(found.user_id, r_item.user_id))
+          );
+          const next_set = new Set<string>();
+          next_list.forEach((r_item, idx_val) => {
+            if (hit_list[idx_val]) next_set.add(r_item.user_id);
+          });
+          setLikedSet(next_set);
+        }
       }
-    }
+    })();
   }, [uid]);
 
   function do_hert(memb_id: string) {

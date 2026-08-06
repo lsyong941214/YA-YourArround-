@@ -12,11 +12,13 @@ export default function ChiefListScreen() {
   const [cntc_list, setCntcList] = useState<AuthUser[]>([]);
 
   useEffect(() => {
-    const user_now = curr_user();
-    if (!user_now) return;
-    const chf_role = user_now.user_role === "chief";
-    setIsChief(chf_role);
-    setCntcList(chf_role ? list_res_of(user_now.user_id) : list_chf_of(user_now.user_id));
+    (async () => {
+      const user_now = await curr_user();
+      if (!user_now) return;
+      const chf_role = user_now.user_role === "chief";
+      setIsChief(chf_role);
+      setCntcList(await (chf_role ? list_res_of(user_now.user_id) : list_chf_of(user_now.user_id)));
+    })();
   }, []);
 
   function go_uid(uid_val: string) {
