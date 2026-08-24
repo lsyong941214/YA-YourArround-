@@ -112,6 +112,23 @@ create table public.chief_reviews (
 create index idx_chief_reviews_chief on public.chief_reviews (chief_id);
 
 -- ============================================================
+-- invite_codes: 이장이 발급하는 1회용 초대코드 (2026-08-24)
+-- ============================================================
+-- 발급 방향은 "이장이 발급 -> 주민이 입력". 코드 자체가 "이장이 인정한 사람"이라는
+-- 인증 수단이라, 코드 사용 후 별도 승인 단계는 두지 않는다. 1회용이고 만료는 없다.
+create table public.invite_codes (
+  code        text primary key,
+  chief_id    uuid not null references public.profiles(id) on delete cascade,
+  used_by     uuid references public.profiles(id) on delete set null,
+  used_at     timestamptz,
+  created_at  timestamptz not null default now()
+);
+create index idx_invite_codes_chief on public.invite_codes (chief_id);
+
+comment on table public.invite_codes is '이장이 발급하는 1회용 초대코드. used_by/used_at 이 null 이면 미사용.';
+comment on column public.invite_codes.code is '사람이 눈으로 읽고 옮겨 적는 코드. 혼동 문자(0/O/1/I/L) 제외 8자리.';
+
+-- ============================================================
 -- Row Level Security
 -- ============================================================
 alter table public.profiles enable row level security;
@@ -120,6 +137,7 @@ alter table public.match_requests enable row level security;
 alter table public.blind_test_requests enable row level security;
 alter table public.blind_test_picks enable row level security;
 alter table public.chief_reviews enable row level security;
+alter table public.invite_codes enable row level security;
 
 -- profiles: 로그인한 누구나 다른 프로필을 조회 가능(추천/탐색 화면에 필요), 본인만 등록/수정
 create policy "profiles_select_authenticated" on public.profiles
@@ -129,11 +147,12 @@ create policy "profiles_insert_own" on public.profiles
 create policy "profiles_update_own" on public.profiles
   for update using (auth.uid() = id);
 
--- village_contacts: 당사자(주민 또는 이장)만 조회, 주민만 새로 저장 가능
+-- village_contacts: 당사자(주민 또는 이장)만 조회.
+-- INSERT 정책은 일부러 두지 않는다 -- 연결은 아래 use_invt_code() 함수(SECURITY DEFINER)로만
+-- 만들어진다. 예전엔 주민이 직접 INSERT 할 수 있었는데(auth.uid() = resident_id), 그러면
+-- 주민이 아무 이장에게나 동의 없이 자신을 붙일 수 있어 제거했다.
 create policy "contacts_select_related" on public.village_contacts
   for select using (auth.uid() = resident_id or auth.uid() = chief_id);
-create policy "contacts_insert_resident" on public.village_contacts
-  for insert with check (auth.uid() = resident_id);
 
 -- match_requests: 신청자/이장/대상 주민만 조회. 생성은 신청자만, 상태 변경은 이장·대상 주민만
 create policy "match_select_related" on public.match_requests
@@ -178,6 +197,87 @@ create policy "reviews_select_all" on public.chief_reviews
   for select using (true);
 create policy "reviews_insert_own" on public.chief_reviews
   for insert with check (auth.uid() = reviewer_id);
+
+-- invite_codes: 발급/조회는 이장 본인만. 주민은 코드를 조회하지 못한다(코드 열거 방지) --
+-- 주민의 코드 사용은 아래 use_invt_code() 함수가 대신 처리한다.
+create policy "invt_insert_chief" on public.invite_codes
+  for insert with check (
+    auth.uid() = chief_id
+    and exists (
+      select 1 from public.profiles p
+      where p.id = auth.uid() and p.user_role = 'chief'
+    )
+  );
+create policy "invt_select_own" on public.invite_codes
+  for select using (auth.uid() = chief_id);
+create policy "invt_delete_own_unused" on public.invite_codes
+  for delete using (auth.uid() = chief_id and used_by is null);
+
+-- ============================================================
+-- use_invt_code: 주민이 초대코드를 입력해 이장과 연결한다
+-- ============================================================
+-- SECURITY DEFINER 로 실행해서, 주민에게 invite_codes 조회 권한이나 village_contacts
+-- INSERT 권한을 열어주지 않고도 연결을 만들 수 있게 한다.
+-- 코드 확인 -> 연결 생성 -> 코드 소진을 한 트랜잭션에서 처리한다.
+create or replace function public.use_invt_code(code_inp text)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  me_uid    uuid := auth.uid();
+  me_role   text;
+  invt_row  public.invite_codes%rowtype;
+begin
+  if me_uid is null then
+    return jsonb_build_object('stat', 'no_auth');
+  end if;
+
+  select user_role into me_role from public.profiles where id = me_uid;
+  if me_role is null then
+    return jsonb_build_object('stat', 'no_prof');
+  end if;
+  if me_role <> 'res' then
+    return jsonb_build_object('stat', 'not_res');
+  end if;
+
+  -- 같은 코드로 두 명이 동시에 들어오는 경우를 막기 위해 행을 잠근다
+  select * into invt_row
+  from public.invite_codes
+  where code = upper(btrim(code_inp))
+  for update;
+
+  if not found then
+    return jsonb_build_object('stat', 'bad_code');
+  end if;
+  if invt_row.chief_id = me_uid then
+    return jsonb_build_object('stat', 'self');
+  end if;
+  if invt_row.used_by is not null then
+    return jsonb_build_object('stat', 'used');
+  end if;
+
+  if exists (
+    select 1 from public.village_contacts
+    where resident_id = me_uid and chief_id = invt_row.chief_id
+  ) then
+    return jsonb_build_object('stat', 'already', 'chief_id', invt_row.chief_id);
+  end if;
+
+  insert into public.village_contacts (resident_id, chief_id)
+  values (me_uid, invt_row.chief_id);
+
+  update public.invite_codes
+  set used_by = me_uid, used_at = now()
+  where code = invt_row.code;
+
+  return jsonb_build_object('stat', 'ok', 'chief_id', invt_row.chief_id);
+end;
+$$;
+
+revoke all on function public.use_invt_code(text) from public;
+grant execute on function public.use_invt_code(text) to authenticated;
 
 -- ============================================================
 -- Storage: 프로필 사진 / 사진첩 앨범 버킷 (2026-08-24, 온보딩 도입과 함께 추가)

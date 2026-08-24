@@ -14,10 +14,13 @@ Next.js + Tailwind CSS 기반 웹으로 1차 개발 후, 웹앱 형태로 제공
 2. Project Settings > API에서 Project URL / anon key를 확인해 `.env.local.example`을 `.env.local`로 복사하고 채운다.
 3. SQL Editor에서 [supabase/schema.sql](supabase/schema.sql)을 실행해 테이블(`profiles`/`village_contacts`/`match_requests`/`blind_test_requests`/`blind_test_picks`/`chief_reviews`)과 RLS 정책, 그리고 프로필 사진용 Storage 버킷(`prof-img`)과 정책을 생성한다.
    - 이미 예전 버전의 `schema.sql`을 실행해둔 프로젝트라면, 전체를 다시 돌리지 말고
-     [supabase/alter_onbd.sql](supabase/alter_onbd.sql)만 실행한다
+     [supabase/alter_onbd.sql](supabase/alter_onbd.sql)과
+     [supabase/alter_invt.sql](supabase/alter_invt.sql)만 차례로 실행한다
      (`profiles.user_age` → `profiles.birth_dt` 교체 + `prof-img` 버킷/정책 추가).
      **나이만으로는 생년월일을 복원할 수 없어 기존 계정의 나이 값은 보존되지 않는다** —
      기존 테스트 계정은 생년월일이 비게 되니 필요하면 손으로 채워 넣을 것.
+   - `alter_invt.sql`은 초대코드 테이블(`invite_codes`)과 `use_invt_code()` 함수를 만들고,
+     주민이 아무 이장에게나 직접 연결할 수 있던 옛 정책(`contacts_insert_resident`)을 내린다.
 4. Authentication > Providers > Email에서 **"Confirm email"을 끈다**
 — 이 앱은 로그인ID를 합성 이메일(`{login_id}@jubyeon.local`)로 변환해 쓰기 때문에 실제 메일함이 없다.
 켜져 있으면 가입 후 로그인이 막힌다.
@@ -70,6 +73,10 @@ jubyeon-web/
   - "내 역할" 카드를 탭하면 주민 ↔ 이장님 전환, 매칭 관련 문구도 함께 변경
   - "이장님 연락처" 카드는 역할과 무관하게 항상 동일하게 노출
   - 가이드 투어 버튼, 하단 탭바는 디자인만 반영되어 있고 동작은 추후 개발 예정
+- `/invt` (`src/app/invt/page.tsx`) : **초대코드** — 주민과 이장을 연결하는 유일한 경로
+  - 이장: 1회용 초대코드 발급 / 복사 / 폐기, 사용 여부 확인
+  - 주민: 받은 코드를 입력해 이장과 연결
+  - 코드를 가지고 있다는 것 자체가 이장의 승인이라, 사용 후 별도 수락 단계는 없음
 - `/resident/[memb_id]` (`src/app/resident/[memb_id]/page.tsx`) : **주민 상세 프로필**
   - 홈 화면의 "이장님 추천 주민" 카드를 클릭하면 이동
   - `src/components/resident/MembDetail.tsx`: 프로필/소개 정보 + 하단 "이장님께 요청하기" / "직접 매칭시도" 버튼(추후 업데이트 예정 안내)

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, ChevronRight, Crown, Users } from "lucide-react";
+import { ChevronLeft, ChevronRight, Crown, Ticket, Users } from "lucide-react";
 import { AuthUser, curr_user } from "@/lib/store/auth_store";
 import { list_chf_of, list_res_of } from "@/lib/store/cntc_store";
 
@@ -23,6 +23,10 @@ export default function ChiefListScreen() {
 
   function go_uid(uid_val: string) {
     rout_nav.push(`/cntc/${uid_val}`);
+  }
+
+  function go_invt() {
+    rout_nav.push("/invt");
   }
 
   const ttl_txt = is_chief ? "연결된 주민" : "이장님 연락처";
@@ -47,8 +51,19 @@ export default function ChiefListScreen() {
 
       <p className="px-5 pb-3 text-xs text-gray-400">{desc_txt}</p>
 
+      <div className="px-5 pb-4">
+        <button
+          type="button"
+          onClick={go_invt}
+          className="flex w-full items-center justify-center gap-1.5 rounded-2xl bg-[#F26B12] py-3 text-sm font-bold text-white transition active:opacity-90"
+        >
+          <Ticket className="h-4 w-4" />
+          {is_chief ? "주민 초대하기" : "초대코드 입력하기"}
+        </button>
+      </div>
+
       {cntc_list.length === 0 ? (
-        <p className="px-5 pt-10 text-center text-sm text-gray-400">{empt_txt}</p>
+        <p className="px-5 pt-6 text-center text-sm text-gray-400">{empt_txt}</p>
       ) : (
         <div className="flex flex-col gap-3 px-5">
           {cntc_list.map((u_item) => (

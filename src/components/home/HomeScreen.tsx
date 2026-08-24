@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Bell, ChevronRight, Crown, Heart, Home, Pencil, Send, User, Users } from "lucide-react";
+import { Bell, ChevronRight, Crown, Heart, Home, Pencil, Send, Ticket, User, Users } from "lucide-react";
 import { jang_pend_cnt, jang_prog_cnt, memb_prop_cnt, sent_prog_cnt } from "@/lib/store/matc_store";
 import { memb_pend_cnt } from "@/lib/store/blnd_store";
 import { AuthRole, AuthUser, curr_user, updt_curr } from "@/lib/store/auth_store";
@@ -63,6 +63,10 @@ export default function HomeScreen() {
     setUserRole(next_role);
     updt_curr({ user_role: next_role });
     load_cntc(me_item!.user_id, next_role);
+  }
+
+  function go_invt() {
+    rout_nav.push("/invt");
   }
 
   function go_cntc() {
@@ -193,6 +197,20 @@ export default function HomeScreen() {
           >
             <div className="flex items-center justify-between">
               <span className="text-xs text-gray-400">전체 연락처 보기</span>
+              <ChevronRight className="h-4 w-4 text-gray-300" />
+            </div>
+          </button>
+          {/* 초대코드 - 이장은 발급, 주민은 입력 (연결을 만드는 유일한 경로) */}
+          <button
+            type="button"
+            onClick={go_invt}
+            className="mt-3 w-full border-t border-gray-100 pt-3 text-left"
+          >
+            <div className="flex items-center justify-between">
+              <span className="flex items-center gap-1 text-xs text-gray-400">
+                <Ticket className="h-3.5 w-3.5" />
+                {user_role === "chief" ? "주민 초대하기" : "초대코드 입력"}
+              </span>
               <ChevronRight className="h-4 w-4 text-gray-300" />
             </div>
           </button>
