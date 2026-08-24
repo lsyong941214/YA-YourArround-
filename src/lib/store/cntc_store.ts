@@ -4,7 +4,7 @@
  * - 주민이 이장을 연락처로 저장해두는 관계(resident_id -> chief_id)를 기록한다
  * - 명명 규칙: "단어_단어_..." 형태, 각 단어는 최대 4자
  */
-import { AuthUser } from "@/lib/store/auth_store";
+import { AuthUser, calc_age } from "@/lib/store/auth_store";
 import { supabase } from "@/lib/supabase/client";
 
 export type CntcItem = {
@@ -17,7 +17,7 @@ type ProfRow = {
   id: string;
   user_name: string;
   user_role: "res" | "chief";
-  user_age: number | null;
+  birth_dt: string | null;
   user_job: string | null;
   user_mbti: string | null;
   user_reg: string | null;
@@ -37,7 +37,8 @@ function row_to_user(row: ProfRow): AuthUser {
     user_id: row.id,
     user_name: row.user_name,
     user_role: row.user_role,
-    user_age: row.user_age ?? undefined,
+    birth_dt: row.birth_dt ?? undefined,
+    user_age: calc_age(row.birth_dt),
     user_job: row.user_job ?? undefined,
     user_mbti: row.user_mbti ?? undefined,
     user_reg: row.user_reg ?? undefined,

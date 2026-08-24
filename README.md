@@ -12,7 +12,12 @@ Next.js + Tailwind CSS 기반 웹으로 1차 개발 후, 웹앱 형태로 제공
 ## Supabase 설정
 1. [supabase.com](https://supabase.com)에서 프로젝트를 생성한다.
 2. Project Settings > API에서 Project URL / anon key를 확인해 `.env.local.example`을 `.env.local`로 복사하고 채운다.
-3. SQL Editor에서 [supabase/schema.sql](supabase/schema.sql)을 실행해 테이블(`profiles`/`village_contacts`/`match_requests`/`blind_test_requests`/`blind_test_picks`/`chief_reviews`)과 RLS 정책을 생성한다.
+3. SQL Editor에서 [supabase/schema.sql](supabase/schema.sql)을 실행해 테이블(`profiles`/`village_contacts`/`match_requests`/`blind_test_requests`/`blind_test_picks`/`chief_reviews`)과 RLS 정책, 그리고 프로필 사진용 Storage 버킷(`prof-img`)과 정책을 생성한다.
+   - 이미 예전 버전의 `schema.sql`을 실행해둔 프로젝트라면, 전체를 다시 돌리지 말고
+     [supabase/alter_onbd.sql](supabase/alter_onbd.sql)만 실행한다
+     (`profiles.user_age` → `profiles.birth_dt` 교체 + `prof-img` 버킷/정책 추가).
+     **나이만으로는 생년월일을 복원할 수 없어 기존 계정의 나이 값은 보존되지 않는다** —
+     기존 테스트 계정은 생년월일이 비게 되니 필요하면 손으로 채워 넣을 것.
 4. Authentication > Providers > Email에서 **"Confirm email"을 끈다**
 — 이 앱은 로그인ID를 합성 이메일(`{login_id}@jubyeon.local`)로 변환해 쓰기 때문에 실제 메일함이 없다.
 켜져 있으면 가입 후 로그인이 막힌다.
@@ -47,10 +52,15 @@ jubyeon-web/
   - 카카오/네이버/구글 소셜 로그인 버튼 제공 (각 사 Client ID 발급 전까지 TODO로 표시)
   - "휴대폰 번호로 시작하기" → 임시 로그인 화면(`/login/local`)으로 연결
   - 뒤로가기 시 이전 화면(로딩 화면)으로 이동
-- `/login/local` (`src/app/login/local/page.tsx`) : **임시 로그인** — 실제 로그인 API 연동 전까지 사용
-  - `src/lib/store/auth_store.ts`: 이름/역할(주민·이장님)/담당 마을 또는 연결 주민 프로필/나이/직업/MBTI/지역/소개/사진을 텍스트로 입력해 계정 생성, localStorage에 여러 계정을 저장해두고 전환 가능
-  - 이장님 역할은 담당 마을(jang_id)을, 주민 역할은 기존 목업 주민 중 하나(memb_id)를 선택해 연결하면 그 주민 앞으로 온 요청을 받아볼 수 있음
-  - `curr_user()` / `do_logout()` 등 함수 시그니처는 유지한 채, 추후 실제 로그인 API로 내부 구현만 교체 가능하도록 설계
+- `/login/local` (`src/app/login/local/page.tsx`) : **임시 로그인** — 실제 소셜 로그인 API 연동 전까지 사용
+  - 로그인ID/비밀번호로 로그인하거나 새 계정을 만든다. 계정 생성은 **계정(인증)만** 만들고,
+    프로필 입력은 온보딩 화면(`/onbd`)으로 넘긴다
+  - 인증은 Supabase Auth를 쓰며, 실제 메일함이 없어 로그인ID를 합성 이메일(`{login_id}@jubyeon.local`)로 변환해 사용
+- `/onbd` (`src/app/onbd/page.tsx`) : **최초 로그인 온보딩** — 내부 계정 프로필 작성
+  - 필수: 프로필 사진 / 이름 / 역할(주민·이장님) / 생년월일 / MBTI, 선택: 직업 / 지역 / 소개
+  - 사진은 Supabase Storage(`prof-img` 버킷)에 실제 업로드된다
+  - 로그인 수단(로그인ID·비밀번호, 추후 카카오/네이버/구글)과 무관하게 이 화면 하나를 공유한다.
+    `sess_stat()`이 `"onbd"`(세션은 있는데 `profiles` 행이 없음)인 유저가 이리로 들어온다
 - `/mypage` (`src/app/mypage/page.tsx`) : **마이페이지** — 내 프로필 확인, 계정 전환, 로그아웃
 
 - `/home` (`src/app/home/page.tsx`) : **홈 대시보드**

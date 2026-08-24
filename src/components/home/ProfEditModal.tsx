@@ -1,8 +1,17 @@
 "use client";
 
+/**
+ * ProfEditModal.tsx
+ * 프로필 수정 모달 (홈 화면 프로필 사진의 연필 버튼)
+ * - [2026-08-24] 나이 직접 입력 -> 생년월일 입력으로 교체(나이는 생년월일에서 파생 계산),
+ *   사진/앨범은 로컬 미리보기 대신 Supabase Storage 실제 업로드로 교체했다.
+ * - 명명 규칙: "단어_단어_..." 형태, 각 단어는 최대 4자
+ */
 import { useRef, useState } from "react";
 import { X } from "lucide-react";
-import { AuthUser } from "@/lib/store/auth_store";
+import { AuthUser, calc_age } from "@/lib/store/auth_store";
+import { MBTI_LIST } from "@/lib/data/mbti_list";
+import { upld_img, upld_many } from "@/lib/supabase/stor_upld";
 
 const BIO_MAX = 60;
 const PHOT_MAX = 6;
@@ -16,11 +25,13 @@ type Props = {
 export default function ProfEditModal({ init_user, onClose, onSave }: Props) {
   const [prev_img, setPrevImg] = useState<string | null>(init_user.user_img);
   const [bio_txt, setBioTxt] = useState(init_user.user_bio);
-  const [age_txt, setAgeTxt] = useState(init_user.user_age ? String(init_user.user_age) : "");
+  const [birth_dt, setBirthDt] = useState(init_user.birth_dt ?? "");
   const [job_txt, setJobTxt] = useState(init_user.user_job ?? "");
   const [mbti_txt, setMbtiTxt] = useState(init_user.user_mbti ?? "");
   const [reg_txt, setRegTxt] = useState(init_user.user_reg ?? "");
   const [phot_list, setPhotList] = useState<string[]>(init_user.phot_list);
+  const [img_busy, setImgBusy] = useState(false);
+  const [err_msg, setErrMsg] = useState("");
   const file_ref = useRef<HTMLInputElement>(null);
   const album_ref = useRef<HTMLInputElement>(null);
 
@@ -28,22 +39,38 @@ export default function ProfEditModal({ init_user, onClose, onSave }: Props) {
     file_ref.current?.click();
   }
 
-  function do_file(ev_chg: React.ChangeEvent<HTMLInputElement>) {
+  async function do_file(ev_chg: React.ChangeEvent<HTMLInputElement>) {
     const f_item = ev_chg.target.files?.[0];
+    ev_chg.target.value = "";
     if (!f_item) return;
-    // TODO: 실제 서버(Supabase Storage 등) 업로드 연동 전까지는 로컬 미리보기만 제공
-    setPrevImg(URL.createObjectURL(f_item));
+    setErrMsg("");
+    setImgBusy(true);
+    const { img_url, err_msg: up_err } = await upld_img(f_item, "avat");
+    setImgBusy(false);
+    if (!img_url) {
+      setErrMsg(up_err ?? "사진 업로드에 실패했어요.");
+      return;
+    }
+    setPrevImg(img_url);
   }
 
   function do_album_pick() {
     album_ref.current?.click();
   }
 
-  function do_album_file(ev_chg: React.ChangeEvent<HTMLInputElement>) {
+  async function do_album_file(ev_chg: React.ChangeEvent<HTMLInputElement>) {
     const f_list = Array.from(ev_chg.target.files ?? []);
-    if (f_list.length === 0) return;
-    setPhotList((prev_list) => [...prev_list, ...f_list.map((f_item) => URL.createObjectURL(f_item))].slice(0, PHOT_MAX));
     ev_chg.target.value = "";
+    if (f_list.length === 0) return;
+    setErrMsg("");
+    setImgBusy(true);
+    const room_cnt = Math.max(0, PHOT_MAX - phot_list.length);
+    const { url_list, err_msg: up_err } = await upld_many(f_list.slice(0, room_cnt), "albm");
+    setImgBusy(false);
+    if (up_err) setErrMsg(up_err);
+    if (url_list.length > 0) {
+      setPhotList((prev_list) => [...prev_list, ...url_list].slice(0, PHOT_MAX));
+    }
   }
 
   function do_album_del(idx_val: number) {
@@ -54,7 +81,10 @@ export default function ProfEditModal({ init_user, onClose, onSave }: Props) {
     onSave({
       user_img: prev_img,
       user_bio: bio_txt,
-      user_age: age_txt ? Number(age_txt) : undefined,
+      birth_dt: birth_dt || undefined,
+      // 나이는 DB에 저장하지 않는 파생값이지만, 호출한 화면이 patch를 그대로 머지해서
+      // 다시 그리므로 여기서 같이 계산해 넘긴다 (updt_curr 는 이 필드를 무시한다)
+      user_age: calc_age(birth_dt),
       user_job: job_txt || undefined,
       user_mbti: mbti_txt || undefined,
       user_reg: reg_txt || undefined,
@@ -76,7 +106,8 @@ export default function ProfEditModal({ init_user, onClose, onSave }: Props) {
           <button
             type="button"
             onClick={do_pick}
-            className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-full bg-[#FFE9D6] text-xs font-medium text-[#F26B12]"
+            disabled={img_busy}
+            className="relative flex h-20 w-20 items-center justify-center overflow-hidden rounded-full bg-[#FFE9D6] text-xs font-medium text-[#F26B12]"
           >
             {prev_img ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -84,17 +115,23 @@ export default function ProfEditModal({ init_user, onClose, onSave }: Props) {
             ) : (
               "사진 선택"
             )}
+            {img_busy && (
+              <span className="absolute inset-0 flex items-center justify-center bg-black/40 text-[11px] font-bold text-white">
+                올리는 중...
+              </span>
+            )}
           </button>
           <input ref={file_ref} type="file" accept="image/*" className="hidden" onChange={do_file} />
         </div>
 
         <div className="mt-5 grid grid-cols-2 gap-2">
           <div>
-            <label className="block text-xs font-medium text-gray-500">나이</label>
+            <label className="block text-xs font-medium text-gray-500">생년월일</label>
             <input
-              value={age_txt}
-              onChange={(ev_chg) => setAgeTxt(ev_chg.target.value.replace(/[^0-9]/g, ""))}
-              placeholder="예) 28"
+              value={birth_dt}
+              onChange={(ev_chg) => setBirthDt(ev_chg.target.value)}
+              type="date"
+              max={new Date().toISOString().slice(0, 10)}
               className="mt-1 w-full rounded-xl border border-gray-200 p-3 text-sm text-gray-800 outline-none focus:border-[#F26B12]"
             />
           </div>
@@ -109,12 +146,20 @@ export default function ProfEditModal({ init_user, onClose, onSave }: Props) {
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-500">MBTI</label>
-            <input
+            <select
               value={mbti_txt}
-              onChange={(ev_chg) => setMbtiTxt(ev_chg.target.value.toUpperCase())}
-              placeholder="예) INFJ"
-              className="mt-1 w-full rounded-xl border border-gray-200 p-3 text-sm text-gray-800 outline-none focus:border-[#F26B12]"
-            />
+              onChange={(ev_chg) => setMbtiTxt(ev_chg.target.value)}
+              className={`mt-1 w-full rounded-xl border border-gray-200 bg-white p-3 text-sm outline-none focus:border-[#F26B12] ${
+                mbti_txt ? "text-gray-800" : "text-gray-400"
+              }`}
+            >
+              <option value="">선택</option>
+              {MBTI_LIST.map((mbti_it) => (
+                <option key={mbti_it} value={mbti_it}>
+                  {mbti_it}
+                </option>
+              ))}
+            </select>
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-500">지역</label>
@@ -162,9 +207,10 @@ export default function ProfEditModal({ init_user, onClose, onSave }: Props) {
             <button
               type="button"
               onClick={do_album_pick}
-              className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl border border-dashed border-gray-300 text-[11px] text-gray-400"
+              disabled={img_busy}
+              className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl border border-dashed border-gray-300 text-[11px] text-gray-400 disabled:opacity-40"
             >
-              + 추가
+              {img_busy ? "올리는 중" : "+ 추가"}
             </button>
           )}
           <input
@@ -177,10 +223,13 @@ export default function ProfEditModal({ init_user, onClose, onSave }: Props) {
           />
         </div>
 
+        {err_msg && <p className="mt-2 text-xs text-red-400">{err_msg}</p>}
+
         <button
           type="button"
           onClick={do_save}
-          className="mt-5 w-full rounded-2xl bg-[#F26B12] py-3 text-sm font-bold text-white transition active:opacity-90"
+          disabled={img_busy}
+          className="mt-5 w-full rounded-2xl bg-[#F26B12] py-3 text-sm font-bold text-white transition active:opacity-90 disabled:opacity-40"
         >
           저장하기
         </button>

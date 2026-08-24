@@ -6,6 +6,7 @@
  *   (BlndReq의 필드 이름/모양은 기존 localStorage 버전과 동일하게 유지)
  * - 명명 규칙: "단어_단어_..." 형태, 각 단어는 최대 4자 ("블라인드" -> blnd)
  */
+import { calc_age } from "@/lib/store/auth_store";
 import { supabase } from "@/lib/supabase/client";
 
 export type BlndStat = "pend" | "acpt" | "rjct";
@@ -50,7 +51,7 @@ export type BlndSide = "req" | "memb";
 
 type ProfRow = {
   user_name: string;
-  user_age: number | null;
+  birth_dt: string | null;
   user_job: string | null;
   user_mbti: string | null;
   user_reg: string | null;
@@ -94,7 +95,7 @@ function row_to_blnd(row: BlndRow): BlndReq {
     jang_name: `${row.chief.user_name} 이장님`,
     memb_id: row.resident_id,
     memb_name: row.resident.user_name,
-    memb_age: row.resident.user_age ?? 0,
+    memb_age: calc_age(row.resident.birth_dt) ?? 0,
     memb_job: row.resident.user_job ?? "-",
     memb_mbti: row.resident.user_mbti ?? "-",
     memb_reg: row.resident.user_reg ?? "-",
@@ -102,7 +103,7 @@ function row_to_blnd(row: BlndRow): BlndReq {
     ini_char: row.resident.ini_char,
     ton_hex: row.resident.ton_hex,
     req_name: row.requester.user_name,
-    req_age: row.requester.user_age ?? 0,
+    req_age: calc_age(row.requester.birth_dt) ?? 0,
     req_job: row.requester.user_job ?? "-",
     req_mbti: row.requester.user_mbti ?? "-",
     req_reg: row.requester.user_reg ?? "-",

@@ -1,17 +1,25 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, Lock, Phone, ShieldCheck, Users } from "lucide-react";
 import { soc_lgin, SocProv } from "@/lib/auth/soc_auth";
-
-// 로그인 성공 후 이동할 경로 (3번째 페이지: 홈 대시보드)
-const NEXT_PATH = "/home";
+import { sess_stat, stat_path } from "@/lib/store/auth_store";
 
 export default function LoginScreen() {
   const rout_nav = useRouter();
   const [busy_prov, setBusyProv] = useState<SocProv | null>(null);
   const [note_msg, setNoteMsg] = useState("");
+
+  // 이미 로그인돼 있으면 세션 상태에 맞는 화면으로 보낸다.
+  // 다른 화면들은 "프로필 없음"도 미로그인으로 보고 /login 으로 돌려보내는데,
+  // 그 유저를 여기서 온보딩(/onbd)으로 이어준다.
+  useEffect(() => {
+    (async () => {
+      const stat_val = await sess_stat();
+      if (stat_val !== "none") rout_nav.replace(stat_path(stat_val));
+    })();
+  }, [rout_nav]);
 
   async function do_soc(prov: SocProv) {
     if (busy_prov) return;
@@ -19,7 +27,8 @@ export default function LoginScreen() {
     setBusyProv(prov);
     try {
       await soc_lgin(prov);
-      rout_nav.replace(NEXT_PATH);
+      // 가입 직후라면 프로필이 없으므로 온보딩으로, 기존 유저면 홈으로 간다
+      rout_nav.replace(stat_path(await sess_stat()));
     } catch {
       setNoteMsg("로그인에 실패했어요. 다시 시도해주세요.");
       setBusyProv(null);

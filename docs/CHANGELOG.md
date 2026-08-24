@@ -1,5 +1,36 @@
 # CHANGELOG
 
+## v0.2.0 - 최초 로그인 온보딩 도입 (계정 생성 / 프로필 작성 분리)
+- **계정 생성과 프로필 작성을 분리** (`src/lib/store/auth_store.ts`)
+  - 기존 `signup()`(auth.signUp + profiles.insert 원자 처리)을 `make_acct()`(계정만)과
+    `make_prof()`(현재 세션에 프로필 생성)로 나눔
+  - 이유: 소셜 로그인(카카오/네이버/구글)은 계정 생성이 provider 콜백에서 일어나 그 시점에
+    프로필을 입력받을 화면이 없다. 인증 수단과 무관하게 온보딩 화면 하나를 재사용하기 위한 구조 변경
+  - `sess_stat()` 신설: `"none"`(미로그인) / `"onbd"`(로그인됐지만 프로필 없음) / `"done"`
+    세 상태를 구분. 이전에는 `curr_user()`가 "세션 없음"과 "프로필 없음"을 모두 `null`로 반환해,
+    소셜 로그인을 붙이면 로그인 화면으로 무한히 되돌아가는 구조였다
+  - `stat_path()`로 상태별 이동 경로를 한 곳에서 관리
+- **온보딩 화면 신설** `/onbd` (`src/app/onbd/page.tsx`, `src/components/onbd/OnbdScreen.tsx`)
+  - 필수: 프로필 사진 / 이름 / 역할 / 생년월일 / MBTI, 선택: 직업 / 지역 / 소개
+  - 진입 게이트: 세션 상태가 `"onbd"`가 아니면 해당 상태의 화면으로 되돌림
+- **생년월일 도입, 나이는 파생값으로 전환**
+  - `profiles.user_age`(int) 제거, `profiles.birth_dt`(date) 추가
+  - `calc_age()`가 만 나이를 계산해 `AuthUser.user_age`를 채운다(DB에는 저장하지 않음).
+    나이와 생년월일을 함께 저장하면 나이가 낡는 문제가 있어 단일 출처로 정리
+  - 프로필을 자체 조회하던 `matc_store` / `blnd_store` / `cntc_store`도 동일하게 전환
+- **사진 업로드 실제 연동** (`src/lib/supabase/stor_upld.ts`)
+  - 로컬 미리보기(`URL.createObjectURL`) → Supabase Storage `prof-img` 버킷 실제 업로드
+  - 경로 `{auth.uid()}/{avat|albm}_{timestamp}_{rand}.{ext}` — 첫 폴더를 uid로 고정해
+    "본인 폴더에만 쓰기" 정책이 성립하게 함. 이미지 타입/5MB 용량 검증 포함
+  - 온보딩과 프로필 수정 모달이 같은 헬퍼를 공유
+- **MBTI 자유 입력 → 16종 선택** (`src/lib/data/mbti_list.ts` 공용화)
+- **로그인 화면 정리**
+  - `/login/local`: 계정 생성 시 로그인ID/비밀번호만 받고 온보딩으로 이어짐(프로필 필드 제거)
+  - `/login`: 진입 시 이미 로그인된 세션이면 상태에 맞는 화면으로 보냄. 소셜 로그인 성공 후
+    이동 경로도 `stat_path(sess_stat())` 기준으로 변경(실제 OAuth 연동 시 그대로 동작)
+- **DB**: `supabase/schema.sql` 갱신 + 기존 프로젝트용 델타 `supabase/alter_onbd.sql` 추가
+  (birth_dt 전환, prof-img 버킷/정책)
+
 ## v0.19.0 - Supabase 연동 (localStorage 저장소 전면 교체)
 - `@supabase/supabase-js` 추가, `src/lib/supabase/client.ts`에 단일 클라이언트 인스턴스 구성 (`.env.local`의 `NEXT_PUBLIC_SUPABASE_URL`/`NEXT_PUBLIC_SUPABASE_ANON_KEY` 필요, `.env.local.example` 참고)
 - `auth_store.ts`: Supabase Auth(이메일+비밀번호, 로그인ID는 합성 이메일로 변환) + `profiles` 테이블로 전면 교체. `AuthUser`에서 `login_id`/`passwd`/`jang_id`/`memb_id` 제거 - `profiles.id`(=auth.users.id) 하나가 역할과 무관하게 이장/주민 식별자를 겸함

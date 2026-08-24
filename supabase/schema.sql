@@ -20,7 +20,7 @@ create table public.profiles (
   id            uuid primary key references auth.users(id) on delete cascade,
   user_name     text not null,
   user_role     text not null check (user_role in ('res', 'chief')), -- res=주민, chief=이장
-  user_age      int,
+  birth_dt      date,                          -- 생년월일. 나이(user_age)는 이 값에서 앱이 파생 계산한다
   user_job      text,
   user_mbti     text,
   user_reg      text,
@@ -178,3 +178,31 @@ create policy "reviews_select_all" on public.chief_reviews
   for select using (true);
 create policy "reviews_insert_own" on public.chief_reviews
   for insert with check (auth.uid() = reviewer_id);
+
+-- ============================================================
+-- Storage: 프로필 사진 / 사진첩 앨범 버킷 (2026-08-24, 온보딩 도입과 함께 추가)
+-- ============================================================
+-- 파일 경로 규칙: `{auth.uid()}/avat_{timestamp}.{ext}` (프로필 사진)
+--                `{auth.uid()}/albm_{timestamp}.{ext}` (사진첩 앨범)
+-- 첫 폴더명을 uid로 강제해서, 정책만으로 "남의 사진은 못 올리고 못 지운다"가 성립하게 한다.
+insert into storage.buckets (id, name, public)
+values ('prof-img', 'prof-img', true)
+on conflict (id) do nothing;
+
+-- 조회: 프로필은 다른 유저에게도 보여야 하므로 공개 버킷(누구나 URL로 조회)
+create policy "prof_img_select_all" on storage.objects
+  for select using (bucket_id = 'prof-img');
+
+-- 업로드/수정/삭제: 본인 uid 폴더 안에서만 가능
+create policy "prof_img_insert_own" on storage.objects
+  for insert with check (
+    bucket_id = 'prof-img' and (storage.foldername(name))[1] = auth.uid()::text
+  );
+create policy "prof_img_update_own" on storage.objects
+  for update using (
+    bucket_id = 'prof-img' and (storage.foldername(name))[1] = auth.uid()::text
+  );
+create policy "prof_img_delete_own" on storage.objects
+  for delete using (
+    bucket_id = 'prof-img' and (storage.foldername(name))[1] = auth.uid()::text
+  );
