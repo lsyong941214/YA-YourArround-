@@ -57,30 +57,47 @@ function row_to_user(row: ProfRow): AuthUser {
   };
 }
 
+// village_contacts 조회 + 상대방 프로필을 2단계로 나눠 가져온다.
+// (기존엔 .select("profiles!village_contacts_xxx_fkey(*)")로 한 번에 JOIN했는데,
+// PostgREST가 관계를 못 찾으면 - 예: alter_invt.sql 적용 후 스키마 캐시가 아직
+// 갱신되지 않은 경우 - 에러를 그대로 삼켜 "연결이 하나도 없음"과 구분되지 않았다.
+// 2단계로 나누면 어느 단계가 실패했는지 콘솔에서 바로 보이고, 관계명 해석에도 기대지 않는다.)
+async function profs_of(id_list: string[]): Promise<ProfRow[]> {
+  if (id_list.length === 0) return [];
+  const { data, error } = await supabase.from("profiles").select("*").in("id", id_list);
+  if (error) {
+    console.error("[cntc_store] profiles 조회 실패:", error.message);
+    return [];
+  }
+  return (data ?? []) as ProfRow[];
+}
+
 // 주민(res_uid) 기준 저장된 연락처 - 이장 프로필 목록
 export async function list_chf_of(res_uid: string): Promise<AuthUser[]> {
   const { data, error } = await supabase
     .from("village_contacts")
-    .select("profiles!village_contacts_chief_id_fkey(*)")
+    .select("chief_id")
     .eq("resident_id", res_uid);
-  if (error || !data) return [];
-  return data
-    .map((row) => row.profiles as unknown as ProfRow)
-    .filter((p_row): p_row is ProfRow => !!p_row)
-    .map(row_to_user);
+  if (error) {
+    console.error("[cntc_store] list_chf_of 조회 실패:", error.message);
+    return [];
+  }
+  const prof_list = await profs_of((data ?? []).map((row) => row.chief_id));
+  return prof_list.map(row_to_user);
 }
 
 // 이장(chf_uid) 기준 연결된 주민 - 주민 프로필 목록
 export async function list_res_of(chf_uid: string): Promise<AuthUser[]> {
   const { data, error } = await supabase
     .from("village_contacts")
-    .select("profiles!village_contacts_resident_id_fkey(*)")
+    .select("resident_id")
     .eq("chief_id", chf_uid);
-  if (error || !data) return [];
-  return data
-    .map((row) => row.profiles as unknown as ProfRow)
-    .filter((p_row): p_row is ProfRow => !!p_row)
-    .map(row_to_user);
+  if (error) {
+    console.error("[cntc_store] list_res_of 조회 실패:", error.message);
+    return [];
+  }
+  const prof_list = await profs_of((data ?? []).map((row) => row.resident_id));
+  return prof_list.map(row_to_user);
 }
 
 // 주민(res_uid)-이장(chf_uid) 연락처가 이미 있는지

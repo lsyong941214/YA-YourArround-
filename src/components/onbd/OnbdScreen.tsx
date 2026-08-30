@@ -10,7 +10,7 @@
  */
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Camera } from "lucide-react";
+import { Camera, ChevronDown } from "lucide-react";
 import { AuthRole, make_prof, sess_stat, stat_path } from "@/lib/store/auth_store";
 import { MBTI_LIST } from "@/lib/data/mbti_list";
 import { upld_img } from "@/lib/supabase/stor_upld";
@@ -174,20 +174,23 @@ export default function OnbdScreen() {
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-500">MBTI *</label>
-            <select
-              value={mbti_val}
-              onChange={(ev_chg) => setMbtiVal(ev_chg.target.value)}
-              className={`mt-1 w-full rounded-xl border border-gray-200 bg-white p-3 text-sm outline-none focus:border-[#F26B12] ${
-                mbti_val ? "text-gray-800" : "text-gray-400"
-              }`}
-            >
-              <option value="">선택</option>
-              {MBTI_LIST.map((mbti_it) => (
-                <option key={mbti_it} value={mbti_it}>
-                  {mbti_it}
-                </option>
-              ))}
-            </select>
+            <div className="relative mt-1">
+              <select
+                value={mbti_val}
+                onChange={(ev_chg) => setMbtiVal(ev_chg.target.value)}
+                className={`w-full appearance-none rounded-xl border border-gray-200 bg-white py-3 pl-3 pr-8 text-sm outline-none focus:border-[#F26B12] ${
+                  mbti_val ? "text-gray-800" : "text-gray-400"
+                }`}
+              >
+                <option value="">선택</option>
+                {MBTI_LIST.map((mbti_it) => (
+                  <option key={mbti_it} value={mbti_it}>
+                    {mbti_it}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            </div>
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-500">직업</label>

@@ -7,6 +7,7 @@ import { find_req, MatcReq, updt_req } from "@/lib/store/matc_store";
 import { add_revw } from "@/lib/store/revw_store";
 import { curr_user } from "@/lib/store/auth_store";
 import ProfileViewModal, { ProfileViewData } from "@/components/profile/ProfileViewModal";
+import Avatar from "@/components/common/Avatar";
 import RevwModal from "./RevwModal";
 
 type ProfWho = "req" | "memb" | null;
@@ -74,6 +75,7 @@ export default function MatchedScreen({ req_id }: { req_id: string }) {
           ini_char: req_item.req_ini,
           ton_hex: req_item.req_ton,
           phot_list: req_item.req_phts,
+          avat_url: req_item.req_img,
           user_name: req_item.req_name,
           user_age: req_item.req_age,
           user_job: req_item.req_job,
@@ -87,6 +89,7 @@ export default function MatchedScreen({ req_id }: { req_id: string }) {
             ini_char: req_item.ini_char,
             ton_hex: req_item.ton_hex,
             phot_list: req_item.memb_phts,
+            avat_url: req_item.memb_img,
             user_name: req_item.memb_name,
             user_age: req_item.memb_age,
             user_job: req_item.memb_job,
@@ -122,21 +125,23 @@ export default function MatchedScreen({ req_id }: { req_id: string }) {
         <h1 className="text-xl font-extrabold text-gray-900">연결 성사! 🎉</h1>
 
         <div className="mt-8 flex items-center gap-5">
-          <div
-            className="flex h-20 w-20 items-center justify-center rounded-full text-2xl font-bold text-white"
-            style={{ backgroundColor: req_item.req_ton }}
-          >
-            {req_item.req_ini}
-          </div>
+          <Avatar
+            img_url={req_item.req_img}
+            ini_char={req_item.req_ini}
+            ton_hex={req_item.req_ton}
+            size_cls="h-20 w-20"
+            txt_cls="text-2xl"
+          />
           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#FFF3E9] text-[#F26B12]">
             <Handshake className="h-5 w-5" />
           </div>
-          <div
-            className="flex h-20 w-20 items-center justify-center rounded-full text-2xl font-bold text-white"
-            style={{ backgroundColor: req_item.ton_hex }}
-          >
-            {req_item.ini_char}
-          </div>
+          <Avatar
+            img_url={req_item.memb_img}
+            ini_char={req_item.ini_char}
+            ton_hex={req_item.ton_hex}
+            size_cls="h-20 w-20"
+            txt_cls="text-2xl"
+          />
         </div>
 
         <p className="mt-6 text-base font-bold text-gray-900">
@@ -146,6 +151,7 @@ export default function MatchedScreen({ req_id }: { req_id: string }) {
 
         <div className="mt-8 grid w-full grid-cols-2 gap-3">
           <PersonMini
+            img_url={req_item.req_img}
             ini_char={req_item.req_ini}
             ton_hex={req_item.req_ton}
             memb_name={req_item.req_name}
@@ -154,6 +160,7 @@ export default function MatchedScreen({ req_id }: { req_id: string }) {
             onView={() => setProfWho("req")}
           />
           <PersonMini
+            img_url={req_item.memb_img}
             ini_char={req_item.ini_char}
             ton_hex={req_item.ton_hex}
             memb_name={req_item.memb_name}
@@ -197,6 +204,7 @@ export default function MatchedScreen({ req_id }: { req_id: string }) {
 }
 
 function PersonMini({
+  img_url,
   ini_char,
   ton_hex,
   memb_name,
@@ -204,6 +212,7 @@ function PersonMini({
   memb_job,
   onView,
 }: {
+  img_url?: string | null;
   ini_char: string;
   ton_hex: string;
   memb_name: string;
@@ -213,11 +222,8 @@ function PersonMini({
 }) {
   return (
     <div className="rounded-2xl bg-[#FFF8F3] p-3 text-center">
-      <div
-        className="mx-auto flex h-11 w-11 items-center justify-center rounded-full text-sm font-bold text-white"
-        style={{ backgroundColor: ton_hex }}
-      >
-        {ini_char}
+      <div className="mx-auto flex h-11 w-11 items-center justify-center">
+        <Avatar img_url={img_url} ini_char={ini_char} ton_hex={ton_hex} size_cls="h-11 w-11" txt_cls="text-sm" />
       </div>
       <p className="mt-2 text-xs font-bold text-gray-900">
         {memb_name} <span className="font-normal text-gray-400">{memb_age}</span>

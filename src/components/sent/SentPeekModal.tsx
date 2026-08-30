@@ -3,6 +3,7 @@
 import { X } from "lucide-react";
 import { MatcReq, matc_stat_lbl } from "@/lib/store/matc_store";
 import PhotoCrsl from "@/components/proposal/PhotoCrsl";
+import Avatar from "@/components/common/Avatar";
 
 export default function SentPeekModal({
   req_item,
@@ -18,6 +19,7 @@ export default function SentPeekModal({
       ? {
           ini_char: req_item.ini_char,
           ton_hex: req_item.ton_hex,
+          img_url: req_item.memb_img,
           name: req_item.memb_name,
           age: req_item.memb_age,
           job: req_item.memb_job,
@@ -31,6 +33,7 @@ export default function SentPeekModal({
       : {
           ini_char: req_item.req_ini,
           ton_hex: req_item.req_ton,
+          img_url: req_item.req_img,
           name: req_item.req_name,
           age: req_item.req_age,
           job: req_item.req_job,
@@ -53,18 +56,24 @@ export default function SentPeekModal({
         </div>
 
         <div className="px-5 pt-2">
-          <PhotoCrsl ini_char={oppo.ini_char} ton_hex={oppo.ton_hex} phot_list={oppo.phts} />
+          <PhotoCrsl
+            ini_char={oppo.ini_char}
+            ton_hex={oppo.ton_hex}
+            phot_list={oppo.phts}
+            avat_url={oppo.img_url}
+          />
         </div>
 
         <div className="px-5 pt-3">
           <p className="text-xs font-medium text-gray-500">{oppo.lbl_txt}</p>
           <div className="mt-1 flex items-center gap-3 rounded-2xl border border-gray-100 bg-[#FFF8F3] p-3">
-            <div
-              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-base font-bold text-white"
-              style={{ backgroundColor: oppo.ton_hex }}
-            >
-              {oppo.ini_char}
-            </div>
+            <Avatar
+              img_url={oppo.img_url}
+              ini_char={oppo.ini_char}
+              ton_hex={oppo.ton_hex}
+              size_cls="h-12 w-12"
+              txt_cls="text-base"
+            />
             <div className="min-w-0">
               <p className="truncate text-sm font-bold text-gray-900">
                 {oppo.name} <span className="font-normal text-gray-400">{oppo.age}</span>

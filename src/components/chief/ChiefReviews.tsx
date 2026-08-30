@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ChevronLeft, Star } from "lucide-react";
 import { find_jang } from "@/lib/data/jang_data";
 import { avg_scr, jang_revw_list, RevwItem } from "@/lib/store/revw_store";
+import Avatar from "@/components/common/Avatar";
 
 export default function ChiefReviews({ jang_id }: { jang_id: string }) {
   const rout_nav = useRouter();
@@ -68,12 +69,13 @@ export default function ChiefReviews({ jang_id }: { jang_id: string }) {
           revw_list.map((r_item) => (
             <div key={r_item.revw_id} className="rounded-2xl bg-white p-4 shadow-sm">
               <div className="flex items-center gap-3">
-                <div
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white"
-                  style={{ backgroundColor: r_item.rvwr_ton }}
-                >
-                  {r_item.rvwr_ini}
-                </div>
+                <Avatar
+                  img_url={r_item.rvwr_img}
+                  ini_char={r_item.rvwr_ini}
+                  ton_hex={r_item.rvwr_ton}
+                  size_cls="h-10 w-10"
+                  txt_cls="text-sm"
+                />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-bold text-gray-900">{r_item.rvwr_name}</p>
                   <div className="mt-0.5 flex gap-0.5">

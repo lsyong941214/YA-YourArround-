@@ -8,7 +8,7 @@
  * - 명명 규칙: "단어_단어_..." 형태, 각 단어는 최대 4자
  */
 import { useRef, useState } from "react";
-import { X } from "lucide-react";
+import { ChevronDown, X } from "lucide-react";
 import { AuthUser, calc_age } from "@/lib/store/auth_store";
 import { MBTI_LIST } from "@/lib/data/mbti_list";
 import { upld_img, upld_many } from "@/lib/supabase/stor_upld";
@@ -146,20 +146,23 @@ export default function ProfEditModal({ init_user, onClose, onSave }: Props) {
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-500">MBTI</label>
-            <select
-              value={mbti_txt}
-              onChange={(ev_chg) => setMbtiTxt(ev_chg.target.value)}
-              className={`mt-1 w-full rounded-xl border border-gray-200 bg-white p-3 text-sm outline-none focus:border-[#F26B12] ${
-                mbti_txt ? "text-gray-800" : "text-gray-400"
-              }`}
-            >
-              <option value="">선택</option>
-              {MBTI_LIST.map((mbti_it) => (
-                <option key={mbti_it} value={mbti_it}>
-                  {mbti_it}
-                </option>
-              ))}
-            </select>
+            <div className="relative mt-1">
+              <select
+                value={mbti_txt}
+                onChange={(ev_chg) => setMbtiTxt(ev_chg.target.value)}
+                className={`w-full appearance-none rounded-xl border border-gray-200 bg-white py-3 pl-3 pr-8 text-sm outline-none focus:border-[#F26B12] ${
+                  mbti_txt ? "text-gray-800" : "text-gray-400"
+                }`}
+              >
+                <option value="">선택</option>
+                {MBTI_LIST.map((mbti_it) => (
+                  <option key={mbti_it} value={mbti_it}>
+                    {mbti_it}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            </div>
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-500">지역</label>
@@ -179,7 +182,7 @@ export default function ProfEditModal({ init_user, onClose, onSave }: Props) {
           rows={3}
           maxLength={BIO_MAX}
           className="mt-1 w-full resize-none rounded-xl border border-gray-200 p-3 text-sm text-gray-800 outline-none focus:border-[#F26B12]"
-          placeholder="나를 소개하는 한 마디를 남겨보세요"
+          placeholder="취미나 주말 루틴, 나만의 특징을 적어보세요 (예: 주말엔 등산 다녀요, 요리가 취미예요)"
         />
         <p className="mt-1 text-right text-[11px] text-gray-300">
           {bio_txt.length}/{BIO_MAX}

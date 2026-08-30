@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ChevronLeft, ChevronRight, Crown, Ticket, Users } from "lucide-react";
 import { AuthUser, curr_user } from "@/lib/store/auth_store";
 import { list_chf_of, list_res_of } from "@/lib/store/cntc_store";
+import Avatar from "@/components/common/Avatar";
 
 export default function ChiefListScreen() {
   const rout_nav = useRouter();
@@ -73,12 +74,13 @@ export default function ChiefListScreen() {
               onClick={() => go_uid(u_item.user_id)}
               className="flex items-center gap-3 rounded-2xl bg-white p-4 text-left shadow-sm transition active:opacity-90"
             >
-              <div
-                className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full text-xl font-bold text-white"
-                style={{ backgroundColor: u_item.ton_hex }}
-              >
-                {u_item.ini_char}
-              </div>
+              <Avatar
+                img_url={u_item.user_img}
+                ini_char={u_item.ini_char}
+                ton_hex={u_item.ton_hex}
+                size_cls="h-14 w-14"
+                txt_cls="text-xl"
+              />
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5">
                   <p className="truncate text-sm font-bold text-gray-900">{u_item.user_name}</p>

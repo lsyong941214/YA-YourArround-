@@ -7,6 +7,7 @@ import { AuthUser, curr_user, find_user } from "@/lib/store/auth_store";
 import { list_chf_of, list_res_of } from "@/lib/store/cntc_store";
 import { has_req } from "@/lib/store/matc_store";
 import ProfileViewModal, { auth_to_prof } from "@/components/profile/ProfileViewModal";
+import Avatar from "@/components/common/Avatar";
 
 const NAV_DELAY = 250;
 
@@ -86,12 +87,13 @@ export default function CntcDetail({ uid }: { uid: string }) {
         onClick={() => setProfItem(user_item)}
         className="mx-5 mt-2 flex w-[calc(100%-2.5rem)] items-center gap-3 rounded-2xl bg-white p-4 text-left shadow-sm transition active:opacity-90"
       >
-        <div
-          className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full text-xl font-bold text-white"
-          style={{ backgroundColor: user_item.ton_hex }}
-        >
-          {user_item.ini_char}
-        </div>
+        <Avatar
+          img_url={user_item.user_img}
+          ini_char={user_item.ini_char}
+          ton_hex={user_item.ton_hex}
+          size_cls="h-14 w-14"
+          txt_cls="text-xl"
+        />
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
             <p className="truncate text-sm font-bold text-gray-900">{user_item.user_name}</p>
@@ -134,12 +136,13 @@ export default function CntcDetail({ uid }: { uid: string }) {
                   onClick={() => setProfItem(l_item)}
                   className="flex min-w-0 flex-1 items-center gap-3 text-left"
                 >
-                  <div
-                    className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-base font-bold text-white"
-                    style={{ backgroundColor: l_item.ton_hex }}
-                  >
-                    {l_item.ini_char}
-                  </div>
+                  <Avatar
+                    img_url={l_item.user_img}
+                    ini_char={l_item.ini_char}
+                    ton_hex={l_item.ton_hex}
+                    size_cls="h-12 w-12"
+                    txt_cls="text-base"
+                  />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-bold text-gray-900">{l_item.user_name}</p>
                     <p className="truncate text-xs text-gray-400">

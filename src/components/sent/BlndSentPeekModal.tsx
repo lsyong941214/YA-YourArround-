@@ -2,6 +2,7 @@
 
 import { X } from "lucide-react";
 import { BlndReq } from "@/lib/store/blnd_store";
+import Avatar from "@/components/common/Avatar";
 
 const STAT_LBL: Record<BlndReq["stat"], string> = {
   pend: "수락 대기중",
@@ -29,12 +30,13 @@ export default function BlndSentPeekModal({
         <div className="px-5 pt-3">
           <p className="text-xs font-medium text-gray-500">요청한 주민</p>
           <div className="mt-1 flex items-center gap-3 rounded-2xl border border-gray-100 bg-[#F1F0FD] p-3">
-            <div
-              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-base font-bold text-white"
-              style={{ backgroundColor: req_item.ton_hex }}
-            >
-              {req_item.ini_char}
-            </div>
+            <Avatar
+              img_url={req_item.memb_img}
+              ini_char={req_item.ini_char}
+              ton_hex={req_item.ton_hex}
+              size_cls="h-12 w-12"
+              txt_cls="text-base"
+            />
             <div className="min-w-0">
               <p className="truncate text-sm font-bold text-gray-900">
                 {req_item.memb_name}

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, Info } from "lucide-react";
 import { find_req, MatcReq, updt_req } from "@/lib/store/matc_store";
+import Avatar from "@/components/common/Avatar";
 import AcptModal from "./AcptModal";
 import RejectModal from "./RejectModal";
 
@@ -72,6 +73,7 @@ export default function MatcReviewScreen({ req_id }: { req_id: string }) {
 
         <p className="mt-5 text-xs font-medium text-gray-500">신청자 정보</p>
         <PersonCard
+          img_url={req_item.req_img}
           ini_char={req_item.req_ini}
           ton_hex={req_item.req_ton}
           memb_name={req_item.req_name}
@@ -84,6 +86,7 @@ export default function MatcReviewScreen({ req_id }: { req_id: string }) {
 
         <p className="mt-4 text-xs font-medium text-gray-500">연결 희망 주민</p>
         <PersonCard
+          img_url={req_item.memb_img}
           ini_char={req_item.ini_char}
           ton_hex={req_item.ton_hex}
           memb_name={req_item.memb_name}
@@ -170,6 +173,7 @@ export default function MatcReviewScreen({ req_id }: { req_id: string }) {
 }
 
 function PersonCard({
+  img_url,
   ini_char,
   ton_hex,
   memb_name,
@@ -179,6 +183,7 @@ function PersonCard({
   memb_reg,
   tag_list,
 }: {
+  img_url?: string | null;
   ini_char: string;
   ton_hex: string;
   memb_name: string;
@@ -190,12 +195,7 @@ function PersonCard({
 }) {
   return (
     <div className="mt-1 flex items-center gap-3 rounded-2xl border border-gray-100 bg-[#FFF8F3] p-3">
-      <div
-        className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-base font-bold text-white"
-        style={{ backgroundColor: ton_hex }}
-      >
-        {ini_char}
-      </div>
+      <Avatar img_url={img_url} ini_char={ini_char} ton_hex={ton_hex} size_cls="h-12 w-12" txt_cls="text-base" />
       <div className="min-w-0">
         <p className="truncate text-sm font-bold text-gray-900">
           {memb_name} <span className="font-normal text-gray-400">{memb_age}</span>

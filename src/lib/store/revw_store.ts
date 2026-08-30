@@ -13,6 +13,7 @@ export type RevwItem = {
   rvwr_name: string;
   rvwr_ini: string;
   rvwr_ton: string;
+  rvwr_img: string | null;
   scr_val: number;
   rvw_txt: string;
   made_at: number;
@@ -24,10 +25,11 @@ type RevwRow = {
   score: number;
   review_text: string;
   created_at: string;
-  reviewer: { user_name: string; ini_char: string; ton_hex: string };
+  reviewer: { user_name: string; ini_char: string; ton_hex: string; avatar_url: string | null };
 };
 
-const SEL_JOIN = "*, reviewer:profiles!chief_reviews_reviewer_id_fkey(user_name, ini_char, ton_hex)";
+const SEL_JOIN =
+  "*, reviewer:profiles!chief_reviews_reviewer_id_fkey(user_name, ini_char, ton_hex, avatar_url)";
 
 function row_to_revw(row: RevwRow): RevwItem {
   return {
@@ -36,6 +38,7 @@ function row_to_revw(row: RevwRow): RevwItem {
     rvwr_name: row.reviewer.user_name,
     rvwr_ini: row.reviewer.ini_char,
     rvwr_ton: row.reviewer.ton_hex,
+    rvwr_img: row.reviewer.avatar_url,
     scr_val: row.score,
     rvw_txt: row.review_text,
     made_at: new Date(row.created_at).getTime(),

@@ -6,6 +6,7 @@ import { ArrowDown, ChevronLeft, Info } from "lucide-react";
 import { find_req_target, ReqTarget } from "@/lib/data/req_target";
 import { AuthUser, curr_user } from "@/lib/store/auth_store";
 import { add_req } from "@/lib/store/matc_store";
+import Avatar from "@/components/common/Avatar";
 
 const MSG_MAX = 100;
 
@@ -73,6 +74,7 @@ export default function ReqSendScreen({
       <div className="flex-1 px-5 pt-2">
         <p className="text-xs font-medium text-gray-500">내 정보 (신청자)</p>
         <PersonCard
+          img_url={me_item.user_img}
           ini_char={me_item.ini_char}
           ton_hex={me_item.ton_hex}
           memb_name={me_item.user_name}
@@ -89,6 +91,7 @@ export default function ReqSendScreen({
 
         <p className="text-xs font-medium text-gray-500">연결 희망 주민</p>
         <PersonCard
+          img_url={resd_item.memb_img}
           ini_char={resd_item.ini_char}
           ton_hex={resd_item.ton_hex}
           memb_name={resd_item.memb_name}
@@ -148,6 +151,7 @@ export default function ReqSendScreen({
 }
 
 function PersonCard({
+  img_url,
   ini_char,
   ton_hex,
   memb_name,
@@ -157,6 +161,7 @@ function PersonCard({
   memb_reg,
   tag_list,
 }: {
+  img_url?: string | null;
   ini_char: string;
   ton_hex: string;
   memb_name: string;
@@ -168,12 +173,7 @@ function PersonCard({
 }) {
   return (
     <div className="mt-1 flex items-center gap-3 rounded-2xl border border-gray-100 bg-[#FFF8F3] p-3">
-      <div
-        className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-base font-bold text-white"
-        style={{ backgroundColor: ton_hex }}
-      >
-        {ini_char}
-      </div>
+      <Avatar img_url={img_url} ini_char={ini_char} ton_hex={ton_hex} size_cls="h-12 w-12" txt_cls="text-base" />
       <div className="min-w-0">
         <p className="truncate text-sm font-bold text-gray-900">
           {memb_name} <span className="font-normal text-gray-400">{memb_age}</span>

@@ -31,6 +31,7 @@ export type BlndReq = {
   tag_list: string[];
   ini_char: string;
   ton_hex: string;
+  memb_img: string | null;
   req_name: string;
   req_age: number;
   req_job: string;
@@ -39,6 +40,7 @@ export type BlndReq = {
   req_tags: string[];
   req_ini: string;
   req_ton: string;
+  req_img: string | null;
   msg_txt: string;
   stat: BlndStat;
   seen_flag?: boolean;
@@ -58,6 +60,7 @@ type ProfRow = {
   tag_list: string[];
   ini_char: string;
   ton_hex: string;
+  avatar_url: string | null;
 };
 
 type PickRow = { side: BlndSide; card_idx: number; pick: BlndPick };
@@ -102,6 +105,7 @@ function row_to_blnd(row: BlndRow): BlndReq {
     tag_list: row.resident.tag_list ?? [],
     ini_char: row.resident.ini_char,
     ton_hex: row.resident.ton_hex,
+    memb_img: row.resident.avatar_url,
     req_name: row.requester.user_name,
     req_age: calc_age(row.requester.birth_dt) ?? 0,
     req_job: row.requester.user_job ?? "-",
@@ -110,6 +114,7 @@ function row_to_blnd(row: BlndRow): BlndReq {
     req_tags: row.requester.tag_list ?? [],
     req_ini: row.requester.ini_char,
     req_ton: row.requester.ton_hex,
+    req_img: row.requester.avatar_url,
     msg_txt: row.message,
     stat: row.status,
     seen_flag: row.seen,

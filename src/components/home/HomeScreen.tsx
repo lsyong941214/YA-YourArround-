@@ -7,6 +7,7 @@ import { jang_pend_cnt, jang_prog_cnt, memb_prop_cnt, sent_prog_cnt } from "@/li
 import { memb_pend_cnt } from "@/lib/store/blnd_store";
 import { AuthRole, AuthUser, curr_user, updt_curr } from "@/lib/store/auth_store";
 import { list_chf_of, list_res_of } from "@/lib/store/cntc_store";
+import Avatar from "@/components/common/Avatar";
 import ProfEditModal from "./ProfEditModal";
 
 export default function HomeScreen() {
@@ -247,12 +248,21 @@ export default function HomeScreen() {
                   key={r_item.user_id}
                   className="w-28 shrink-0 rounded-2xl bg-white p-3 text-left shadow-sm"
                 >
-                  <div
-                    className="flex h-20 w-full items-center justify-center rounded-xl text-2xl font-bold text-white"
-                    style={{ backgroundColor: r_item.ton_hex }}
-                  >
-                    {r_item.ini_char}
-                  </div>
+                  {r_item.user_img ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={r_item.user_img}
+                      alt="프로필 사진"
+                      className="h-20 w-full rounded-xl object-cover"
+                    />
+                  ) : (
+                    <div
+                      className="flex h-20 w-full items-center justify-center rounded-xl text-2xl font-bold text-white"
+                      style={{ backgroundColor: r_item.ton_hex }}
+                    >
+                      {r_item.ini_char}
+                    </div>
+                  )}
                   <p className="mt-2 truncate text-sm font-bold text-gray-900">{r_item.user_name}</p>
                   <p className="truncate text-[11px] text-gray-400">
                     {r_item.user_job || "-"} {r_item.user_mbti ? `· ${r_item.user_mbti}` : ""}

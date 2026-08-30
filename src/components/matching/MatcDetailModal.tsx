@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ChevronRight, X } from "lucide-react";
 import { MatcReq, updt_req } from "@/lib/store/matc_store";
 import ProfileViewModal, { ProfileViewData } from "@/components/profile/ProfileViewModal";
+import Avatar from "@/components/common/Avatar";
 import AcptModal from "./AcptModal";
 import RejectModal from "./RejectModal";
 
@@ -42,6 +43,7 @@ export default function MatcDetailModal({
           ini_char: req_item.req_ini,
           ton_hex: req_item.req_ton,
           phot_list: req_item.req_phts,
+          avat_url: req_item.req_img,
           user_name: req_item.req_name,
           user_age: req_item.req_age,
           user_job: req_item.req_job,
@@ -55,6 +57,7 @@ export default function MatcDetailModal({
             ini_char: req_item.ini_char,
             ton_hex: req_item.ton_hex,
             phot_list: req_item.memb_phts,
+            avat_url: req_item.memb_img,
             user_name: req_item.memb_name,
             user_age: req_item.memb_age,
             user_job: req_item.memb_job,
@@ -82,6 +85,7 @@ export default function MatcDetailModal({
 
           <p className="mt-4 text-xs font-medium text-gray-500">신청자 정보</p>
           <PersonCard
+            img_url={req_item.req_img}
             ini_char={req_item.req_ini}
             ton_hex={req_item.req_ton}
             memb_name={req_item.req_name}
@@ -95,6 +99,7 @@ export default function MatcDetailModal({
 
           <p className="mt-3 text-xs font-medium text-gray-500">연결 희망 주민</p>
           <PersonCard
+            img_url={req_item.memb_img}
             ini_char={req_item.ini_char}
             ton_hex={req_item.ton_hex}
             memb_name={req_item.memb_name}
@@ -153,6 +158,7 @@ export default function MatcDetailModal({
 }
 
 function PersonCard({
+  img_url,
   ini_char,
   ton_hex,
   memb_name,
@@ -163,6 +169,7 @@ function PersonCard({
   tag_list,
   onView,
 }: {
+  img_url?: string | null;
   ini_char: string;
   ton_hex: string;
   memb_name: string;
@@ -179,12 +186,7 @@ function PersonCard({
       onClick={onView}
       className="mt-1 flex w-full items-center gap-3 rounded-2xl border border-gray-100 bg-[#FFF8F3] p-3 text-left transition active:opacity-80"
     >
-      <div
-        className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-base font-bold text-white"
-        style={{ backgroundColor: ton_hex }}
-      >
-        {ini_char}
-      </div>
+      <Avatar img_url={img_url} ini_char={ini_char} ton_hex={ton_hex} size_cls="h-12 w-12" txt_cls="text-base" />
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-bold text-gray-900">
           {memb_name} <span className="font-normal text-gray-400">{memb_age}</span>
