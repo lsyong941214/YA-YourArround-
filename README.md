@@ -14,13 +14,17 @@ Next.js + Tailwind CSS 기반 웹으로 1차 개발 후, 웹앱 형태로 제공
 2. Project Settings > API에서 Project URL / anon key를 확인해 `.env.local.example`을 `.env.local`로 복사하고 채운다.
 3. SQL Editor에서 [supabase/schema.sql](supabase/schema.sql)을 실행해 테이블(`profiles`/`village_contacts`/`match_requests`/`blind_test_requests`/`blind_test_picks`/`chief_reviews`)과 RLS 정책, 그리고 프로필 사진용 Storage 버킷(`prof-img`)과 정책을 생성한다.
    - 이미 예전 버전의 `schema.sql`을 실행해둔 프로젝트라면, 전체를 다시 돌리지 말고
-     [supabase/alter_onbd.sql](supabase/alter_onbd.sql)과
-     [supabase/alter_invt.sql](supabase/alter_invt.sql)만 차례로 실행한다
+     [supabase/alter_onbd.sql](supabase/alter_onbd.sql),
+     [supabase/alter_invt.sql](supabase/alter_invt.sql),
+     [supabase/alter_cntc_visib.sql](supabase/alter_cntc_visib.sql)을 차례로 실행한다
      (`profiles.user_age` → `profiles.birth_dt` 교체 + `prof-img` 버킷/정책 추가).
      **나이만으로는 생년월일을 복원할 수 없어 기존 계정의 나이 값은 보존되지 않는다** —
      기존 테스트 계정은 생년월일이 비게 되니 필요하면 손으로 채워 넣을 것.
    - `alter_invt.sql`은 초대코드 테이블(`invite_codes`)과 `use_invt_code()` 함수를 만들고,
      주민이 아무 이장에게나 직접 연결할 수 있던 옛 정책(`contacts_insert_resident`)을 내린다.
+   - `alter_cntc_visib.sql`은 주민이 자기 이장님과 연결된 "다른" 주민들을 볼 수 있도록
+     `village_contacts`의 select 정책을 넓힌다 (이전엔 본인이 당사자인 행만 보여서,
+     연락처 상세에서 같은 이장의 다른 주민이 하나도 안 보이는 버그가 있었다).
 4. Authentication > Providers > Email에서 **"Confirm email"을 끈다**
 — 이 앱은 로그인ID를 합성 이메일(`{login_id}@jubyeon.local`)로 변환해 쓰기 때문에 실제 메일함이 없다.
 켜져 있으면 가입 후 로그인이 막힌다.

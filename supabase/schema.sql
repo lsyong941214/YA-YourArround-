@@ -147,12 +147,36 @@ create policy "profiles_insert_own" on public.profiles
 create policy "profiles_update_own" on public.profiles
   for update using (auth.uid() = id);
 
--- village_contacts: 당사자(주민 또는 이장)만 조회.
+-- village_contacts: 당사자(주민 또는 이장) + "같은 이장의 다른 주민"까지 조회 가능.
 -- INSERT 정책은 일부러 두지 않는다 -- 연결은 아래 use_invt_code() 함수(SECURITY DEFINER)로만
 -- 만들어진다. 예전엔 주민이 직접 INSERT 할 수 있었는데(auth.uid() = resident_id), 그러면
 -- 주민이 아무 이장에게나 동의 없이 자신을 붙일 수 있어 제거했다.
+--
+-- [2026-08-30] 당사자만 보이게 했더니, 주민이 "연락처 정보"에서 자기 이장님을 눌러 봐도
+-- 그 이장님과 연결된 "다른" 주민들(연결 요청을 보낼 대상)이 전혀 보이지 않는 버그가 있었다
+-- (village_contacts 각 행은 딱 그 행의 당사자 둘에게만 보이므로, 같은 이장 밑의 다른
+-- 주민 행은 제3자 취급되어 걸러졌다). is_res_of_chief() 로 "나도 이 이장의 주민이다"를
+-- 확인해 허용한다 - 같은 정책 안에서 village_contacts 를 직접 재참조하면 infinite
+-- recursion 에러가 나서 SECURITY DEFINER 함수로 분리했다.
+create or replace function public.is_res_of_chief(chief_uuid uuid)
+returns boolean
+language sql
+security definer
+stable
+set search_path = public
+as $$
+  select exists (
+    select 1 from public.village_contacts
+    where chief_id = chief_uuid and resident_id = auth.uid()
+  );
+$$;
+
 create policy "contacts_select_related" on public.village_contacts
-  for select using (auth.uid() = resident_id or auth.uid() = chief_id);
+  for select using (
+    auth.uid() = resident_id
+    or auth.uid() = chief_id
+    or public.is_res_of_chief(chief_id)
+  );
 
 -- match_requests: 신청자/이장/대상 주민만 조회. 생성은 신청자만, 상태 변경은 이장·대상 주민만
 create policy "match_select_related" on public.match_requests
