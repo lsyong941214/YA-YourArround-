@@ -1,5 +1,24 @@
 # CHANGELOG
 
+## v0.4.1 - 밸런스 게임 카테고리별 랜덤 출제(10문항) + 재출제 하이라이트
+- **한 게임에 카테고리(topic)별 2~3개씩, 총 10문항만 무작위로 출제** (`blnd_store.ts`의
+  `draw_qstn_set`/`ensure_game_qstns`) - 지금까지는 문항 뱅크(20개) 전부를 순서대로 다 풀어야
+  했는데, 카테고리마다 고르게 섞은 10문항만 플레이하도록 바꿨다. 문항을 더 추가하면
+  (같은 topic에 행만 더하면) 다음 게임부터 자동으로 뽑기 후보에 포함된다
+  - 신청자/대상 주민 두 사람이 같은 게임에서 다른 문항을 보면 안 되므로, 뽑힌 10개를
+    `blind_test_game_questions`에 배정 결과로 고정 저장한다. 누가 먼저 들어와 배정하든
+    상관없도록, 클라이언트가 뽑은 결과를 그냥 INSERT하고 - 이미 배정된 게임이면
+    `(blind_test_id, card_idx)` 기본키 충돌로 실패해 자동으로 "먼저 쓴 쪽이 이긴다"
+  - 기존 1번 문항의 topic을 `데이트 빈도` → `데이트 스타일`로 정리(카테고리 4개로 통일)
+- **본인이 이미 답했던 문항이 다른 게임에서 다시 나오면, 그때 골랐던 카드에 하이라이트**
+  (`pick_hist`, `BlndGameScreen.tsx`의 `ChoiceCard` highlight/Sparkles 뱃지) - `blind_test_picks`에
+  `question_id`/`user_id`를 추가해 "내가 이 문항에 예전엔 뭘 골랐었는지"를 다른 게임까지
+  가로질러 바로 조회할 수 있게 했다. 카드 순서는 이제 `blind_test_game_questions`가 가지므로
+  `blind_test_picks`의 `card_idx`는 제거(문항이 카드 순서로만 식별되던 기존 픽 데이터는
+  어느 문항인지 알 수 없어 이번에도 보존하지 않고 테이블을 재생성 - `alter_blnd_game.sql`)
+- pick 기록 INSERT 정책을 `side`가 실제 신청자/대상 주민 역할과 일치할 때만 허용하도록 강화
+  (기존엔 게임 당사자면 아무 side로나 기록할 수 있었음)
+
 ## v0.4.0 - 밸런스 게임 문항 20개로 확장 (문항 뱅크 테이블 분리)
 - **밸런스 게임 문항을 `public.blind_test_questions` 테이블로 분리** (`supabase/schema.sql` +
   기존 프로젝트용 델타 `supabase/alter_blnd.sql`) - 지금까지 1번 카드만 `BlndGameScreen.tsx`에

@@ -49,8 +49,8 @@ export default function BlndReviewScreen({ blnd_id }: { blnd_id: string }) {
 
   if (blnd_item.stat === "acpt") {
     const my_side = side_of(blnd_item, my_user);
-    if (my_side) {
-      return <BlndGameScreen blnd_id={blnd_id} item={blnd_item} side={my_side} />;
+    if (my_side && my_user) {
+      return <BlndGameScreen blnd_id={blnd_id} item={blnd_item} side={my_side} user_id={my_user.user_id} />;
     }
   }
 

@@ -2,14 +2,15 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, Heart, PartyPopper } from "lucide-react";
+import { ChevronLeft, Heart, PartyPopper, Sparkles } from "lucide-react";
 import {
   BlndPick,
   BlndQstn,
   BlndReq,
   BlndSide,
+  ensure_game_qstns,
   find_req,
-  list_qstn,
+  pick_hist,
   pick_list,
   submit_pick,
 } from "@/lib/store/blnd_store";
@@ -18,19 +19,31 @@ export default function BlndGameScreen({
   blnd_id,
   item,
   side,
+  user_id,
 }: {
   blnd_id: string;
   item: BlndReq;
   side: BlndSide;
+  user_id: string;
 }) {
   const rout_nav = useRouter();
   const [cur_item, setCurItem] = useState(item);
   const [phase, setPhase] = useState<"deck" | "choice">("deck");
   const [qstn_list, setQstnList] = useState<BlndQstn[] | null>(null);
+  const [hist_map, setHistMap] = useState<Record<string, BlndPick>>({});
 
   useEffect(() => {
-    list_qstn().then(setQstnList);
-  }, []);
+    ensure_game_qstns(blnd_id).then((dealt) => {
+      setQstnList(dealt);
+      if (dealt.length > 0) {
+        pick_hist(
+          user_id,
+          dealt.map((q_item) => q_item.qstn_id),
+          blnd_id
+        ).then(setHistMap);
+      }
+    });
+  }, [blnd_id, user_id]);
 
   const opp_side: BlndSide = side === "req" ? "memb" : "req";
   const my_step = pick_list(cur_item, side).length;
@@ -51,7 +64,9 @@ export default function BlndGameScreen({
   }, [my_done, both_done, blnd_id]);
 
   async function do_pick(pick_val: BlndPick) {
-    const updt_item = await submit_pick(blnd_id, side, pick_val);
+    const qstn = qstn_list?.[my_step];
+    if (!qstn) return;
+    const updt_item = await submit_pick(blnd_id, side, user_id, qstn.qstn_id, pick_val);
     if (updt_item) setCurItem(updt_item);
     setPhase("deck");
   }
@@ -79,6 +94,7 @@ export default function BlndGameScreen({
       ) : (
         <PlayView
           qstn_list={qstn_list}
+          hist_map={hist_map}
           step_idx={my_step}
           phase={phase}
           onStart={() => setPhase("choice")}
@@ -91,12 +107,14 @@ export default function BlndGameScreen({
 
 function PlayView({
   qstn_list,
+  hist_map,
   step_idx,
   phase,
   onStart,
   onPick,
 }: {
   qstn_list: BlndQstn[];
+  hist_map: Record<string, BlndPick>;
   step_idx: number;
   phase: "deck" | "choice";
   onStart: () => void;
@@ -121,7 +139,7 @@ function PlayView({
       {phase === "deck" ? (
         <DeckStack remaining={card_cnt - step_idx} onStart={onStart} />
       ) : (
-        <ChoiceCards qstn={qstn} onPick={onPick} />
+        <ChoiceCards qstn={qstn} hist_pick={hist_map[qstn.qstn_id]} onPick={onPick} />
       )}
 
       <p className="text-center text-xs text-gray-400">
@@ -167,34 +185,54 @@ function DeckStack({ remaining, onStart }: { remaining: number; onStart: () => v
 
 function ChoiceCards({
   qstn,
+  hist_pick,
   onPick,
 }: {
   qstn: BlndQstn;
+  hist_pick?: BlndPick;
   onPick: (pick_val: BlndPick) => void;
 }) {
   return (
     <div className="flex flex-col items-center gap-2">
       <p className="text-[11px] font-bold text-[#6C63E0]">{qstn.topic}</p>
       <div className="flex items-center justify-center gap-2">
-        <ChoiceCard img={qstn.img_a} txt={qstn.txt_a} onClick={() => onPick("a")} />
+        <ChoiceCard
+          img={qstn.img_a}
+          txt={qstn.txt_a}
+          highlight={hist_pick === "a"}
+          onClick={() => onPick("a")}
+        />
         <span className="z-10 shrink-0 rounded-full bg-[#6C63E0] px-2.5 py-1 text-[11px] font-bold text-white shadow-sm">
           VS
         </span>
-        <ChoiceCard img={qstn.img_b} txt={qstn.txt_b} onClick={() => onPick("b")} />
+        <ChoiceCard
+          img={qstn.img_b}
+          txt={qstn.txt_b}
+          highlight={hist_pick === "b"}
+          onClick={() => onPick("b")}
+        />
       </div>
+      {hist_pick && (
+        <p className="text-center text-[11px] font-medium text-[#B7791F]">
+          이 문항, 예전에도 골랐던 적이 있어요
+        </p>
+      )}
     </div>
   );
 }
 
 // 카드는 이미지만 담고, 문항 내용은 카드 아래 텍스트로 노출한다 - 주제별 이미지가 아직
-// 업로드되지 않은 문항(img가 null)은 카드 자리에 기본 그라디언트만 채워 자연스럽게 대체된다
+// 업로드되지 않은 문항(img가 null)은 카드 자리에 기본 그라디언트만 채워 자연스럽게 대체된다.
+// highlight는 이 문항이 다른 게임에서 이미 나왔었고, 그때 이 카드를 골랐던 적이 있다는 표시
 function ChoiceCard({
   img,
   txt,
+  highlight,
   onClick,
 }: {
   img: string | null;
   txt: string;
+  highlight: boolean;
   onClick: () => void;
 }) {
   return (
@@ -203,13 +241,23 @@ function ChoiceCard({
       onClick={onClick}
       className="flex w-32 shrink-0 flex-col items-center gap-2 transition active:scale-95"
     >
-      <div className="h-56 w-32 overflow-hidden rounded-3xl shadow-md">
+      <div
+        className={`relative h-56 w-32 overflow-hidden rounded-3xl shadow-md ${
+          highlight ? "ring-4 ring-[#F5A623] ring-offset-2" : ""
+        }`}
+      >
         {img ? (
           <img src={img} alt="" className="h-full w-full object-cover" />
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#C9C4F7] to-[#8A82EA]">
             <Heart className="h-7 w-7 fill-white/80 text-white/80" />
           </div>
+        )}
+        {highlight && (
+          <span className="absolute left-1.5 top-1.5 flex items-center gap-0.5 rounded-full bg-[#F5A623] px-2 py-0.5 text-[10px] font-bold text-white shadow">
+            <Sparkles className="h-2.5 w-2.5" />
+            예전 선택
+          </span>
         )}
       </div>
       <p className="text-center text-xs font-semibold leading-snug text-gray-700">{txt}</p>

@@ -87,23 +87,12 @@ create table public.blind_test_requests (
 create index idx_blind_test_requests_resident on public.blind_test_requests (resident_id, status);
 create index idx_blind_test_requests_requester on public.blind_test_requests (requester_id);
 
--- blind_test_picks: 밸런스 게임 카드별 선택 (신청자/대상 각자, 카드 순서 보존)
--- card_idx 상한은 blind_test_questions 문항 수에 따라 늘어날 수 있어 하한만 고정한다
-create table public.blind_test_picks (
-  blind_test_id     uuid not null references public.blind_test_requests(id) on delete cascade,
-  side              text not null check (side in ('req', 'memb')), -- req=신청자, memb=대상 주민
-  card_idx          smallint not null check (card_idx > 0),
-  pick              text not null check (pick in ('a', 'b')),
-  picked_at         timestamptz not null default now(),
-  primary key (blind_test_id, side, card_idx)
-);
-
 -- ============================================================
--- blind_test_questions: 밸런스 게임 문항 뱅크 (주변인 테스트에서 순서대로 출제)
+-- blind_test_questions: 밸런스 게임 문항 뱅크 (카테고리별로 무작위 출제)
 -- ============================================================
--- 신청자/대상 주민 모두가 보는 공용 콘텐츠라 유저별 데이터가 아니다. 문항 추가/순서 변경은
--- 이 테이블에 행을 더하거나 seq_no 를 조정하는 것만으로 끝나, 카드 수를 코드에 하드코딩하지 않는다.
--- image_a/image_b 는 주제별 일러스트가 준비되기 전까지 null 일 수 있고, 화면에서는 이미지가
+-- 신청자/대상 주민 모두가 보는 공용 콘텐츠라 유저별 데이터가 아니다. topic(카테고리)별로
+-- 행을 더하기만 하면 다음 게임부터 자동으로 뽑기 후보에 포함된다(코드 변경 불필요).
+-- image_a/image_b 는 주제별 일러스트가 준비되기 전까지 null 일 수 있고, 화면에서는 이미지이
 -- 없으면 기본 카드 배경 위에 텍스트만 표시한다.
 create table public.blind_test_questions (
   id            uuid primary key default gen_random_uuid(),
@@ -114,6 +103,36 @@ create table public.blind_test_questions (
   image_a       text,
   image_b       text,
   created_at    timestamptz not null default now()
+);
+create index idx_blind_test_questions_topic on public.blind_test_questions (topic);
+
+-- blind_test_game_questions: 게임(blind_test_id) 하나에 실제로 배정된 문항 10개 + 카드 순서.
+-- 신청자/대상 주민이 서로 다른 문항을 보면 안 되므로, 카테고리별 2~3개(총 10개) 무작위 추첨
+-- 결과를 이 테이블에 한 번 고정 저장하고 양쪽 모두 같은 배정 결과만 읽는다. 누가 먼저
+-- 들어와 배정하든 상관없도록, 클라이언트가 뽑은 결과를 그냥 INSERT하고 - 이미 배정된 게임이면
+-- (blind_test_id, card_idx) 기본키 충돌로 실패해서 자동으로 "먼저 쓴 쪽이 이긴다".
+create table public.blind_test_game_questions (
+  blind_test_id   uuid not null references public.blind_test_requests(id) on delete cascade,
+  card_idx        smallint not null check (card_idx > 0),
+  question_id     uuid not null references public.blind_test_questions(id) on delete restrict,
+  dealt_at        timestamptz not null default now(),
+  primary key (blind_test_id, card_idx),
+  unique (blind_test_id, question_id)
+);
+
+-- blind_test_picks: 밸런스 게임 문항별 선택 (신청자/대상 각자, 문항당 최대 1번).
+-- 카드 순서는 blind_test_game_questions 가 갖고 있어 여기서는 어떤 문항(question_id)에
+-- 어떤 선택을 했는지만 기록한다. user_id 는 "내가 예전에 이 문항에 뭘 골랐었는지"를 다른
+-- 게임까지 가로질러 바로 조회하기 위한 비정규화 컬럼이다(신청자/대상 주민 어느 쪽이든
+-- 자기 자신의 전체 이력을 곧장 조회할 수 있어야 재출제 하이라이트가 가능하다).
+create table public.blind_test_picks (
+  blind_test_id     uuid not null references public.blind_test_requests(id) on delete cascade,
+  side              text not null check (side in ('req', 'memb')), -- req=신청자, memb=대상 주민
+  question_id       uuid not null references public.blind_test_questions(id) on delete restrict,
+  user_id           uuid not null references public.profiles(id) on delete cascade,
+  pick              text not null check (pick in ('a', 'b')),
+  picked_at         timestamptz not null default now(),
+  primary key (blind_test_id, side, question_id)
 );
 
 -- ============================================================
@@ -156,6 +175,7 @@ alter table public.match_requests enable row level security;
 alter table public.blind_test_requests enable row level security;
 alter table public.blind_test_picks enable row level security;
 alter table public.blind_test_questions enable row level security;
+alter table public.blind_test_game_questions enable row level security;
 alter table public.chief_reviews enable row level security;
 alter table public.invite_codes enable row level security;
 
@@ -194,7 +214,10 @@ create policy "blind_insert_requester" on public.blind_test_requests
 create policy "blind_update_related" on public.blind_test_requests
   for update using (auth.uid() = requester_id or auth.uid() = resident_id);
 
--- blind_test_picks: 해당 주변인 테스트의 당사자(신청자/대상 주민)만 조회·기록
+-- blind_test_picks: 조회는 해당 주변인 테스트의 당사자(신청자/대상 주민)만 - 이 조건 하나로
+-- "이번 게임에서 상대방 진행 상황 보기"와 "내 전체 이력 조회하기"(user_id 로 필터링)를 모두
+-- 커버한다(내가 남긴 pick 은 항상 내가 당사자인 게임에만 존재하므로). 기록은 본인 것만,
+-- side 가 실제로 신청자/대상 주민 중 자신의 역할과 일치할 때만 허용해 side 위조를 막는다.
 create policy "picks_select_related" on public.blind_test_picks
   for select using (
     exists (
@@ -203,7 +226,34 @@ create policy "picks_select_related" on public.blind_test_picks
         and (auth.uid() = b.requester_id or auth.uid() = b.resident_id)
     )
   );
-create policy "picks_insert_related" on public.blind_test_picks
+create policy "picks_insert_own" on public.blind_test_picks
+  for insert with check (
+    auth.uid() = user_id
+    and exists (
+      select 1 from public.blind_test_requests b
+      where b.id = blind_test_id
+        and (
+          (side = 'req' and b.requester_id = auth.uid())
+          or (side = 'memb' and b.resident_id = auth.uid())
+        )
+    )
+  );
+
+-- blind_test_questions: 문항 뱅크는 공용 콘텐츠라 로그인한 누구나 조회, 편집은 클라이언트로 열지 않는다
+create policy "blnd_qstn_select_authenticated" on public.blind_test_questions
+  for select using (auth.role() = 'authenticated');
+
+-- blind_test_game_questions: 해당 게임 당사자만 조회·배정. 배정은 한 번 정해지면 고정이라
+-- update/delete 정책은 두지 않는다(문항 재배정이 필요하면 게임을 새로 만든다).
+create policy "game_qstn_select_related" on public.blind_test_game_questions
+  for select using (
+    exists (
+      select 1 from public.blind_test_requests b
+      where b.id = blind_test_id
+        and (auth.uid() = b.requester_id or auth.uid() = b.resident_id)
+    )
+  );
+create policy "game_qstn_insert_related" on public.blind_test_game_questions
   for insert with check (
     exists (
       select 1 from public.blind_test_requests b
@@ -211,10 +261,6 @@ create policy "picks_insert_related" on public.blind_test_picks
         and (auth.uid() = b.requester_id or auth.uid() = b.resident_id)
     )
   );
-
--- blind_test_questions: 문항 뱅크는 공용 콘텐츠라 로그인한 누구나 조회, 편집은 클라이언트로 열지 않는다
-create policy "blnd_qstn_select_authenticated" on public.blind_test_questions
-  for select using (auth.role() = 'authenticated');
 
 -- chief_reviews: 이장님 리뷰는 공개 정보라 누구나 조회 가능, 작성은 리뷰어 본인만
 create policy "reviews_select_all" on public.chief_reviews
@@ -338,7 +384,7 @@ create policy "prof_img_delete_own" on storage.objects
 -- 2~20번은 주제별 일러스트가 준비되는 대로 image_a/image_b 를 채워 넣을 예정 -- 그 전까지는
 -- 화면에서 텍스트만으로 노출된다.
 insert into public.blind_test_questions (seq_no, topic, prompt_a, prompt_b, image_a, image_b) values
-  (1,  '데이트 빈도',      '매일 만나지만 1시간만 데이트',              '한 달에 한 번 만나서 2박 3일 데이트',            '/assets/blnd/q1_a.png', '/assets/blnd/q1_b.png'),
+  (1,  '데이트 스타일',    '매일 만나지만 1시간만 데이트',              '한 달에 한 번 만나서 2박 3일 데이트',            '/assets/blnd/q1_a.png', '/assets/blnd/q1_b.png'),
   (2,  '데이트 스타일',    '계획 세워서 알차게 데이트',                 '그날 기분따라 즉흥적으로 데이트',                null, null),
   (3,  '데이트 스타일',    '집에서 뒹굴며 데이트',                      '밖에서 활동적으로 데이트',                       null, null),
   (4,  '데이트 스타일',    '웨이팅 필수인 맛집 탐방',                   '익숙하고 편한 단골집',                           null, null),

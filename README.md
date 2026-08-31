@@ -24,6 +24,8 @@ Next.js + Tailwind CSS 기반 웹으로 1차 개발 후, 웹앱 형태로 제공
      주민이 아무 이장에게나 직접 연결할 수 있던 옛 정책(`contacts_insert_resident`)을 내린다.
    - `alter_blnd.sql`은 밸런스 게임 문항 뱅크(`blind_test_questions`) 테이블을 만들고
      문항 20개를 시드로 채운 뒤, `blind_test_picks.card_idx`의 상한(5) 제약을 없앤다.
+   - `alter_blnd_game.sql`은 게임별 문항 배정 테이블(`blind_test_game_questions`)을 추가하고,
+     `blind_test_picks`를 `question_id`/`user_id` 기준으로 재구성한다(기존 픽 데이터는 보존되지 않음).
 4. Authentication > Providers > Email에서 **"Confirm email"을 끈다**
 — 이 앱은 로그인ID를 합성 이메일(`{login_id}@jubyeon.local`)로 변환해 쓰기 때문에 실제 메일함이 없다.
 켜져 있으면 가입 후 로그인이 막힌다.
@@ -83,8 +85,9 @@ jubyeon-web/
 - `/cntc/[uid]` (`src/app/cntc/[uid]/page.tsx`) : **연락처 상세** — 해당 유저 프로필, 그 유저 기준 연결된 상대방 목록, (이장일 때) "성공한 만남" 카드로 `/chief/[jang_id]/reviews`(이장님 리뷰 목록) 진입
 - `/chief/[jang_id]/request/[memb_id]`, `/chief/[jang_id]/blind/[memb_id]` : 연결 요청 보내기 / 주변인 테스트 신청 화면
 - `/blind/[blnd_id]` (`src/app/blind/[blnd_id]/page.tsx`) : **주변인 테스트** — 수락/거절, 수락 후 밸런스 게임(`BlndGameScreen.tsx`) 진행
-  - 문항은 `public.blind_test_questions` 테이블에서 순서대로 조회(`list_qstn`) — 카드에는 이미지만, 문항 텍스트는 카드 아래에 별도로 노출
-  - 문항별 이미지(`image_a`/`image_b`)가 아직 없으면 기본 그라디언트 카드로 자연스럽게 대체, 준비되는 대로 테이블만 채우면 바로 반영됨
+  - 문항 뱅크(`blind_test_questions`)에서 카테고리(topic)별로 2~3개씩, 총 10개를 무작위로 뽑아 한 게임에 고정 배정한다(`blind_test_game_questions`, `ensure_game_qstns`) — 신청자/대상 주민 둘 다 같은 문항·순서를 본다
+  - 카드에는 이미지만, 문항 텍스트는 카드 아래에 별도로 노출. 문항별 이미지(`image_a`/`image_b`)가 아직 없으면 기본 그라디언트 카드로 자연스럽게 대체, 준비되는 대로 테이블만 채우면 바로 반영됨
+  - 같은 문항이 다른 게임에서 다시 나오면, 예전에 골랐던 카드에 하이라이트(`pick_hist`)가 표시됨
 
 ## 실행 방법
 ```bash
