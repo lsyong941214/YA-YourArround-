@@ -87,14 +87,33 @@ create table public.blind_test_requests (
 create index idx_blind_test_requests_resident on public.blind_test_requests (resident_id, status);
 create index idx_blind_test_requests_requester on public.blind_test_requests (requester_id);
 
--- blind_test_picks: 밸런스 게임 카드별 선택 (신청자/대상 각자 최대 5장, 카드 순서 보존)
+-- blind_test_picks: 밸런스 게임 카드별 선택 (신청자/대상 각자, 카드 순서 보존)
+-- card_idx 상한은 blind_test_questions 문항 수에 따라 늘어날 수 있어 하한만 고정한다
 create table public.blind_test_picks (
   blind_test_id     uuid not null references public.blind_test_requests(id) on delete cascade,
   side              text not null check (side in ('req', 'memb')), -- req=신청자, memb=대상 주민
-  card_idx          smallint not null check (card_idx between 1 and 5),
+  card_idx          smallint not null check (card_idx > 0),
   pick              text not null check (pick in ('a', 'b')),
   picked_at         timestamptz not null default now(),
   primary key (blind_test_id, side, card_idx)
+);
+
+-- ============================================================
+-- blind_test_questions: 밸런스 게임 문항 뱅크 (주변인 테스트에서 순서대로 출제)
+-- ============================================================
+-- 신청자/대상 주민 모두가 보는 공용 콘텐츠라 유저별 데이터가 아니다. 문항 추가/순서 변경은
+-- 이 테이블에 행을 더하거나 seq_no 를 조정하는 것만으로 끝나, 카드 수를 코드에 하드코딩하지 않는다.
+-- image_a/image_b 는 주제별 일러스트가 준비되기 전까지 null 일 수 있고, 화면에서는 이미지가
+-- 없으면 기본 카드 배경 위에 텍스트만 표시한다.
+create table public.blind_test_questions (
+  id            uuid primary key default gen_random_uuid(),
+  seq_no        smallint not null unique,
+  topic         text not null,
+  prompt_a      text not null,
+  prompt_b      text not null,
+  image_a       text,
+  image_b       text,
+  created_at    timestamptz not null default now()
 );
 
 -- ============================================================
@@ -136,6 +155,7 @@ alter table public.village_contacts enable row level security;
 alter table public.match_requests enable row level security;
 alter table public.blind_test_requests enable row level security;
 alter table public.blind_test_picks enable row level security;
+alter table public.blind_test_questions enable row level security;
 alter table public.chief_reviews enable row level security;
 alter table public.invite_codes enable row level security;
 
@@ -191,6 +211,10 @@ create policy "picks_insert_related" on public.blind_test_picks
         and (auth.uid() = b.requester_id or auth.uid() = b.resident_id)
     )
   );
+
+-- blind_test_questions: 문항 뱅크는 공용 콘텐츠라 로그인한 누구나 조회, 편집은 클라이언트로 열지 않는다
+create policy "blnd_qstn_select_authenticated" on public.blind_test_questions
+  for select using (auth.role() = 'authenticated');
 
 -- chief_reviews: 이장님 리뷰는 공개 정보라 누구나 조회 가능, 작성은 리뷰어 본인만
 create policy "reviews_select_all" on public.chief_reviews
@@ -306,3 +330,32 @@ create policy "prof_img_delete_own" on storage.objects
   for delete using (
     bucket_id = 'prof-img' and (storage.foldername(name))[1] = auth.uid()::text
   );
+
+-- ============================================================
+-- blind_test_questions: 밸런스 게임 문항 20개 시드 (2026-08-31)
+-- ============================================================
+-- 1번은 기존에 이미 제작된 일러스트(public/assets/blnd/q1_a.png, q1_b.png)를 그대로 쓴다.
+-- 2~20번은 주제별 일러스트가 준비되는 대로 image_a/image_b 를 채워 넣을 예정 -- 그 전까지는
+-- 화면에서 텍스트만으로 노출된다.
+insert into public.blind_test_questions (seq_no, topic, prompt_a, prompt_b, image_a, image_b) values
+  (1,  '데이트 빈도',      '매일 만나지만 1시간만 데이트',              '한 달에 한 번 만나서 2박 3일 데이트',            '/assets/blnd/q1_a.png', '/assets/blnd/q1_b.png'),
+  (2,  '데이트 스타일',    '계획 세워서 알차게 데이트',                 '그날 기분따라 즉흥적으로 데이트',                null, null),
+  (3,  '데이트 스타일',    '집에서 뒹굴며 데이트',                      '밖에서 활동적으로 데이트',                       null, null),
+  (4,  '데이트 스타일',    '웨이팅 필수인 맛집 탐방',                   '익숙하고 편한 단골집',                           null, null),
+  (5,  '데이트 스타일',    '여행은 계획표대로 빡빡하게',                '발길 닿는 대로 여유롭게',                        null, null),
+  (6,  '애정 표현·소통',   '말로 하는 애정표현 ("사랑해" 자주)',        '행동으로 하는 애정표현 (선물, 스킨십)',          null, null),
+  (7,  '애정 표현·소통',   '하루 종일 실시간으로 연락',                 '각자 시간 보내다 저녁에 몰아서 연락',            null, null),
+  (8,  '애정 표현·소통',   '스킨십은 자연스럽게 언제든',                '분위기 잡고 제대로',                             null, null),
+  (9,  '애정 표현·소통',   '애정표현 다른 사람 앞에서도 티 내는 편',    '둘이 있을 때만',                                 null, null),
+  (10, '애정 표현·소통',   '싸우면 바로 그 자리에서 풀기',              '시간 갖고 각자 생각 정리 후 풀기',               null, null),
+  (11, '연애 가치관',      '연애할 때 상대가 리드해주는 게 좋음',       '내가 리드하는 게 좋음',                          null, null),
+  (12, '연애 가치관',      '이성 볼 때 첫인상(외모·분위기)',            '대화하면서 드러나는 성격·가치관',                null, null),
+  (13, '연애 가치관',      '서로 다른 점이 많아 자극되는 연애',         '취향이 비슷해 편안한 연애',                      null, null),
+  (14, '연애 가치관',      '연인끼리는 어느 정도 안 싸우는 게 좋다',    '싸우더라도 할 말은 해야 건강한 관계',            null, null),
+  (15, '연애 가치관',      '연애 초반엔 조금 튕기는 밀당',              '마음 있으면 바로 직진',                          null, null),
+  (16, '라이프스타일·취향', '아침형 데이트 (브런치, 산책)',              '저녁형 데이트 (야경, 술 한잔)',                  null, null),
+  (17, '라이프스타일·취향', '커플룩·시그니처 아이템 챙기는 편',          '각자 스타일 그대로',                             null, null),
+  (18, '라이프스타일·취향', '기념일은 거창하게 이벤트 준비',             '소소하지만 매년 꾸준히',                         null, null),
+  (19, '라이프스타일·취향', '여행 갈 때 사진 많이 남기는 편',            '그 순간을 눈으로 즐기는 편',                     null, null),
+  (20, '라이프스타일·취향', '연애 얘기 친구들에게 시시콜콜 공유',        '둘만 아는 걸로 간직',                            null, null)
+on conflict (seq_no) do nothing;

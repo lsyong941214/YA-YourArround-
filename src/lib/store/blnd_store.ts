@@ -4,6 +4,8 @@
  * + public.blind_test_picks 테이블 기반
  * - 신청자/이장/대상 주민 프로필은 스냅샷으로 저장하지 않고 매번 profiles를 JOIN해서 채운다
  *   (BlndReq의 필드 이름/모양은 기존 localStorage 버전과 동일하게 유지)
+ * - 밸런스 게임 문항은 public.blind_test_questions에서 조회한다(list_qstn) - 문항 수가
+ *   코드에 고정되어 있지 않아, 문항을 늘리려면 테이블에 행만 추가하면 된다
  * - 명명 규칙: "단어_단어_..." 형태, 각 단어는 최대 4자 ("블라인드" -> blnd)
  */
 import { calc_age } from "@/lib/store/auth_store";
@@ -13,9 +15,6 @@ export type BlndStat = "pend" | "acpt" | "rjct";
 
 // 밸런스 게임 카드 선택지 (a = 첫번째 카드, b = 두번째 카드)
 export type BlndPick = "a" | "b";
-
-// 밸런스 게임 총 카드 수 (현재 버전: 1번 카드만 실제 문항, 2~5번은 "추후 공개" placeholder)
-export const BLND_CARD_CNT = 5;
 
 export type BlndReq = {
   blnd_id: string;
@@ -217,4 +216,47 @@ export async function submit_pick(blnd_id: string, side: BlndSide, pick: BlndPic
   const card_idx = pick_list(item_now, side).length + 1;
   await supabase.from("blind_test_picks").insert({ blind_test_id: blnd_id, side, card_idx, pick });
   return find_req(blnd_id);
+}
+
+// 밸런스 게임 문항 한 장 (카드 이미지는 선택, 준비되기 전까지 null일 수 있음)
+export type BlndQstn = {
+  qstn_id: string;
+  seq_no: number;
+  topic: string;
+  txt_a: string;
+  txt_b: string;
+  img_a: string | null;
+  img_b: string | null;
+};
+
+type QstnRow = {
+  id: string;
+  seq_no: number;
+  topic: string;
+  prompt_a: string;
+  prompt_b: string;
+  image_a: string | null;
+  image_b: string | null;
+};
+
+function row_to_qstn(row: QstnRow): BlndQstn {
+  return {
+    qstn_id: row.id,
+    seq_no: row.seq_no,
+    topic: row.topic,
+    txt_a: row.prompt_a,
+    txt_b: row.prompt_b,
+    img_a: row.image_a,
+    img_b: row.image_b,
+  };
+}
+
+// 밸런스 게임 문항 전체를 출제 순서대로 조회
+export async function list_qstn(): Promise<BlndQstn[]> {
+  const { data, error } = await supabase
+    .from("blind_test_questions")
+    .select("*")
+    .order("seq_no", { ascending: true });
+  if (error || !data) return [];
+  return (data as unknown as QstnRow[]).map(row_to_qstn);
 }

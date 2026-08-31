@@ -2,20 +2,17 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, Heart, Lock, PartyPopper } from "lucide-react";
+import { ChevronLeft, Heart, PartyPopper } from "lucide-react";
 import {
-  BLND_CARD_CNT,
   BlndPick,
+  BlndQstn,
   BlndReq,
   BlndSide,
   find_req,
+  list_qstn,
   pick_list,
   submit_pick,
 } from "@/lib/store/blnd_store";
-
-// 1번 카드만 현재 버전에서 실제 문항으로 제공, 2~5번은 "추후 공개됩니다." placeholder
-const Q1_A_IMG = "/assets/blnd/q1_a.png";
-const Q1_B_IMG = "/assets/blnd/q1_b.png";
 
 export default function BlndGameScreen({
   blnd_id,
@@ -29,14 +26,20 @@ export default function BlndGameScreen({
   const rout_nav = useRouter();
   const [cur_item, setCurItem] = useState(item);
   const [phase, setPhase] = useState<"deck" | "choice">("deck");
+  const [qstn_list, setQstnList] = useState<BlndQstn[] | null>(null);
+
+  useEffect(() => {
+    list_qstn().then(setQstnList);
+  }, []);
 
   const opp_side: BlndSide = side === "req" ? "memb" : "req";
   const my_step = pick_list(cur_item, side).length;
   const opp_step = pick_list(cur_item, opp_side).length;
-  const my_done = my_step >= BLND_CARD_CNT;
-  const both_done = my_done && opp_step >= BLND_CARD_CNT;
+  const card_cnt = qstn_list?.length ?? 0;
+  const my_done = qstn_list !== null && my_step >= card_cnt;
+  const both_done = my_done && opp_step >= card_cnt;
 
-  // 내가 5장을 다 고른 뒤엔, 상대방도 다 골랐는지 주기적으로 확인
+  // 내가 문항을 다 고른 뒤엔, 상대방도 다 골랐는지 주기적으로 확인
   useEffect(() => {
     if (!my_done || both_done) return;
     const timer_id = window.setInterval(() => {
@@ -67,12 +70,15 @@ export default function BlndGameScreen({
         <h1 className="text-base font-bold text-gray-900">주변인 테스트</h1>
       </header>
 
-      {both_done ? (
+      {qstn_list === null ? (
+        <LoadView />
+      ) : both_done ? (
         <DoneView />
       ) : my_done ? (
         <WaitView />
       ) : (
         <PlayView
+          qstn_list={qstn_list}
           step_idx={my_step}
           phase={phase}
           onStart={() => setPhase("choice")}
@@ -84,39 +90,44 @@ export default function BlndGameScreen({
 }
 
 function PlayView({
+  qstn_list,
   step_idx,
   phase,
   onStart,
   onPick,
 }: {
+  qstn_list: BlndQstn[];
   step_idx: number;
   phase: "deck" | "choice";
   onStart: () => void;
   onPick: (pick_val: BlndPick) => void;
 }) {
+  const card_cnt = qstn_list.length;
+  const qstn = qstn_list[step_idx];
+
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-8 px-6 pb-16">
-      <div className="flex gap-2" role="status" aria-label="밸런스 게임 진행 상태">
-        {Array.from({ length: BLND_CARD_CNT }).map((_, dot_idx) => (
+    <div className="flex flex-1 flex-col items-center justify-center gap-6 px-6 pb-16">
+      <div className="flex max-w-xs flex-wrap justify-center gap-1" role="status" aria-label="밸런스 게임 진행 상태">
+        {qstn_list.map((q_item, dot_idx) => (
           <span
-            key={dot_idx}
-            className={`h-2 w-2 rounded-full transition-all duration-300 ${
-              dot_idx < step_idx ? "w-5 bg-[#6C63E0]" : "bg-[#E3E1FA]"
+            key={q_item.qstn_id}
+            className={`h-1.5 rounded-full transition-all duration-300 ${
+              dot_idx < step_idx ? "w-3.5 bg-[#6C63E0]" : "w-1.5 bg-[#E3E1FA]"
             }`}
           />
         ))}
       </div>
 
       {phase === "deck" ? (
-        <DeckStack remaining={BLND_CARD_CNT - step_idx} onStart={onStart} />
+        <DeckStack remaining={card_cnt - step_idx} onStart={onStart} />
       ) : (
-        <ChoiceCards step_idx={step_idx} onPick={onPick} />
+        <ChoiceCards qstn={qstn} onPick={onPick} />
       )}
 
       <p className="text-center text-xs text-gray-400">
         {phase === "deck"
           ? "가운데 카드를 눌러 다음 문항을 확인해보세요"
-          : "마음에 드는 쪽 카드를 골라주세요"}
+          : "마음에 드는 쪽을 골라주세요"}
       </p>
     </div>
   );
@@ -155,75 +166,64 @@ function DeckStack({ remaining, onStart }: { remaining: number; onStart: () => v
 }
 
 function ChoiceCards({
-  step_idx,
+  qstn,
   onPick,
 }: {
-  step_idx: number;
+  qstn: BlndQstn;
   onPick: (pick_val: BlndPick) => void;
 }) {
-  const is_q1 = step_idx === 0;
-
   return (
-    <div className="flex items-center justify-center gap-2">
-      {is_q1 ? (
-        <ChoiceCard onClick={() => onPick("a")}>
-          <img
-            src={Q1_A_IMG}
-            alt="매일 만나지만 1시간만 데이트"
-            className="h-full w-full rounded-3xl object-cover"
-          />
-        </ChoiceCard>
-      ) : (
-        <PlaceholderCard onClick={() => onPick("a")} />
-      )}
-
-      <span className="z-10 shrink-0 rounded-full bg-[#6C63E0] px-2.5 py-1 text-[11px] font-bold text-white shadow-sm">
-        VS
-      </span>
-
-      {is_q1 ? (
-        <ChoiceCard onClick={() => onPick("b")}>
-          <img
-            src={Q1_B_IMG}
-            alt="한 달에 한 번 만나서 2박 3일 데이트"
-            className="h-full w-full rounded-3xl object-cover"
-          />
-        </ChoiceCard>
-      ) : (
-        <PlaceholderCard onClick={() => onPick("b")} />
-      )}
+    <div className="flex flex-col items-center gap-2">
+      <p className="text-[11px] font-bold text-[#6C63E0]">{qstn.topic}</p>
+      <div className="flex items-center justify-center gap-2">
+        <ChoiceCard img={qstn.img_a} txt={qstn.txt_a} onClick={() => onPick("a")} />
+        <span className="z-10 shrink-0 rounded-full bg-[#6C63E0] px-2.5 py-1 text-[11px] font-bold text-white shadow-sm">
+          VS
+        </span>
+        <ChoiceCard img={qstn.img_b} txt={qstn.txt_b} onClick={() => onPick("b")} />
+      </div>
     </div>
   );
 }
 
+// 카드는 이미지만 담고, 문항 내용은 카드 아래 텍스트로 노출한다 - 주제별 이미지가 아직
+// 업로드되지 않은 문항(img가 null)은 카드 자리에 기본 그라디언트만 채워 자연스럽게 대체된다
 function ChoiceCard({
-  children,
+  img,
+  txt,
   onClick,
 }: {
-  children: React.ReactNode;
+  img: string | null;
+  txt: string;
   onClick: () => void;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="h-56 w-32 shrink-0 overflow-hidden rounded-3xl shadow-md transition active:scale-95"
+      className="flex w-32 shrink-0 flex-col items-center gap-2 transition active:scale-95"
     >
-      {children}
+      <div className="h-56 w-32 overflow-hidden rounded-3xl shadow-md">
+        {img ? (
+          <img src={img} alt="" className="h-full w-full object-cover" />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#C9C4F7] to-[#8A82EA]">
+            <Heart className="h-7 w-7 fill-white/80 text-white/80" />
+          </div>
+        )}
+      </div>
+      <p className="text-center text-xs font-semibold leading-snug text-gray-700">{txt}</p>
     </button>
   );
 }
 
-function PlaceholderCard({ onClick }: { onClick: () => void }) {
+function LoadView() {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="flex h-56 w-32 shrink-0 flex-col items-center justify-center gap-2 rounded-3xl border-2 border-dashed border-[#D8D4F7] bg-[#F1F0FD] px-2 text-center transition active:scale-95"
-    >
-      <Lock className="h-6 w-6 text-[#B3ACEB]" />
-      <span className="text-xs font-bold leading-snug text-[#8C85D6]">추후 공개됩니다.</span>
-    </button>
+    <div className="flex flex-1 flex-col items-center justify-center gap-1.5">
+      <span className="h-2.5 w-2.5 animate-bounce rounded-full bg-[#6C63E0] [animation-delay:-0.3s]" />
+      <span className="h-2.5 w-2.5 animate-bounce rounded-full bg-[#6C63E0] [animation-delay:-0.15s]" />
+      <span className="h-2.5 w-2.5 animate-bounce rounded-full bg-[#6C63E0]" />
+    </div>
   );
 }
 
