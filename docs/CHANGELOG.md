@@ -1,5 +1,19 @@
 # CHANGELOG
 
+## v0.3.1 - 목업 데이터 정리 (죽은 코드 제거 및 이장님 리뷰 실데이터 연결)
+- **`jang_data.ts`/`memb_data.ts`(이장·주민 목업) 및 이들에 의존하던 죽은 화면 삭제**
+  - `/chief` 목록(`ChiefListScreen`)이 실제 연락처(`cntc_store`) 기반 `/cntc/[uid]`로 이동하도록 바뀐 뒤(v0.11.0)로,
+    목업 전용이던 `/chief/[jang_id]`(`ChiefDetail.tsx`)는 실제 진입 경로가 없는 죽은 코드였다 — 삭제
+    (프로필/연결목록/하트 기능은 이미 `CntcDetail.tsx`가 실데이터로 대체하고 있었음)
+  - 홈 화면의 "이장님 추천 주민" 목업 리스트가 삭제된 뒤(v0.11.0)로 `/resident/[memb_id]`(`MembDetail.tsx`)도
+    열어주는 진입점이 없는 죽은 코드였다 — 삭제
+  - `req_target.ts`의 목업(jang_data) 폴백 분기 제거, 실제 유저(`find_user`) 조회만 남김
+- **이장님 리뷰 목록(`/chief/[jang_id]/reviews`, `ChiefReviews.tsx`)은 실제 `chief_reviews` 테이블을 쓰는 기능이라
+  삭제 대신 실데이터로 연결**
+  - `find_jang`(목업) 대신 `find_user`(실제 유저)로 이장님 이름을 조회하도록 교체
+  - 진입점이던 `ChiefDetail.tsx`가 삭제되며 볼 방법이 없어졌던 문제를, `CntcDetail.tsx`에 "성공한 만남" 카드(평균 평점 · 후기 개수)를
+    새로 추가해 이장님 연락처 상세에서 리뷰 목록으로 이동할 수 있도록 복구
+
 ## v0.3.0 - 초대코드 기반 주민-이장 연결
 - **연결 생성 경로를 초대코드로 일원화** (이전까지는 연결을 만드는 UI 자체가 없었고,
   `add_cntc()`는 어디서도 호출되지 않는 죽은 코드였다)

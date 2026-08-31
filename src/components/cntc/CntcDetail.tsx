@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, ChevronRight, Crown, Heart, Users } from "lucide-react";
+import { ChevronLeft, ChevronRight, Crown, Heart, Star, Users } from "lucide-react";
 import { AuthUser, curr_user, find_user } from "@/lib/store/auth_store";
 import { list_chf_of, list_res_of } from "@/lib/store/cntc_store";
 import { has_req } from "@/lib/store/matc_store";
+import { jang_revw_list } from "@/lib/store/revw_store";
 import ProfileViewModal, { auth_to_prof } from "@/components/profile/ProfileViewModal";
 
 const NAV_DELAY = 250;
@@ -16,6 +17,8 @@ export default function CntcDetail({ uid }: { uid: string }) {
   const [link_list, setLinkList] = useState<AuthUser[]>([]);
   const [liked_set, setLikedSet] = useState<Set<string>>(new Set());
   const [prof_item, setProfItem] = useState<AuthUser | null>(null);
+  const [scr_val, setScrVal] = useState(0);
+  const [revw_cnt, setRevwCnt] = useState(0);
 
   useEffect(() => {
     (async () => {
@@ -29,14 +32,23 @@ export default function CntcDetail({ uid }: { uid: string }) {
         const next_list = raw_list.filter((l_item) => l_item.user_id !== me_now?.user_id);
         setLinkList(next_list);
         if (found.user_role === "chief") {
-          const hit_list = await Promise.all(
-            next_list.map((r_item) => has_req(found.user_id, r_item.user_id))
-          );
+          const [hit_list, revw_list] = await Promise.all([
+            Promise.all(next_list.map((r_item) => has_req(found.user_id, r_item.user_id))),
+            jang_revw_list(found.user_id),
+          ]);
           const next_set = new Set<string>();
           next_list.forEach((r_item, idx_val) => {
             if (hit_list[idx_val]) next_set.add(r_item.user_id);
           });
           setLikedSet(next_set);
+          setRevwCnt(revw_list.length);
+          setScrVal(
+            revw_list.length === 0
+              ? 0
+              : Math.round(
+                  (revw_list.reduce((acc_val, r_item) => acc_val + r_item.scr_val, 0) / revw_list.length) * 10
+                ) / 10
+          );
         }
       }
     })();
@@ -115,6 +127,23 @@ export default function CntcDetail({ uid }: { uid: string }) {
         </div>
         <ChevronRight className="h-4 w-4 shrink-0 text-gray-300" />
       </button>
+
+      {user_item.user_role === "chief" && (
+        <button
+          type="button"
+          onClick={() => rout_nav.push(`/chief/${user_item.user_id}/reviews`)}
+          className="mx-5 mt-3 flex w-[calc(100%-2.5rem)] items-center justify-between rounded-2xl bg-white p-4 text-left shadow-sm transition active:opacity-90"
+        >
+          <div className="flex items-center gap-1 text-xs text-gray-400">
+            <Star className="h-3.5 w-3.5 text-[#F26B12]" />
+            성공한 만남 · 후기 {revw_cnt}개
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="text-sm font-extrabold text-gray-900">{scr_val || "-"}</span>
+            <ChevronRight className="h-4 w-4 shrink-0 text-gray-300" />
+          </div>
+        </button>
+      )}
 
       <section className="mt-5">
         <h2 className="px-5 text-[15px] font-bold text-gray-900">{link_lbl}</h2>

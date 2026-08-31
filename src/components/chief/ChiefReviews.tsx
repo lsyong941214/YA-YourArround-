@@ -3,19 +3,24 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, Star } from "lucide-react";
-import { find_jang } from "@/lib/data/jang_data";
+import { AuthUser, find_user } from "@/lib/store/auth_store";
 import { avg_scr, jang_revw_list, RevwItem } from "@/lib/store/revw_store";
 
 export default function ChiefReviews({ jang_id }: { jang_id: string }) {
   const rout_nav = useRouter();
-  const jang_item = find_jang(jang_id);
+  const [jang_item, setJangItem] = useState<AuthUser | null | undefined>(undefined);
   const [revw_list, setRevwList] = useState<RevwItem[]>([]);
   const [scr_val, setScrVal] = useState(0);
 
   useEffect(() => {
+    find_user(jang_id).then((found) => setJangItem(found ?? null));
     jang_revw_list(jang_id).then(setRevwList);
     avg_scr(jang_id).then(setScrVal);
   }, [jang_id]);
+
+  if (jang_item === undefined) {
+    return <main className="h-dvh w-full bg-white" />;
+  }
 
   if (!jang_item) {
     return (
@@ -47,7 +52,7 @@ export default function ChiefReviews({ jang_id }: { jang_id: string }) {
       </header>
 
       <section className="mx-5 mt-2 rounded-2xl bg-white p-5 text-center shadow-sm">
-        <p className="text-xs text-gray-400">{jang_item.jang_name}의 평점</p>
+        <p className="text-xs text-gray-400">{jang_item.user_name} 이장님의 평점</p>
         <p className="mt-1 text-3xl font-extrabold text-gray-900">{scr_val || "-"}</p>
         <div className="mt-1 flex justify-center gap-0.5">
           {[1, 2, 3, 4, 5].map((n_val) => (
