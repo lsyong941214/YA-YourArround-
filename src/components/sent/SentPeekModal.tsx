@@ -18,6 +18,7 @@ export default function SentPeekModal({
       ? {
           ini_char: req_item.ini_char,
           ton_hex: req_item.ton_hex,
+          img: req_item.memb_img,
           name: req_item.memb_name,
           age: req_item.memb_age,
           job: req_item.memb_job,
@@ -31,6 +32,7 @@ export default function SentPeekModal({
       : {
           ini_char: req_item.req_ini,
           ton_hex: req_item.req_ton,
+          img: req_item.req_img,
           name: req_item.req_name,
           age: req_item.req_age,
           job: req_item.req_job,
@@ -53,7 +55,7 @@ export default function SentPeekModal({
         </div>
 
         <div className="px-5 pt-2">
-          <PhotoCrsl ini_char={oppo.ini_char} ton_hex={oppo.ton_hex} phot_list={oppo.phts} />
+          <PhotoCrsl ini_char={oppo.ini_char} ton_hex={oppo.ton_hex} user_img={oppo.img} phot_list={oppo.phts} />
         </div>
 
         <div className="px-5 pt-3">

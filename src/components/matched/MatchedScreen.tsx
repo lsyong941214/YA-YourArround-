@@ -73,6 +73,7 @@ export default function MatchedScreen({ req_id }: { req_id: string }) {
       ? {
           ini_char: req_item.req_ini,
           ton_hex: req_item.req_ton,
+          user_img: req_item.req_img,
           phot_list: req_item.req_phts,
           user_name: req_item.req_name,
           user_age: req_item.req_age,
@@ -86,6 +87,7 @@ export default function MatchedScreen({ req_id }: { req_id: string }) {
         ? {
             ini_char: req_item.ini_char,
             ton_hex: req_item.ton_hex,
+            user_img: req_item.memb_img,
             phot_list: req_item.memb_phts,
             user_name: req_item.memb_name,
             user_age: req_item.memb_age,

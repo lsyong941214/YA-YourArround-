@@ -26,7 +26,12 @@ export default function ProposalModal({
         </div>
 
         <div className="px-5 pt-2">
-          <PhotoCrsl ini_char={req_item.req_ini} ton_hex={req_item.req_ton} phot_list={req_item.req_phts} />
+          <PhotoCrsl
+            ini_char={req_item.req_ini}
+            ton_hex={req_item.req_ton}
+            user_img={req_item.req_img}
+            phot_list={req_item.req_phts}
+          />
         </div>
 
         <div className="px-5 pt-4">

@@ -8,17 +8,23 @@ const PLHD_CNT = 3;
 export default function PhotoCrsl({
   ini_char,
   ton_hex,
+  user_img,
   phot_list,
 }: {
   ini_char: string;
   ton_hex: string;
+  user_img?: string | null;
   phot_list?: string[];
 }) {
   const scrl_ref = useRef<HTMLDivElement>(null);
   const [idx_val, setIdxVal] = useState(0);
 
-  const has_phot = !!phot_list && phot_list.length > 0;
-  const sld_cnt = has_phot ? phot_list!.length : PLHD_CNT;
+  // 대표 프로필 사진(user_img)을 항상 첫 장으로, 그 뒤에 사진첩 앨범(phot_list)을 이어붙인다 -
+  // 예전엔 phot_list만 보여줘서, 앨범을 따로 추가하지 않은 유저는 프로필 사진을 올려놔도
+  // 이 캐러셀에서는 이니셜 placeholder만 보였다
+  const slide_list = [user_img, ...(phot_list ?? [])].filter((url): url is string => !!url);
+  const has_phot = slide_list.length > 0;
+  const sld_cnt = has_phot ? slide_list.length : PLHD_CNT;
 
   function on_scrl() {
     const el_ref = scrl_ref.current;
@@ -40,7 +46,7 @@ export default function PhotoCrsl({
         className="flex snap-x snap-mandatory overflow-x-auto rounded-2xl"
       >
         {has_phot
-          ? phot_list!.map((phot_url, s_idx) => (
+          ? slide_list.map((phot_url, s_idx) => (
               <div key={phot_url + s_idx} className="h-52 w-full shrink-0 snap-center">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={phot_url} alt="프로필 사진" className="h-full w-full object-cover" />

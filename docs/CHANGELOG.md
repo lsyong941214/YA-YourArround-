@@ -1,5 +1,19 @@
 # CHANGELOG
 
+## v0.4.2 - 버그 수정: 프로필 카드에서 저장된 프로필 사진이 안 보이던 문제
+- **원인**: 프로필 보기 팝업(`ProfileViewModal`/`PhotoCrsl`, 그리고 이를 그대로 흉내내던
+  `ProposalModal`/`SentPeekModal`의 캐러셀)이 사진첩 앨범(`phot_list`/`*_phts`)만 슬라이드로
+  보여주고 대표 프로필 사진(`user_img`/`avatar_url`)은 아예 참조하지 않았다. 온보딩에서
+  프로필 사진은 필수지만 앨범 추가는 선택이라, 앨범을 따로 채우지 않은 대다수 유저는
+  프로필 사진을 올려놨어도 이 캐러셀에서 이니셜 placeholder만 보였다
+  - `MatcDetailModal.tsx`/`MatchedScreen.tsx`가 쓰는 `MatcReq`(`matc_store.ts`)도
+    `requester`/`resident` profiles를 이미 `*`로 JOIN하고 있었는데 `avatar_url`을
+    타입/매핑에서 누락하고 있었다(`req_img`/`memb_img` 필드 추가로 노출)
+- **수정**: `PhotoCrsl`이 `user_img`를 항상 첫 슬라이드로, 그 뒤에 앨범 사진을 이어붙이도록
+  변경. `ProfileViewData`/`auth_to_prof`/`MatcReq`에 `user_img`·`req_img`·`memb_img`를 추가하고
+  `ProfileViewModal`/`ProposalModal`/`SentPeekModal`/`MatcDetailModal`/`MatchedScreen`의 호출부를
+  모두 연결
+
 ## v0.4.1 - 밸런스 게임 카테고리별 랜덤 출제(10문항) + 재출제 하이라이트
 - **한 게임에 카테고리(topic)별 2~3개씩, 총 10문항만 무작위로 출제** (`blnd_store.ts`의
   `draw_qstn_set`/`ensure_game_qstns`) - 지금까지는 문항 뱅크(20개) 전부를 순서대로 다 풀어야

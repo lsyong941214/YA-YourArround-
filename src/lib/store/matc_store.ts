@@ -24,6 +24,7 @@ export type MatcReq = {
   memb_mbti: string;
   memb_reg: string;
   memb_bio: string;
+  memb_img: string | null;
   memb_phts: string[];
   tag_list: string[];
   ini_char: string;
@@ -34,6 +35,7 @@ export type MatcReq = {
   req_mbti: string;
   req_reg: string;
   req_bio: string;
+  req_img: string | null;
   req_phts: string[];
   req_tags: string[];
   req_ini: string;
@@ -55,6 +57,7 @@ type ProfRow = {
   user_mbti: string | null;
   user_reg: string | null;
   user_bio: string;
+  avatar_url: string | null;
   photo_urls: string[];
   tag_list: string[];
   ini_char: string;
@@ -95,6 +98,7 @@ function row_to_matc(row: MatcRow): MatcReq {
     memb_mbti: row.resident.user_mbti ?? "-",
     memb_reg: row.resident.user_reg ?? "-",
     memb_bio: row.resident.user_bio,
+    memb_img: row.resident.avatar_url,
     memb_phts: row.resident.photo_urls ?? [],
     tag_list: row.resident.tag_list ?? [],
     ini_char: row.resident.ini_char,
@@ -105,6 +109,7 @@ function row_to_matc(row: MatcRow): MatcReq {
     req_mbti: row.requester.user_mbti ?? "-",
     req_reg: row.requester.user_reg ?? "-",
     req_bio: row.requester.user_bio,
+    req_img: row.requester.avatar_url,
     req_phts: row.requester.photo_urls ?? [],
     req_tags: row.requester.tag_list ?? [],
     req_ini: row.requester.ini_char,
