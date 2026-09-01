@@ -7,6 +7,7 @@ import { find_req, MatcReq, updt_req } from "@/lib/store/matc_store";
 import { add_revw } from "@/lib/store/revw_store";
 import { curr_user } from "@/lib/store/auth_store";
 import ProfileViewModal, { ProfileViewData } from "@/components/profile/ProfileViewModal";
+import AvatarCircle from "@/components/common/AvatarCircle";
 import RevwModal from "./RevwModal";
 
 type ProfWho = "req" | "memb" | null;
@@ -73,6 +74,7 @@ export default function MatchedScreen({ req_id }: { req_id: string }) {
       ? {
           ini_char: req_item.req_ini,
           ton_hex: req_item.req_ton,
+          img_url: req_item.req_img,
           phot_list: req_item.req_phts,
           user_name: req_item.req_name,
           user_age: req_item.req_age,
@@ -86,6 +88,7 @@ export default function MatchedScreen({ req_id }: { req_id: string }) {
         ? {
             ini_char: req_item.ini_char,
             ton_hex: req_item.ton_hex,
+            img_url: req_item.memb_img,
             phot_list: req_item.memb_phts,
             user_name: req_item.memb_name,
             user_age: req_item.memb_age,
@@ -122,21 +125,21 @@ export default function MatchedScreen({ req_id }: { req_id: string }) {
         <h1 className="text-xl font-extrabold text-gray-900">연결 성사! 🎉</h1>
 
         <div className="mt-8 flex items-center gap-5">
-          <div
+          <AvatarCircle
+            img_url={req_item.req_img}
+            ini_char={req_item.req_ini}
+            ton_hex={req_item.req_ton}
             className="flex h-20 w-20 items-center justify-center rounded-full text-2xl font-bold text-white"
-            style={{ backgroundColor: req_item.req_ton }}
-          >
-            {req_item.req_ini}
-          </div>
+          />
           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#FFF3E9] text-[#F26B12]">
             <Handshake className="h-5 w-5" />
           </div>
-          <div
+          <AvatarCircle
+            img_url={req_item.memb_img}
+            ini_char={req_item.ini_char}
+            ton_hex={req_item.ton_hex}
             className="flex h-20 w-20 items-center justify-center rounded-full text-2xl font-bold text-white"
-            style={{ backgroundColor: req_item.ton_hex }}
-          >
-            {req_item.ini_char}
-          </div>
+          />
         </div>
 
         <p className="mt-6 text-base font-bold text-gray-900">
@@ -148,6 +151,7 @@ export default function MatchedScreen({ req_id }: { req_id: string }) {
           <PersonMini
             ini_char={req_item.req_ini}
             ton_hex={req_item.req_ton}
+            img_url={req_item.req_img}
             memb_name={req_item.req_name}
             memb_age={req_item.req_age}
             memb_job={req_item.req_job}
@@ -156,6 +160,7 @@ export default function MatchedScreen({ req_id }: { req_id: string }) {
           <PersonMini
             ini_char={req_item.ini_char}
             ton_hex={req_item.ton_hex}
+            img_url={req_item.memb_img}
             memb_name={req_item.memb_name}
             memb_age={req_item.memb_age}
             memb_job={req_item.memb_job}
@@ -199,6 +204,7 @@ export default function MatchedScreen({ req_id }: { req_id: string }) {
 function PersonMini({
   ini_char,
   ton_hex,
+  img_url,
   memb_name,
   memb_age,
   memb_job,
@@ -206,6 +212,7 @@ function PersonMini({
 }: {
   ini_char: string;
   ton_hex: string;
+  img_url?: string | null;
   memb_name: string;
   memb_age: number;
   memb_job: string;
@@ -213,12 +220,12 @@ function PersonMini({
 }) {
   return (
     <div className="rounded-2xl bg-[#FFF8F3] p-3 text-center">
-      <div
+      <AvatarCircle
+        img_url={img_url}
+        ini_char={ini_char}
+        ton_hex={ton_hex}
         className="mx-auto flex h-11 w-11 items-center justify-center rounded-full text-sm font-bold text-white"
-        style={{ backgroundColor: ton_hex }}
-      >
-        {ini_char}
-      </div>
+      />
       <p className="mt-2 text-xs font-bold text-gray-900">
         {memb_name} <span className="font-normal text-gray-400">{memb_age}</span>
       </p>

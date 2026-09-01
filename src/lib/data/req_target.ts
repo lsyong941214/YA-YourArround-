@@ -20,6 +20,7 @@ export type ReqTarget = {
   tag_list: string[];
   ini_char: string;
   ton_hex: string;
+  memb_img: string | null;
 };
 
 export async function find_req_target(jang_id: string, memb_id: string): Promise<ReqTarget | undefined> {
@@ -39,6 +40,7 @@ export async function find_req_target(jang_id: string, memb_id: string): Promise
       tag_list: resd_item.tag_list,
       ini_char: resd_item.ini_char,
       ton_hex: resd_item.ton_hex,
+      memb_img: null,
     };
   }
 
@@ -57,6 +59,7 @@ export async function find_req_target(jang_id: string, memb_id: string): Promise
       tag_list: res_user.tag_list,
       ini_char: res_user.ini_char,
       ton_hex: res_user.ton_hex,
+      memb_img: res_user.user_img,
     };
   }
 

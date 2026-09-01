@@ -1,5 +1,19 @@
 # CHANGELOG
 
+## v0.3.1 - 프로필 사진이 홈/마이페이지 밖에서는 안 보이던 문제 수정
+- 원인 파악: 프로필 사진(`avatar_url`) 업로드/저장 자체는 정상 동작했지만, 두 군데에서 화면에 반영되지 않고 있었다
+  - `matc_store.ts`/`blnd_store.ts`가 매칭·주변인 테스트 요청을 조회할 때 `profiles`를 JOIN하면서도
+    `avatar_url`은 `MatcReq`/`BlndReq`로 옮겨 담지 않았음 (이니셜/톤 컬러만 옮겨 담고 있었음)
+  - 연락처 목록(`ChiefListScreen`/`CntcDetail`), 홈의 "연결된 주민" 카드 등은 실제 `user_img`를 갖고 있었는데도
+    화면에서 이니셜 원형만 그리고 사진은 아예 참조하지 않았음
+- 공용 `AvatarCircle` 컴포넌트 신규 추가 (`src/components/common/AvatarCircle.tsx`) - 사진이 있으면 사진을,
+  없으면 기존 이니셜 원형을 그대로 보여준다. 흩어져 있던 동일한 이니셜 원형 마크업을 이 컴포넌트로 교체
+- `MatcReq`/`BlndReq`/`ReqTarget`에 `memb_img`/`req_img`(또는 `memb_img`) 필드 추가, 조회 시 `avatar_url`을 함께 채움
+- `PhotoCrsl`(프로필 보기 팝업의 사진 캐러셀)이 사진첩 앨범이 비어있을 때 이니셜 placeholder 대신
+  프로필 사진(`avat_url`)을 보여주도록 개선, `ProfileViewModal`/`auth_to_prof`도 프로필 사진을 함께 전달
+- 적용 화면: 이장님 연락처 목록/상세, 홈의 "연결된 주민", 진행중인 매칭 목록/상세, 매칭 현황(보낸/받은),
+  연결 요청 보내기, 주변인 테스트 결과 팝업, 연결 성사 화면, 프로필 보기 팝업 전체
+
 ## v0.3.0 - 초대코드 기반 주민-이장 연결
 - **연결 생성 경로를 초대코드로 일원화** (이전까지는 연결을 만드는 UI 자체가 없었고,
   `add_cntc()`는 어디서도 호출되지 않는 죽은 코드였다)

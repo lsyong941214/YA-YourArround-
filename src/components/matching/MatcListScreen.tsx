@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { jang_list, matc_is_prog, matc_stat_lbl, matc_stat_tone, MatcReq } from "@/lib/store/matc_store";
 import { curr_user } from "@/lib/store/auth_store";
+import AvatarCircle from "@/components/common/AvatarCircle";
 import MatcDetailModal from "./MatcDetailModal";
 
 export default function MatcListScreen() {
@@ -64,12 +65,12 @@ export default function MatcListScreen() {
               onClick={() => go_req(r_item)}
               className="flex items-center gap-3 rounded-2xl bg-white p-4 text-left shadow-sm transition active:opacity-90"
             >
-              <div
+              <AvatarCircle
+                img_url={r_item.memb_img}
+                ini_char={r_item.ini_char}
+                ton_hex={r_item.ton_hex}
                 className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-base font-bold text-white"
-                style={{ backgroundColor: r_item.ton_hex }}
-              >
-                {r_item.ini_char}
-              </div>
+              />
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5">
                   <p className="truncate text-sm font-bold text-gray-900">

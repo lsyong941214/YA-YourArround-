@@ -20,6 +20,7 @@ import {
 import SentPeekModal from "./SentPeekModal";
 import BlndSentPeekModal from "./BlndSentPeekModal";
 import ProposalModal from "@/components/proposal/ProposalModal";
+import AvatarCircle from "@/components/common/AvatarCircle";
 
 type SentDir = "sent" | "recv";
 
@@ -127,15 +128,12 @@ export default function SentListScreen() {
               onClick={() => go_item(sent_item)}
               className="flex items-center gap-3 rounded-2xl bg-white p-4 text-left shadow-sm transition active:opacity-90"
             >
-              <div
+              <AvatarCircle
+                img_url={sent_item.dir === "sent" ? sent_item.item.memb_img : sent_item.item.req_img}
+                ini_char={sent_item.dir === "sent" ? sent_item.item.ini_char : sent_item.item.req_ini}
+                ton_hex={sent_item.dir === "sent" ? sent_item.item.ton_hex : sent_item.item.req_ton}
                 className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-base font-bold text-white"
-                style={{
-                  backgroundColor:
-                    sent_item.dir === "sent" ? sent_item.item.ton_hex : sent_item.item.req_ton,
-                }}
-              >
-                {sent_item.dir === "sent" ? sent_item.item.ini_char : sent_item.item.req_ini}
-              </div>
+              />
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5">
                   <p className="truncate text-sm font-bold text-gray-900">

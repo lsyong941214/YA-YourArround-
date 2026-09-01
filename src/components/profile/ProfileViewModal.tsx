@@ -7,6 +7,7 @@ import { AuthUser } from "@/lib/store/auth_store";
 export type ProfileViewData = {
   ini_char: string;
   ton_hex: string;
+  img_url?: string | null;
   phot_list?: string[];
   user_name: string;
   user_age?: number;
@@ -22,6 +23,7 @@ export function auth_to_prof(u_item: AuthUser): ProfileViewData {
   return {
     ini_char: u_item.ini_char,
     ton_hex: u_item.ton_hex,
+    img_url: u_item.user_img,
     phot_list: u_item.phot_list,
     user_name: u_item.user_name,
     user_age: u_item.user_age,
@@ -51,7 +53,12 @@ export default function ProfileViewModal({
         </div>
 
         <div className="px-5 pt-2">
-          <PhotoCrsl ini_char={prof_item.ini_char} ton_hex={prof_item.ton_hex} phot_list={prof_item.phot_list} />
+          <PhotoCrsl
+            ini_char={prof_item.ini_char}
+            ton_hex={prof_item.ton_hex}
+            img_url={prof_item.img_url}
+            phot_list={prof_item.phot_list}
+          />
         </div>
 
         <div className="px-5 pt-4">

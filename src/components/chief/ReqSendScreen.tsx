@@ -6,6 +6,7 @@ import { ArrowDown, ChevronLeft, Info } from "lucide-react";
 import { find_req_target, ReqTarget } from "@/lib/data/req_target";
 import { AuthUser, curr_user } from "@/lib/store/auth_store";
 import { add_req } from "@/lib/store/matc_store";
+import AvatarCircle from "@/components/common/AvatarCircle";
 
 const MSG_MAX = 100;
 
@@ -75,6 +76,7 @@ export default function ReqSendScreen({
         <PersonCard
           ini_char={me_item.ini_char}
           ton_hex={me_item.ton_hex}
+          img_url={me_item.user_img}
           memb_name={me_item.user_name}
           memb_age={me_item.user_age ?? 0}
           memb_job={me_item.user_job ?? "-"}
@@ -91,6 +93,7 @@ export default function ReqSendScreen({
         <PersonCard
           ini_char={resd_item.ini_char}
           ton_hex={resd_item.ton_hex}
+          img_url={resd_item.memb_img}
           memb_name={resd_item.memb_name}
           memb_age={resd_item.memb_age}
           memb_job={resd_item.memb_job}
@@ -150,6 +153,7 @@ export default function ReqSendScreen({
 function PersonCard({
   ini_char,
   ton_hex,
+  img_url,
   memb_name,
   memb_age,
   memb_job,
@@ -159,6 +163,7 @@ function PersonCard({
 }: {
   ini_char: string;
   ton_hex: string;
+  img_url?: string | null;
   memb_name: string;
   memb_age: number;
   memb_job: string;
@@ -168,12 +173,12 @@ function PersonCard({
 }) {
   return (
     <div className="mt-1 flex items-center gap-3 rounded-2xl border border-gray-100 bg-[#FFF8F3] p-3">
-      <div
+      <AvatarCircle
+        img_url={img_url}
+        ini_char={ini_char}
+        ton_hex={ton_hex}
         className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-base font-bold text-white"
-        style={{ backgroundColor: ton_hex }}
-      >
-        {ini_char}
-      </div>
+      />
       <div className="min-w-0">
         <p className="truncate text-sm font-bold text-gray-900">
           {memb_name} <span className="font-normal text-gray-400">{memb_age}</span>

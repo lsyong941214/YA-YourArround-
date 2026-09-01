@@ -8,17 +8,23 @@ const PLHD_CNT = 3;
 export default function PhotoCrsl({
   ini_char,
   ton_hex,
+  img_url,
   phot_list,
 }: {
   ini_char: string;
   ton_hex: string;
+  img_url?: string | null;
   phot_list?: string[];
 }) {
   const scrl_ref = useRef<HTMLDivElement>(null);
   const [idx_val, setIdxVal] = useState(0);
 
-  const has_phot = !!phot_list && phot_list.length > 0;
-  const sld_cnt = has_phot ? phot_list!.length : PLHD_CNT;
+  // 사진첩 앨범이 있으면 앨범을, 없으면 프로필 사진(avat_url) 한 장을, 그마저 없으면
+  // 이니셜 placeholder를 보여준다
+  const has_albm = !!phot_list && phot_list.length > 0;
+  const sld_list = has_albm ? phot_list! : img_url ? [img_url] : [];
+  const has_phot = sld_list.length > 0;
+  const sld_cnt = has_phot ? sld_list.length : PLHD_CNT;
 
   function on_scrl() {
     const el_ref = scrl_ref.current;
@@ -40,7 +46,7 @@ export default function PhotoCrsl({
         className="flex snap-x snap-mandatory overflow-x-auto rounded-2xl"
       >
         {has_phot
-          ? phot_list!.map((phot_url, s_idx) => (
+          ? sld_list.map((phot_url, s_idx) => (
               <div key={phot_url + s_idx} className="h-52 w-full shrink-0 snap-center">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={phot_url} alt="프로필 사진" className="h-full w-full object-cover" />

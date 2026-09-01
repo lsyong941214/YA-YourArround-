@@ -6,6 +6,7 @@ import { ChevronLeft, Info } from "lucide-react";
 import { find_req, MatcReq, updt_req } from "@/lib/store/matc_store";
 import AcptModal from "./AcptModal";
 import RejectModal from "./RejectModal";
+import AvatarCircle from "@/components/common/AvatarCircle";
 
 export default function MatcReviewScreen({ req_id }: { req_id: string }) {
   const rout_nav = useRouter();
@@ -74,6 +75,7 @@ export default function MatcReviewScreen({ req_id }: { req_id: string }) {
         <PersonCard
           ini_char={req_item.req_ini}
           ton_hex={req_item.req_ton}
+          img_url={req_item.req_img}
           memb_name={req_item.req_name}
           memb_age={req_item.req_age}
           memb_job={req_item.req_job}
@@ -86,6 +88,7 @@ export default function MatcReviewScreen({ req_id }: { req_id: string }) {
         <PersonCard
           ini_char={req_item.ini_char}
           ton_hex={req_item.ton_hex}
+          img_url={req_item.memb_img}
           memb_name={req_item.memb_name}
           memb_age={req_item.memb_age}
           memb_job={req_item.memb_job}
@@ -172,6 +175,7 @@ export default function MatcReviewScreen({ req_id }: { req_id: string }) {
 function PersonCard({
   ini_char,
   ton_hex,
+  img_url,
   memb_name,
   memb_age,
   memb_job,
@@ -181,6 +185,7 @@ function PersonCard({
 }: {
   ini_char: string;
   ton_hex: string;
+  img_url?: string | null;
   memb_name: string;
   memb_age: number;
   memb_job: string;
@@ -190,12 +195,12 @@ function PersonCard({
 }) {
   return (
     <div className="mt-1 flex items-center gap-3 rounded-2xl border border-gray-100 bg-[#FFF8F3] p-3">
-      <div
+      <AvatarCircle
+        img_url={img_url}
+        ini_char={ini_char}
+        ton_hex={ton_hex}
         className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-base font-bold text-white"
-        style={{ backgroundColor: ton_hex }}
-      >
-        {ini_char}
-      </div>
+      />
       <div className="min-w-0">
         <p className="truncate text-sm font-bold text-gray-900">
           {memb_name} <span className="font-normal text-gray-400">{memb_age}</span>
