@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { ChevronLeft, Handshake, Home } from "lucide-react";
 import { find_req, MatcReq, updt_req } from "@/lib/store/matc_store";
 import { add_revw } from "@/lib/store/revw_store";
-import { curr_user } from "@/lib/store/auth_store";
 import ProfileViewModal, { ProfileViewData } from "@/components/profile/ProfileViewModal";
 import AvatarCircle from "@/components/common/AvatarCircle";
 import RevwModal from "./RevwModal";
@@ -39,12 +38,6 @@ export default function MatchedScreen({ req_id }: { req_id: string }) {
     await updt_req(req_id, { rvwd_flag: true });
     setReqItem(await find_req(req_id));
     setRevwOpen(false);
-  }
-
-  async function do_prof_agn() {
-    if (!req_item) return;
-    const me_now = await curr_user();
-    setProfWho(me_now?.user_id === req_item.req_uid ? "memb" : "req");
   }
 
   // TODO: 채팅 기능 연동
@@ -174,13 +167,6 @@ export default function MatchedScreen({ req_id }: { req_id: string }) {
       <div className="space-y-2 px-6 pb-8 pt-4">
         <button
           type="button"
-          onClick={do_prof_agn}
-          className="w-full rounded-2xl border border-gray-200 py-3.5 text-sm font-bold text-gray-700 transition active:opacity-90"
-        >
-          프로필 다시 보기
-        </button>
-        <button
-          type="button"
           onClick={do_chat}
           className="w-full rounded-2xl bg-[#F26B12] py-3.5 text-sm font-bold text-white transition active:opacity-90"
         >
@@ -219,7 +205,11 @@ function PersonMini({
   onView: () => void;
 }) {
   return (
-    <div className="rounded-2xl bg-[#FFF8F3] p-3 text-center">
+    <button
+      type="button"
+      onClick={onView}
+      className="rounded-2xl bg-[#FFF8F3] p-3 text-center transition active:opacity-80"
+    >
       <AvatarCircle
         img_url={img_url}
         ini_char={ini_char}
@@ -230,13 +220,6 @@ function PersonMini({
         {memb_name} <span className="font-normal text-gray-400">{memb_age}</span>
       </p>
       <p className="text-[11px] text-gray-400">{memb_job}</p>
-      <button
-        type="button"
-        onClick={onView}
-        className="mt-2 w-full rounded-lg bg-[#F26B12] py-1.5 text-[11px] font-bold text-white transition active:opacity-90"
-      >
-        프로필 보기
-      </button>
-    </div>
+    </button>
   );
 }

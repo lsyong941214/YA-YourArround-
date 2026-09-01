@@ -64,13 +64,18 @@ export default function ProfileViewModal({
         <div className="px-5 pt-4">
           <p className="text-base font-bold text-gray-900">
             {prof_item.user_name}
-            {prof_item.user_age ? <span className="font-normal text-gray-400"> {prof_item.user_age}</span> : null}
-            {prof_item.user_job ? (
-              <span className="font-normal text-gray-400"> · {prof_item.user_job}</span>
+            {prof_item.user_mbti ? (
+              <span className="font-normal text-gray-400"> {prof_item.user_mbti}</span>
             ) : null}
           </p>
-          <p className="mt-0.5 text-xs text-gray-400">
-            {[prof_item.user_mbti, prof_item.user_reg].filter(Boolean).join(" · ")}
+          <p className="mt-0.5 text-sm text-gray-400">
+            {[
+              prof_item.user_age ? `${prof_item.user_age}세` : null,
+              prof_item.user_reg,
+              prof_item.user_job,
+            ]
+              .filter(Boolean)
+              .join(" · ")}
           </p>
 
           {!!prof_item.tag_list?.length && (
@@ -88,8 +93,7 @@ export default function ProfileViewModal({
 
           {prof_item.user_bio && (
             <div className="mt-4 rounded-2xl bg-[#FFF8F3] p-3.5">
-              <p className="text-xs font-bold text-gray-900">소개</p>
-              <p className="mt-1 text-sm leading-relaxed text-gray-600">{prof_item.user_bio}</p>
+              <p className="text-sm leading-relaxed text-gray-600">{prof_item.user_bio}</p>
             </div>
           )}
         </div>

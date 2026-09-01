@@ -78,6 +78,10 @@ export default function ProfEditModal({ init_user, onClose, onSave }: Props) {
   }
 
   function do_save() {
+    if (!prev_img) {
+      setErrMsg("프로필 사진은 필수예요.");
+      return;
+    }
     onSave({
       user_img: prev_img,
       user_bio: bio_txt,
@@ -123,6 +127,9 @@ export default function ProfEditModal({ init_user, onClose, onSave }: Props) {
           </button>
           <input ref={file_ref} type="file" accept="image/*" className="hidden" onChange={do_file} />
         </div>
+        <p className="mx-auto mt-2 max-w-[220px] text-center text-[11px] leading-relaxed text-[#F26B12]">
+          얼굴이 명확하게 보이는 사진을 프로필로 선택하면 매칭 확률을 더 높일 수 있습니다!
+        </p>
 
         <div className="mt-5 grid grid-cols-2 gap-2">
           <div>
@@ -228,7 +235,7 @@ export default function ProfEditModal({ init_user, onClose, onSave }: Props) {
         <button
           type="button"
           onClick={do_save}
-          disabled={img_busy}
+          disabled={img_busy || !prev_img}
           className="mt-5 w-full rounded-2xl bg-[#F26B12] py-3 text-sm font-bold text-white transition active:opacity-90 disabled:opacity-40"
         >
           저장하기

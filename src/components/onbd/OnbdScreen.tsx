@@ -124,6 +124,9 @@ export default function OnbdScreen() {
         </button>
         <input ref={file_ref} type="file" accept="image/*" className="hidden" onChange={do_file} />
         <p className="mt-2 text-[11px] text-gray-400">프로필 사진 (필수)</p>
+        <p className="mt-1 max-w-[220px] text-center text-[11px] leading-relaxed text-[#F26B12]">
+          얼굴이 명확하게 보이는 사진을 프로필로 선택하면 매칭 확률을 더 높일 수 있습니다!
+        </p>
       </section>
 
       <section className="mt-6 px-5">
