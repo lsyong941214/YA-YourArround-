@@ -1,6 +1,6 @@
 "use client";
 
-import { X } from "lucide-react";
+import { Heart, X } from "lucide-react";
 import PhotoCrsl from "@/components/proposal/PhotoCrsl";
 import { AuthUser } from "@/lib/store/auth_store";
 
@@ -38,9 +38,15 @@ export function auth_to_prof(u_item: AuthUser): ProfileViewData {
 export default function ProfileViewModal({
   prof_item,
   onClose,
+  onHeart,
+  liked,
 }: {
   prof_item: ProfileViewData;
   onClose: () => void;
+  // 넘기면 하단에 큰 하트(연결 요청) 버튼이 함께 뜬다 - 상세 화면 등 요청이 의미 없는
+  // 맥락에서는 생략하면 기존처럼 닫기 버튼만 남는다
+  onHeart?: () => void;
+  liked?: boolean;
 }) {
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center">
@@ -98,7 +104,22 @@ export default function ProfileViewModal({
           )}
         </div>
 
-        <div className="px-5 pb-6 pt-5">
+        <div className="space-y-2 px-5 pb-6 pt-5">
+          {onHeart && (
+            <button
+              type="button"
+              onClick={onHeart}
+              aria-label={liked ? "연결 요청을 보냈어요" : "연결 요청 보내기"}
+              className={`flex w-full items-center justify-center gap-2 rounded-2xl py-3.5 text-sm font-bold transition active:opacity-90 ${
+                liked
+                  ? "border border-red-200 bg-red-50 text-red-500"
+                  : "bg-[#F26B12] text-white"
+              }`}
+            >
+              <Heart className="h-4 w-4" fill={liked ? "currentColor" : "none"} />
+              {liked ? "요청을 보냈어요" : "연결 요청 보내기"}
+            </button>
+          )}
           <button
             type="button"
             onClick={onClose}

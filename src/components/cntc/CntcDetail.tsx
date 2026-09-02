@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, ChevronRight, Crown, Heart, Users } from "lucide-react";
+import { ChevronLeft, ChevronRight, Crown, Users } from "lucide-react";
 import { AuthUser, curr_user, find_user } from "@/lib/store/auth_store";
 import { list_chf_of, list_res_of } from "@/lib/store/cntc_store";
 import { has_req } from "@/lib/store/matc_store";
@@ -47,6 +47,7 @@ export default function CntcDetail({ uid }: { uid: string }) {
     if (!user_item) return;
     setLikedSet((prev_set) => new Set(prev_set).add(memb_id));
     setTimeout(() => {
+      setProfItem(null);
       rout_nav.push(`/chief/${user_item.user_id}/request/${memb_id}`);
     }, NAV_DELAY);
   }
@@ -126,50 +127,55 @@ export default function CntcDetail({ uid }: { uid: string }) {
         ) : (
           <div className="mt-3 flex flex-col gap-3 px-5">
             {link_list.map((l_item) => (
-              <div
+              <button
                 key={l_item.user_id}
-                className="flex items-center gap-3 rounded-2xl bg-white p-4 shadow-sm"
+                type="button"
+                onClick={() => setProfItem(l_item)}
+                className="flex items-center gap-3 rounded-2xl bg-white p-4 text-left shadow-sm transition active:opacity-90"
               >
-                <button
-                  type="button"
-                  onClick={() => setProfItem(l_item)}
-                  className="flex min-w-0 flex-1 items-center gap-3 text-left"
-                >
-                  <AvatarCircle
-                    img_url={l_item.user_img}
-                    ini_char={l_item.ini_char}
-                    ton_hex={l_item.ton_hex}
-                    className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-base font-bold text-white"
-                  />
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-bold text-gray-900">{l_item.user_name}</p>
-                    <p className="truncate text-xs text-gray-400">
-                      {l_item.user_age ? `${l_item.user_age}세 · ` : ""}
-                      {l_item.user_job || "-"} {l_item.user_mbti ? `· ${l_item.user_mbti}` : ""}
-                    </p>
-                  </div>
-                </button>
-                {user_item.user_role === "chief" && (
-                  <button
-                    type="button"
-                    onClick={() => do_hert(l_item.user_id)}
-                    aria-label={`${l_item.user_name}님과 연결 요청`}
-                    className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full border transition active:opacity-80 ${
-                      liked_set.has(l_item.user_id)
-                        ? "border-red-200 bg-red-50 text-red-500"
-                        : "border-gray-200 text-gray-300"
-                    }`}
-                  >
-                    <Heart className="h-4 w-4" fill={liked_set.has(l_item.user_id) ? "currentColor" : "none"} />
-                  </button>
-                )}
-              </div>
+                <AvatarCircle
+                  img_url={l_item.user_img}
+                  ini_char={l_item.ini_char}
+                  ton_hex={l_item.ton_hex}
+                  className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-base font-bold text-white"
+                />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-bold text-gray-900">
+                    {l_item.user_name}
+                    {l_item.user_mbti ? (
+                      <span className="font-normal text-gray-400"> {l_item.user_mbti}</span>
+                    ) : null}
+                  </p>
+                  <p className="mt-0.5 truncate text-xs text-gray-400">
+                    {[l_item.user_age ? `${l_item.user_age}세` : null, l_item.user_reg]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </p>
+                  {l_item.user_bio && (
+                    <p className="mt-0.5 truncate text-xs text-gray-500">{l_item.user_bio}</p>
+                  )}
+                </div>
+                <ChevronRight className="h-4 w-4 shrink-0 text-gray-300" />
+              </button>
             ))}
           </div>
         )}
       </section>
 
-      {prof_item && <ProfileViewModal prof_item={auth_to_prof(prof_item)} onClose={() => setProfItem(null)} />}
+      {prof_item &&
+        (() => {
+          const hertable =
+            user_item.user_role === "chief" &&
+            link_list.some((l_item) => l_item.user_id === prof_item.user_id);
+          return (
+            <ProfileViewModal
+              prof_item={auth_to_prof(prof_item)}
+              onClose={() => setProfItem(null)}
+              onHeart={hertable ? () => do_hert(prof_item.user_id) : undefined}
+              liked={liked_set.has(prof_item.user_id)}
+            />
+          );
+        })()}
     </main>
   );
 }
