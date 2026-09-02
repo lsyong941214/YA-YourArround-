@@ -109,7 +109,7 @@ export default function ProfileViewModal({
             <button
               type="button"
               onClick={onHeart}
-              aria-label={liked ? "연결 요청을 보냈어요" : "연결 요청 보내기"}
+              aria-label={liked ? "어떤 방식으로 연결할지 선택해요" : "연결 요청 보내기"}
               className={`flex w-full items-center justify-center gap-2 rounded-2xl py-3.5 text-sm font-bold transition active:opacity-90 ${
                 liked
                   ? "border border-red-200 bg-red-50 text-red-500"
@@ -117,7 +117,7 @@ export default function ProfileViewModal({
               }`}
             >
               <Heart className="h-4 w-4" fill={liked ? "currentColor" : "none"} />
-              {liked ? "요청을 보냈어요" : "연결 요청 보내기"}
+              {liked ? "어떤 방식으로 연결할지 선택해요" : "연결 요청 보내기"}
             </button>
           )}
           <button
