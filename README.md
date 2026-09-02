@@ -21,6 +21,10 @@ Next.js + Tailwind CSS 기반 웹으로 1차 개발 후, 웹앱 형태로 제공
      기존 테스트 계정은 생년월일이 비게 되니 필요하면 손으로 채워 넣을 것.
    - `alter_invt.sql`은 초대코드 테이블(`invite_codes`)과 `use_invt_code()` 함수를 만들고,
      주민이 아무 이장에게나 직접 연결할 수 있던 옛 정책(`contacts_insert_resident`)을 내린다.
+   - 주변인 테스트 신청 시 `column blind_test_picks_1.card_idx does not exist` 오류가 뜬다면
+     [supabase/alter_blnd_picks.sql](supabase/alter_blnd_picks.sql)을 실행한다 — 배포된 프로젝트의
+     `blind_test_picks` 테이블에 `card_idx` 컬럼이 빠져 있어(스키마가 완전히 적용되지 못한 것으로
+     보임) 요청 생성 자체가 실패하던 문제를 고친다.
 4. Authentication > Providers > Email에서 **"Confirm email"을 끈다**
 — 이 앱은 로그인ID를 합성 이메일(`{login_id}@jubyeon.local`)로 변환해 쓰기 때문에 실제 메일함이 없다.
 켜져 있으면 가입 후 로그인이 막힌다.

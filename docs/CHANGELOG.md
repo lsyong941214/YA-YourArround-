@@ -1,5 +1,16 @@
 # CHANGELOG
 
+## v0.3.6 - 주변인 테스트 신청 실패 원인 규명: blind_test_picks.card_idx 누락
+- 지난 버전에서 추가한 에러 노출(v0.3.3) 덕분에 실제 원인을 확인 — 주변인 테스트 신청 시
+  `column blind_test_picks_1.card_idx does not exist` 에러가 떴다. `add_req()`가 insert 직후
+  `blind_test_picks`를 함께 select(JOIN)하는데, 배포된 Supabase 프로젝트의 `blind_test_picks`
+  테이블에는 `card_idx` 컬럼이 없어서 이 select가 실패 — insert+select가 한 트랜잭션이라
+  **insert 자체가 롤백되어 요청이 아예 생성되지 않고 있었다.** (`schema.sql`에는 처음부터
+  이 컬럼이 정의돼 있었는데, 실제 프로젝트엔 반영되지 못한 상태였던 것으로 보임)
+- 앱 코드는 스키마와 이미 일치했으므로 코드 변경은 없음 - DB 쪽 델타 스크립트
+  `supabase/alter_blnd_picks.sql` 신규 추가 (테이블/컬럼이 없는 경우 모두 안전하게 처리,
+  재실행해도 안전). **Supabase SQL Editor에서 이 스크립트를 실행해야 실제로 해결된다.**
+
 ## v0.3.5 - 프로필 카드 하트 클릭 후 안내 문구 수정
 - 프로필 카드(`ProfileViewModal.tsx`)에서 하트를 누르면 잠깐 보이던 "요청을 보냈어요" 문구를
   "어떤 방식으로 연결할지 선택해요"로 변경 - 실제로는 이 시점에 요청이 바로 전송되는 게 아니라
