@@ -126,7 +126,9 @@ function row_to_blnd(row: BlndRow): BlndReq {
 
 export type AddBlndInp = { req_uid: string; jang_id: string; memb_id: string; msg_txt: string };
 
-export async function add_req(inp: AddBlndInp): Promise<BlndReq | undefined> {
+export async function add_req(
+  inp: AddBlndInp
+): Promise<{ item?: BlndReq; err_msg?: string }> {
   const { data, error } = await supabase
     .from("blind_test_requests")
     .insert({
@@ -137,8 +139,10 @@ export async function add_req(inp: AddBlndInp): Promise<BlndReq | undefined> {
     })
     .select(SEL_JOIN)
     .single();
-  if (error || !data) return undefined;
-  return row_to_blnd(data as unknown as BlndRow);
+  if (error || !data) {
+    return { err_msg: error?.message ?? "주변인 테스트 요청에 실패했어요." };
+  }
+  return { item: row_to_blnd(data as unknown as BlndRow) };
 }
 
 export async function find_req(blnd_id: string): Promise<BlndReq | undefined> {

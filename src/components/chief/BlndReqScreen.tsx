@@ -29,6 +29,7 @@ export default function BlndReqScreen({
   const [msg_txt, setMsgTxt] = useState("");
   const [busy_flag, setBusyFlag] = useState(false);
   const [me_item, setMeItem] = useState<AuthUser | null | undefined>(undefined);
+  const [err_msg, setErrMsg] = useState("");
 
   useEffect(() => {
     (async () => {
@@ -53,13 +54,19 @@ export default function BlndReqScreen({
 
   async function do_send() {
     if (busy_flag || !me_item) return;
+    setErrMsg("");
     setBusyFlag(true);
-    await add_req({
+    const { item, err_msg: send_err } = await add_req({
       req_uid: me_item.user_id,
       jang_id,
       memb_id,
       msg_txt,
     });
+    setBusyFlag(false);
+    if (!item) {
+      setErrMsg(send_err ?? "주변인 테스트 요청에 실패했어요. 잠시 후 다시 시도해주세요.");
+      return;
+    }
     rout_nav.replace("/home");
   }
 
@@ -113,6 +120,8 @@ export default function BlndReqScreen({
             {msg_txt.length}/{MSG_MAX}
           </p>
         </div>
+
+        {err_msg && <p className="mt-2 text-xs text-red-400">{err_msg}</p>}
       </div>
 
       <div className="fixed inset-x-0 bottom-0 grid grid-cols-2 gap-3 border-t border-gray-100 bg-white px-5 pb-8 pt-4">

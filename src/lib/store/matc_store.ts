@@ -127,7 +127,9 @@ function row_to_matc(row: MatcRow): MatcReq {
 
 export type AddReqInp = { req_uid: string; jang_id: string; memb_id: string; msg_txt: string };
 
-export async function add_req(inp: AddReqInp): Promise<MatcReq | undefined> {
+export async function add_req(
+  inp: AddReqInp
+): Promise<{ item?: MatcReq; err_msg?: string }> {
   const { data, error } = await supabase
     .from("match_requests")
     .insert({
@@ -138,8 +140,10 @@ export async function add_req(inp: AddReqInp): Promise<MatcReq | undefined> {
     })
     .select(SEL_JOIN)
     .single();
-  if (error || !data) return undefined;
-  return row_to_matc(data as unknown as MatcRow);
+  if (error || !data) {
+    return { err_msg: error?.message ?? "연결 요청에 실패했어요." };
+  }
+  return { item: row_to_matc(data as unknown as MatcRow) };
 }
 
 export async function find_req(req_id: string): Promise<MatcReq | undefined> {
