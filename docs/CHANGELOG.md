@@ -1,5 +1,22 @@
 # CHANGELOG
 
+## v0.3.8 - 하단 탭바를 로그인 이후 주요 화면에 전역 고정
+- 하단 탭바(`<nav>` + `TabItem`)를 `HomeScreen.tsx`에서 떼어내 공용 컴포넌트
+  `src/components/common/BottomTabBar.tsx`로 분리 - "매칭" 하트 배지/채워짐 로직(받은 미확인
+  제안 + 보낸 진행중 건수 합산)은 그대로 유지하면서, `usePathname()`으로 현재 라우트를 봐서
+  홈/매칭(매칭·매칭현황·제안함)/마이페이지 탭을 스스로 강조 표시하도록 변경
+- 라우트 그룹 `src/app/(main)/`을 신설해 `home`/`chief`(목록)/`matching`(목록)/`sent`/`proposal`/
+  `mypage`를 이 그룹으로 옮기고, 그룹 레이아웃(`src/app/(main)/layout.tsx`)에서 `BottomTabBar`를
+  항상 렌더링하도록 구성 - URL은 그대로 유지된다 (라우트 그룹은 URL에 영향을 주지 않음)
+  - 이장님 상세/요청 보내기/수락·거절/밸런스 게임/연결 성사 등 "한 가지 작업에 집중해야 하는"
+    상세·액션 화면(`chief/[jang_id]/**`, `matching/[req_id]`, `blind/[blnd_id]`, `matched/[req_id]`,
+    `cntc/[uid]`, `resident/[memb_id]`, `invt`)은 이 그룹 밖에 그대로 둬서 탭바 없이 유지 - 이미
+    자체 하단 고정 버튼(전송하기/수락하기 등)을 쓰고 있어 탭바와 겹치는 걸 피했다
+  - 새로 탭바가 얹히는 목록 화면(`ChiefListScreen`/`MatcListScreen`/`SentListScreen`/
+    `ProposalListScreen`/`MyPageScreen`)의 하단 여백을 `pb-8`/`pb-10`에서 `pb-24`로 늘려
+    마지막 항목이 탭바에 가리지 않도록 함
+- 로그인/온보딩/로딩 화면은 이 그룹에 넣지 않아 지금처럼 탭바 없이 유지됨
+
 ## v0.3.7 - 하단 탭바 "매칭" 아이콘에 진행중 매칭 건수 반영
 - `blnd_store.ts`에 `sent_prog_cnt(req_uid)` 신규 추가 - 내가 보낸 주변인 테스트 중 상대가
   아직 응답하지 않은(`pend`) 건수를 센다 (주변인 테스트는 이장님 검토 단계가 없어 `pend` 하나만

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Bell, ChevronRight, Crown, Heart, Home, Pencil, Send, Ticket, User, Users } from "lucide-react";
+import { Bell, ChevronRight, Crown, Pencil, Ticket, Users } from "lucide-react";
 import { jang_pend_cnt, jang_prog_cnt, memb_prop_cnt, sent_prog_cnt } from "@/lib/store/matc_store";
 import { memb_pend_cnt, sent_prog_cnt as blnd_sent_prog_cnt } from "@/lib/store/blnd_store";
 import { AuthRole, AuthUser, curr_user, updt_curr } from "@/lib/store/auth_store";
@@ -83,28 +83,14 @@ export default function HomeScreen() {
     }
   }
 
-  function go_sent() {
-    rout_nav.push("/sent");
-  }
-
   function go_prop() {
     rout_nav.push("/proposal");
-  }
-
-  function go_mypage() {
-    rout_nav.push("/mypage");
   }
 
   const role_lbl = user_role === "res" ? "주민" : "이장님";
   const matc_lbl = user_role === "res" ? "매칭 현황" : "진행중인 매칭";
   const matc_val = user_role === "res" ? `${sent_prog_val}/${me_item.matc_max}` : `${prog_val}건`;
   const bell_dot = (user_role === "chief" && pend_val > 0) || prop_val > 0;
-
-  // "매칭" 탭바 아이콘: 내가 받은 미확인 제안 + 내가 보낸 진행중 요청(연결/주변인 테스트)을 합쳐
-  // 하나라도 있으면 하트를 채우고, 옆에 합산 건수를 배지로 보여준다
-  const matc_badge_cnt = prop_val + sent_prog_val;
-  const matc_actv = matc_badge_cnt > 0;
-  const go_matc_badge = prop_val > 0 ? go_prop : go_sent;
 
   const cntc_lbl = user_role === "res" ? "이장님 연락처" : "연결된 주민";
   const cntc_main = `${cntc_list.length}명`;
@@ -272,22 +258,6 @@ export default function HomeScreen() {
         </section>
       )}
 
-      {/* 하단 탭바 (추후 개발) */}
-      <nav className="fixed inset-x-0 bottom-0 z-10 flex justify-around border-t border-gray-100 bg-white py-2">
-        <TabItem icon={<Home className="h-5 w-5" />} lbl_txt="홈" actv />
-        <TabItem
-          icon={<Heart className="h-5 w-5" fill={matc_actv ? "currentColor" : "none"} />}
-          lbl_txt="매칭"
-          actv={matc_actv}
-          badge_cnt={matc_badge_cnt}
-          onBadge={go_matc_badge}
-          onTap={go_sent}
-        />
-        <TabItem icon={<Users className="h-5 w-5" />} lbl_txt="마을" />
-        <TabItem icon={<Send className="h-5 w-5" />} lbl_txt="메시지" />
-        <TabItem icon={<User className="h-5 w-5" />} lbl_txt="마이페이지" onTap={go_mypage} />
-      </nav>
-
       {edit_open && (
         <ProfEditModal
           init_user={me_item}
@@ -300,47 +270,6 @@ export default function HomeScreen() {
         />
       )}
     </main>
-  );
-}
-
-function TabItem({
-  icon,
-  lbl_txt,
-  actv,
-  badge_cnt,
-  onBadge,
-  onTap,
-}: {
-  icon: React.ReactNode;
-  lbl_txt: string;
-  actv?: boolean;
-  badge_cnt?: number;
-  onBadge?: () => void;
-  onTap?: () => void;
-}) {
-  return (
-    <div className="relative flex flex-col items-center gap-1 px-2 py-1">
-      <button
-        type="button"
-        onClick={onTap}
-        className={`flex flex-col items-center gap-1 ${actv ? "text-[#F26B12]" : "text-gray-300"}`}
-      >
-        {icon}
-        <span className={`text-[10px] ${actv ? "font-bold text-[#F26B12]" : "text-gray-400"}`}>
-          {lbl_txt}
-        </span>
-      </button>
-      {!!badge_cnt && badge_cnt > 0 && (
-        <button
-          type="button"
-          onClick={onBadge}
-          aria-label={`새로운 제안 ${badge_cnt}건 확인하기`}
-          className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white"
-        >
-          {badge_cnt}
-        </button>
-      )}
-    </div>
   );
 }
 

@@ -37,7 +37,7 @@ export default function ChiefListScreen() {
   const empt_txt = is_chief ? "아직 연결된 주민이 없어요." : "아직 등록된 연락처가 없어요.";
 
   return (
-    <main className="min-h-dvh w-full bg-[#FFF8F3] pb-8">
+    <main className="min-h-dvh w-full bg-[#FFF8F3] pb-24">
       <header className="flex items-center gap-2 px-4 pb-2 pt-5">
         <button
           type="button"
