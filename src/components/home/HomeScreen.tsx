@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Bell, ChevronRight, Crown, Heart, Home, Pencil, Send, Ticket, User, Users } from "lucide-react";
 import { jang_pend_cnt, jang_prog_cnt, memb_prop_cnt, sent_prog_cnt } from "@/lib/store/matc_store";
-import { memb_pend_cnt } from "@/lib/store/blnd_store";
+import { memb_pend_cnt, sent_prog_cnt as blnd_sent_prog_cnt } from "@/lib/store/blnd_store";
 import { AuthRole, AuthUser, curr_user, updt_curr } from "@/lib/store/auth_store";
 import { list_chf_of, list_res_of } from "@/lib/store/cntc_store";
 import AvatarCircle from "@/components/common/AvatarCircle";
@@ -35,16 +35,17 @@ export default function HomeScreen() {
       }
       setMeItem(user_now);
       setUserRole(user_now.user_role);
-      const [pend_cnt, prog_cnt, sent_cnt, prop_cnt, blnd_cnt] = await Promise.all([
+      const [pend_cnt, prog_cnt, sent_matc_cnt, sent_blnd_cnt, prop_cnt, blnd_cnt] = await Promise.all([
         jang_pend_cnt(user_now.user_id),
         jang_prog_cnt(user_now.user_id),
         sent_prog_cnt(user_now.user_id),
+        blnd_sent_prog_cnt(user_now.user_id),
         memb_prop_cnt(user_now.user_id),
         memb_pend_cnt(user_now.user_id),
       ]);
       setPendVal(pend_cnt);
       setProgVal(prog_cnt);
-      setSentProgVal(sent_cnt);
+      setSentProgVal(sent_matc_cnt + sent_blnd_cnt);
       setPropVal(prop_cnt + blnd_cnt);
       load_cntc(user_now.user_id, user_now.user_role);
     })();
@@ -98,6 +99,12 @@ export default function HomeScreen() {
   const matc_lbl = user_role === "res" ? "매칭 현황" : "진행중인 매칭";
   const matc_val = user_role === "res" ? `${sent_prog_val}/${me_item.matc_max}` : `${prog_val}건`;
   const bell_dot = (user_role === "chief" && pend_val > 0) || prop_val > 0;
+
+  // "매칭" 탭바 아이콘: 내가 받은 미확인 제안 + 내가 보낸 진행중 요청(연결/주변인 테스트)을 합쳐
+  // 하나라도 있으면 하트를 채우고, 옆에 합산 건수를 배지로 보여준다
+  const matc_badge_cnt = prop_val + sent_prog_val;
+  const matc_actv = matc_badge_cnt > 0;
+  const go_matc_badge = prop_val > 0 ? go_prop : go_sent;
 
   const cntc_lbl = user_role === "res" ? "이장님 연락처" : "연결된 주민";
   const cntc_main = `${cntc_list.length}명`;
@@ -269,10 +276,11 @@ export default function HomeScreen() {
       <nav className="fixed inset-x-0 bottom-0 z-10 flex justify-around border-t border-gray-100 bg-white py-2">
         <TabItem icon={<Home className="h-5 w-5" />} lbl_txt="홈" actv />
         <TabItem
-          icon={<Heart className="h-5 w-5" />}
+          icon={<Heart className="h-5 w-5" fill={matc_actv ? "currentColor" : "none"} />}
           lbl_txt="매칭"
-          badge_cnt={prop_val}
-          onBadge={go_prop}
+          actv={matc_actv}
+          badge_cnt={matc_badge_cnt}
+          onBadge={go_matc_badge}
           onTap={go_sent}
         />
         <TabItem icon={<Users className="h-5 w-5" />} lbl_txt="마을" />
