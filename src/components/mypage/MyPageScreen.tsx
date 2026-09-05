@@ -40,7 +40,7 @@ export default function MyPageScreen() {
   }
 
   return (
-    <main className="min-h-dvh w-full bg-[#FFF8F3] pb-10">
+    <main className="min-h-dvh w-full bg-[#FFF8F3] pb-24">
       <header className="flex items-center gap-2 px-4 pb-2 pt-5">
         <button
           type="button"

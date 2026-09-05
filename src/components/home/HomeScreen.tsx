@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Bell, ChevronRight, Crown, Heart, Home, Pencil, Send, Ticket, User, Users } from "lucide-react";
-import { jang_pend_cnt, jang_prog_cnt, memb_prop_cnt, sent_prog_cnt } from "@/lib/store/matc_store";
-import { memb_pend_cnt } from "@/lib/store/blnd_store";
+import { Bell, ChevronRight, Crown, Pencil, Ticket, Users } from "lucide-react";
+import { jang_pend_cnt, jang_prog_cnt, memb_prop_cnt, sent_used_cnt } from "@/lib/store/matc_store";
+import { memb_pend_cnt, sent_used_cnt as blnd_sent_used_cnt } from "@/lib/store/blnd_store";
 import { AuthRole, AuthUser, curr_user, updt_curr } from "@/lib/store/auth_store";
 import { list_chf_of, list_res_of } from "@/lib/store/cntc_store";
 import AvatarCircle from "@/components/common/AvatarCircle";
@@ -18,7 +18,7 @@ export default function HomeScreen() {
   const [edit_open, setEditOpen] = useState(false);
   const [pend_val, setPendVal] = useState(0);
   const [prog_val, setProgVal] = useState(0);
-  const [sent_prog_val, setSentProgVal] = useState(0);
+  const [sent_used_val, setSentUsedVal] = useState(0);
   const [prop_val, setPropVal] = useState(0);
   const [cntc_list, setCntcList] = useState<AuthUser[]>([]);
 
@@ -35,16 +35,17 @@ export default function HomeScreen() {
       }
       setMeItem(user_now);
       setUserRole(user_now.user_role);
-      const [pend_cnt, prog_cnt, sent_cnt, prop_cnt, blnd_cnt] = await Promise.all([
+      const [pend_cnt, prog_cnt, used_matc_cnt, used_blnd_cnt, prop_cnt, blnd_cnt] = await Promise.all([
         jang_pend_cnt(user_now.user_id),
         jang_prog_cnt(user_now.user_id),
-        sent_prog_cnt(user_now.user_id),
+        sent_used_cnt(user_now.user_id),
+        blnd_sent_used_cnt(user_now.user_id),
         memb_prop_cnt(user_now.user_id),
         memb_pend_cnt(user_now.user_id),
       ]);
       setPendVal(pend_cnt);
       setProgVal(prog_cnt);
-      setSentProgVal(sent_cnt);
+      setSentUsedVal(used_matc_cnt + used_blnd_cnt);
       setPropVal(prop_cnt + blnd_cnt);
       load_cntc(user_now.user_id, user_now.user_role);
     })();
@@ -82,21 +83,16 @@ export default function HomeScreen() {
     }
   }
 
-  function go_sent() {
-    rout_nav.push("/sent");
-  }
-
   function go_prop() {
     rout_nav.push("/proposal");
   }
 
-  function go_mypage() {
-    rout_nav.push("/mypage");
-  }
-
   const role_lbl = user_role === "res" ? "주민" : "이장님";
-  const matc_lbl = user_role === "res" ? "매칭 현황" : "진행중인 매칭";
-  const matc_val = user_role === "res" ? `${sent_prog_val}/${me_item.matc_max}` : `${prog_val}건`;
+  const matc_lbl = user_role === "res" ? "남은 매칭 횟수" : "진행중인 매칭";
+  // 남은 매칭 횟수 = 총 시도 가능 횟수 - 소진된(=거절되지 않은) 시도 - 대기중/수락 대기중/수락완료는
+  // 계속 소진 상태로 남아 차감되고, 거절되면 다시 늘어난다
+  const remain_val = Math.max(0, me_item.matc_max - sent_used_val);
+  const matc_val = user_role === "res" ? `${remain_val}/${me_item.matc_max}회` : `${prog_val}건`;
   const bell_dot = (user_role === "chief" && pend_val > 0) || prop_val > 0;
 
   const cntc_lbl = user_role === "res" ? "이장님 연락처" : "연결된 주민";
@@ -265,21 +261,6 @@ export default function HomeScreen() {
         </section>
       )}
 
-      {/* 하단 탭바 (추후 개발) */}
-      <nav className="fixed inset-x-0 bottom-0 z-10 flex justify-around border-t border-gray-100 bg-white py-2">
-        <TabItem icon={<Home className="h-5 w-5" />} lbl_txt="홈" actv />
-        <TabItem
-          icon={<Heart className="h-5 w-5" />}
-          lbl_txt="매칭"
-          badge_cnt={prop_val}
-          onBadge={go_prop}
-          onTap={go_sent}
-        />
-        <TabItem icon={<Users className="h-5 w-5" />} lbl_txt="마을" />
-        <TabItem icon={<Send className="h-5 w-5" />} lbl_txt="메시지" />
-        <TabItem icon={<User className="h-5 w-5" />} lbl_txt="마이페이지" onTap={go_mypage} />
-      </nav>
-
       {edit_open && (
         <ProfEditModal
           init_user={me_item}
@@ -292,47 +273,6 @@ export default function HomeScreen() {
         />
       )}
     </main>
-  );
-}
-
-function TabItem({
-  icon,
-  lbl_txt,
-  actv,
-  badge_cnt,
-  onBadge,
-  onTap,
-}: {
-  icon: React.ReactNode;
-  lbl_txt: string;
-  actv?: boolean;
-  badge_cnt?: number;
-  onBadge?: () => void;
-  onTap?: () => void;
-}) {
-  return (
-    <div className="relative flex flex-col items-center gap-1 px-2 py-1">
-      <button
-        type="button"
-        onClick={onTap}
-        className={`flex flex-col items-center gap-1 ${actv ? "text-[#F26B12]" : "text-gray-300"}`}
-      >
-        {icon}
-        <span className={`text-[10px] ${actv ? "font-bold text-[#F26B12]" : "text-gray-400"}`}>
-          {lbl_txt}
-        </span>
-      </button>
-      {!!badge_cnt && badge_cnt > 0 && (
-        <button
-          type="button"
-          onClick={onBadge}
-          aria-label={`새로운 제안 ${badge_cnt}건 확인하기`}
-          className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white"
-        >
-          {badge_cnt}
-        </button>
-      )}
-    </div>
   );
 }
 

@@ -246,9 +246,15 @@ export async function memb_hist_list(memb_id: string): Promise<MatcReq[]> {
   return list_by({ resident_id: memb_id, status: ["c_acpt", "r_acpt", "r_rjct"] }, true);
 }
 
-// 특정 유저(req_uid)가 보낸 요청 중 "진행중"(대기중 + 수락 대기중) 건수 - 홈 화면 매칭 현황 표시용
+// 특정 유저(req_uid)가 보낸 요청 중 "진행중"(대기중 + 수락 대기중) 건수 - 하단 탭바 배지 표시용
 export async function sent_prog_cnt(req_uid: string): Promise<number> {
   return (await sent_list(req_uid)).filter((r_item) => r_item.stat === "pend" || r_item.stat === "c_acpt").length;
+}
+
+// 특정 유저(req_uid)가 보낸 요청 중 "매칭 시도로 소진된"(거절되지 않은) 건수 - 대기중/수락
+// 대기중/수락완료는 계속 소진 상태로 남고, 거절(c_rjct/r_rjct)된 건만 다시 남은 횟수로 돌아온다
+export async function sent_used_cnt(req_uid: string): Promise<number> {
+  return (await sent_list(req_uid)).filter((r_item) => r_item.stat !== "c_rjct" && r_item.stat !== "r_rjct").length;
 }
 
 // 매칭 요청 단계별 표시 문구/톤
