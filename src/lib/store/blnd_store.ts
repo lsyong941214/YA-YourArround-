@@ -198,10 +198,16 @@ export async function sent_list(req_uid: string): Promise<BlndReq[]> {
   return list_by({ requester_id: req_uid }, true);
 }
 
-// 특정 유저(req_uid)가 보낸 주변인 테스트 중 "진행중"(상대가 아직 응답 전) 건수
+// 특정 유저(req_uid)가 보낸 주변인 테스트 중 "진행중"(상대가 아직 응답 전) 건수 - 하단 탭바 배지 표시용
 // - 주변인 테스트는 이장님 검토 단계가 없어 pend 하나만 진행중 상태
 export async function sent_prog_cnt(req_uid: string): Promise<number> {
   return (await sent_list(req_uid)).filter((b_item) => b_item.stat === "pend").length;
+}
+
+// 특정 유저(req_uid)가 보낸 주변인 테스트 중 "매칭 시도로 소진된"(거절되지 않은) 건수
+// - 대기중/수락됨은 계속 소진 상태로 남고, 거절(rjct)된 건만 다시 남은 횟수로 돌아온다
+export async function sent_used_cnt(req_uid: string): Promise<number> {
+  return (await sent_list(req_uid)).filter((b_item) => b_item.stat !== "rjct").length;
 }
 
 // 특정 주민(memb_id)이 "요청받은" 주변인 테스트 전체 (상태 무관 - 이장님 검토 단계 없이
