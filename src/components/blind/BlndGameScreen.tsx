@@ -29,6 +29,8 @@ export default function BlndGameScreen({
   const rout_nav = useRouter();
   const [cur_item, setCurItem] = useState(item);
   const [phase, setPhase] = useState<"deck" | "choice">("deck");
+  // 카드 전환 애니메이션 방향 - "out": 고른 카드가 뒤로 넘어감, "in": 다음 카드가 나타남
+  const [trans_dir, setTransDir] = useState<"in" | "out">("in");
 
   const opp_side: BlndSide = side === "req" ? "memb" : "req";
   const my_step = pick_list(cur_item, side).length;
@@ -47,10 +49,18 @@ export default function BlndGameScreen({
     return () => window.clearInterval(timer_id);
   }, [my_done, both_done, blnd_id]);
 
+  const CARD_OUT_MS = 220;
+
+  // 카드를 고르면 "시작할까요?" 화면으로 돌아가지 않고, 고른 카드가 뒤로 넘어가면서
+  // 바로 다음 문항의 선택지가 이어서 나타나는 애니메이션으로 전환한다
   async function do_pick(pick_val: BlndPick) {
-    const updt_item = await submit_pick(blnd_id, side, pick_val);
+    setTransDir("out");
+    const [updt_item] = await Promise.all([
+      submit_pick(blnd_id, side, pick_val),
+      new Promise((resolve) => setTimeout(resolve, CARD_OUT_MS)),
+    ]);
     if (updt_item) setCurItem(updt_item);
-    setPhase("deck");
+    setTransDir("in");
   }
 
   return (
@@ -75,6 +85,7 @@ export default function BlndGameScreen({
         <PlayView
           step_idx={my_step}
           phase={phase}
+          trans_dir={trans_dir}
           onStart={() => setPhase("choice")}
           onPick={do_pick}
         />
@@ -86,11 +97,13 @@ export default function BlndGameScreen({
 function PlayView({
   step_idx,
   phase,
+  trans_dir,
   onStart,
   onPick,
 }: {
   step_idx: number;
   phase: "deck" | "choice";
+  trans_dir: "in" | "out";
   onStart: () => void;
   onPick: (pick_val: BlndPick) => void;
 }) {
@@ -110,7 +123,12 @@ function PlayView({
       {phase === "deck" ? (
         <DeckStack remaining={BLND_CARD_CNT - step_idx} onStart={onStart} />
       ) : (
-        <ChoiceCards step_idx={step_idx} onPick={onPick} />
+        <div
+          key={step_idx}
+          className={trans_dir === "out" ? "animate-card-out" : "animate-card-in"}
+        >
+          <ChoiceCards step_idx={step_idx} onPick={onPick} disabled={trans_dir === "out"} />
+        </div>
       )}
 
       <p className="text-center text-xs text-gray-400">
@@ -157,16 +175,18 @@ function DeckStack({ remaining, onStart }: { remaining: number; onStart: () => v
 function ChoiceCards({
   step_idx,
   onPick,
+  disabled,
 }: {
   step_idx: number;
   onPick: (pick_val: BlndPick) => void;
+  disabled?: boolean;
 }) {
   const is_q1 = step_idx === 0;
 
   return (
     <div className="flex items-center justify-center gap-2">
       {is_q1 ? (
-        <ChoiceCard onClick={() => onPick("a")}>
+        <ChoiceCard onClick={() => onPick("a")} disabled={disabled}>
           <img
             src={Q1_A_IMG}
             alt="매일 만나지만 1시간만 데이트"
@@ -174,7 +194,7 @@ function ChoiceCards({
           />
         </ChoiceCard>
       ) : (
-        <PlaceholderCard onClick={() => onPick("a")} />
+        <PlaceholderCard onClick={() => onPick("a")} disabled={disabled} />
       )}
 
       <span className="z-10 shrink-0 rounded-full bg-[#6C63E0] px-2.5 py-1 text-[11px] font-bold text-white shadow-sm">
@@ -182,7 +202,7 @@ function ChoiceCards({
       </span>
 
       {is_q1 ? (
-        <ChoiceCard onClick={() => onPick("b")}>
+        <ChoiceCard onClick={() => onPick("b")} disabled={disabled}>
           <img
             src={Q1_B_IMG}
             alt="한 달에 한 번 만나서 2박 3일 데이트"
@@ -190,7 +210,7 @@ function ChoiceCards({
           />
         </ChoiceCard>
       ) : (
-        <PlaceholderCard onClick={() => onPick("b")} />
+        <PlaceholderCard onClick={() => onPick("b")} disabled={disabled} />
       )}
     </div>
   );
@@ -199,27 +219,31 @@ function ChoiceCards({
 function ChoiceCard({
   children,
   onClick,
+  disabled,
 }: {
   children: React.ReactNode;
   onClick: () => void;
+  disabled?: boolean;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="h-56 w-32 shrink-0 overflow-hidden rounded-3xl shadow-md transition active:scale-95"
+      disabled={disabled}
+      className="h-56 w-32 shrink-0 overflow-hidden rounded-3xl shadow-md transition active:scale-95 disabled:pointer-events-none"
     >
       {children}
     </button>
   );
 }
 
-function PlaceholderCard({ onClick }: { onClick: () => void }) {
+function PlaceholderCard({ onClick, disabled }: { onClick: () => void; disabled?: boolean }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="flex h-56 w-32 shrink-0 flex-col items-center justify-center gap-2 rounded-3xl border-2 border-dashed border-[#D8D4F7] bg-[#F1F0FD] px-2 text-center transition active:scale-95"
+      disabled={disabled}
+      className="flex h-56 w-32 shrink-0 flex-col items-center justify-center gap-2 rounded-3xl border-2 border-dashed border-[#D8D4F7] bg-[#F1F0FD] px-2 text-center transition active:scale-95 disabled:pointer-events-none"
     >
       <Lock className="h-6 w-6 text-[#B3ACEB]" />
       <span className="text-xs font-bold leading-snug text-[#8C85D6]">추후 공개됩니다.</span>

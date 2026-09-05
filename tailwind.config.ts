@@ -13,6 +13,20 @@ const config: Config = {
           700: "#D9560A",
         },
       },
+      keyframes: {
+        "card-out": {
+          "0%": { transform: "translateY(0) scale(1)", opacity: "1" },
+          "100%": { transform: "translateY(-28px) scale(0.85)", opacity: "0" },
+        },
+        "card-in": {
+          "0%": { transform: "translateY(28px) scale(0.92)", opacity: "0" },
+          "100%": { transform: "translateY(0) scale(1)", opacity: "1" },
+        },
+      },
+      animation: {
+        "card-out": "card-out 220ms ease-in forwards",
+        "card-in": "card-in 260ms ease-out forwards",
+      },
     },
   },
   plugins: [],
