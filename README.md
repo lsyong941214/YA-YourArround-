@@ -37,9 +37,10 @@ Next.js + Tailwind CSS 기반 웹으로 1차 개발 후, 웹앱 형태로 제공
    - 밸런스 게임 카드 선택 시 `null value in column "question_id" of relation
      "blind_test_picks" violates not-null constraint` 오류가 뜬다면
      [supabase/alter_blnd_picks_qid.sql](supabase/alter_blnd_picks_qid.sql)을 실행한다 — 배포된
-     프로젝트의 `blind_test_picks` 테이블에 이 앱에서는 쓰지 않는 `question_id` NOT NULL
-     컬럼이 남아있어(과거 다른 설계의 흔적으로 보임) 카드를 고를 때마다 저장이 막히던
-     문제를 고친다.
+     프로젝트의 `blind_test_picks` 테이블이 문항을 `blind_test_questions`라는 별도 테이블로
+     관리하는 예전 설계(`question_id`/`user_id` 컬럼, `(blind_test_id, side, question_id)`
+     기본키)로 남아있어서, 지금 앱 코드가 기대하는 `(blind_test_id, side, card_idx)` 기본키와
+     달라 카드를 고를 때마다 저장이 막히던 문제를 고친다.
 4. Authentication > Providers > Email에서 **"Confirm email"을 끈다**
 — 이 앱은 로그인ID를 합성 이메일(`{login_id}@jubyeon.local`)로 변환해 쓰기 때문에 실제 메일함이 없다.
 켜져 있으면 가입 후 로그인이 막힌다.

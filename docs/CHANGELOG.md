@@ -2,12 +2,16 @@
 
 ## v0.3.14 - 주변인 테스트 카드 선택이 저장 안 되던 근본 원인(question_id) 해결
 - v0.3.13에서 추가한 에러 로그로 확인된 실제 원인: 배포된 Supabase 프로젝트의
-  `blind_test_picks` 테이블에 이 저장소의 `schema.sql`에는 없는 `question_id` NOT NULL
-  컬럼이 남아있어서(과거 다른 설계의 흔적으로 보임), 앱이 `{ blind_test_id, side, card_idx,
-  pick }`만 넣는 insert가 매번 `null value in column "question_id" ... violates not-null
-  constraint`로 실패하고 있었다
-  - `question_id`는 이 앱 어디에서도 쓰지 않으므로(카드 순서는 `card_idx`로만 구분), 컬럼은
-    남겨두고 NOT NULL 제약만 제거하는 `supabase/alter_blnd_picks_qid.sql` 마이그레이션 추가
+  `blind_test_picks` 테이블이 문항을 `blind_test_questions`라는 별도 테이블로 관리하는
+  예전 설계(`question_id uuid not null references blind_test_questions(id)`,
+  `user_id uuid not null references profiles(id)`, 기본키 `(blind_test_id, side,
+  question_id)`)로 남아있어서, 지금 코드가 쓰는 `(blind_test_id, side, card_idx)` 구조와
+  어긋나 `{ blind_test_id, side, card_idx, pick }`만 넣는 insert가 매번
+  `null value in column "question_id" ... violates not-null constraint`로 실패하고 있었다
+  - `question_id`는 기본키의 일부라 NOT NULL만 풀 수는 없고(값을 채워도 이 앱은 문항을
+    코드에 정적으로 저장해서 쓰기 때문에 `blind_test_questions`를 참조할 방법이 없음),
+    대신 코드가 실제로 기대하는 기본키 `(blind_test_id, side, card_idx)`로 테이블을
+    맞추는 `supabase/alter_blnd_picks_qid.sql` 마이그레이션으로 수정
 
 ## v0.3.13 - 주변인 테스트 카드 선택 저장 실패 시 진행이 안 되던 문제 수정
 - `submit_pick()`이 `blind_test_picks` insert 에러를 확인하지 않고 그냥 다시 조회만 해서, 저장이
