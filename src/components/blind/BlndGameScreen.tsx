@@ -28,6 +28,7 @@ export default function BlndGameScreen({
   const [phase, setPhase] = useState<"deck" | "choice">("deck");
   // 카드 전환 애니메이션 방향 - "out": 고른 카드가 뒤로 넘어감, "in": 다음 카드가 나타남
   const [trans_dir, setTransDir] = useState<"in" | "out">("in");
+  const [err_msg, setErrMsg] = useState("");
 
   const opp_side: BlndSide = side === "req" ? "memb" : "req";
   const my_step = pick_list(cur_item, side).length;
@@ -51,12 +52,18 @@ export default function BlndGameScreen({
   // 카드를 고르면 "시작할까요?" 화면으로 돌아가지 않고, 고른 카드가 뒤로 넘어가면서
   // 바로 다음 문항의 선택지가 이어서 나타나는 애니메이션으로 전환한다
   async function do_pick(pick_val: BlndPick) {
+    setErrMsg("");
     setTransDir("out");
-    const [updt_item] = await Promise.all([
+    const [pick_rslt] = await Promise.all([
       submit_pick(blnd_id, side, pick_val),
       new Promise((resolve) => setTimeout(resolve, CARD_OUT_MS)),
     ]);
-    if (updt_item) setCurItem(updt_item);
+    if (pick_rslt.item) {
+      setCurItem(pick_rslt.item);
+    } else {
+      console.error("주변인 테스트 카드 선택 저장 실패:", pick_rslt.err_msg);
+      setErrMsg("선택을 저장하지 못했어요. 다시 시도해주세요.");
+    }
     setTransDir("in");
   }
 
@@ -84,6 +91,7 @@ export default function BlndGameScreen({
           card_ids={cur_item.card_ids}
           phase={phase}
           trans_dir={trans_dir}
+          err_msg={err_msg}
           onStart={() => setPhase("choice")}
           onPick={do_pick}
         />
@@ -97,6 +105,7 @@ function PlayView({
   card_ids,
   phase,
   trans_dir,
+  err_msg,
   onStart,
   onPick,
 }: {
@@ -104,6 +113,7 @@ function PlayView({
   card_ids: string[];
   phase: "deck" | "choice";
   trans_dir: "in" | "out";
+  err_msg: string;
   onStart: () => void;
   onPick: (pick_val: BlndPick) => void;
 }) {
@@ -144,6 +154,8 @@ function PlayView({
           ? "가운데 카드를 눌러 다음 문항을 확인해보세요"
           : "마음에 드는 쪽 카드를 골라주세요"}
       </p>
+
+      {err_msg && <p className="text-center text-xs font-bold text-red-400">{err_msg}</p>}
     </div>
   );
 }

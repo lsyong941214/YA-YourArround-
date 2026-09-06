@@ -254,12 +254,24 @@ export function pick_list(item: BlndReq, side: BlndSide): BlndPick[] {
 }
 
 // 밸런스 게임 카드 한 장 선택 결과 저장, 갱신된 항목을 반환
-export async function submit_pick(blnd_id: string, side: BlndSide, pick: BlndPick): Promise<BlndReq | undefined> {
+// - insert 실패(에러)를 그냥 무시하면 카드가 저장되지 않았는데도 화면은 성공한 것처럼 다음
+//   단계로 넘어가려다가, 다시 조회한 결과가 그대로라 같은 문항이 반복되는 것처럼 보이게 된다.
+//   그래서 에러 메시지를 그대로 돌려주고, 호출부(BlndGameScreen)에서 실패를 알 수 있게 한다.
+export async function submit_pick(
+  blnd_id: string,
+  side: BlndSide,
+  pick: BlndPick
+): Promise<{ item?: BlndReq; err_msg?: string }> {
   const item_now = await find_req(blnd_id);
-  if (!item_now) return undefined;
+  if (!item_now) return { err_msg: "주변인 테스트 정보를 불러오지 못했어요." };
   const card_idx = pick_list(item_now, side).length + 1;
-  await supabase.from("blind_test_picks").insert({ blind_test_id: blnd_id, side, card_idx, pick });
-  return find_req(blnd_id);
+  const { error } = await supabase
+    .from("blind_test_picks")
+    .insert({ blind_test_id: blnd_id, side, card_idx, pick });
+  if (error) {
+    return { err_msg: error.message };
+  }
+  return { item: await find_req(blnd_id) };
 }
 
 // 두 사람이 밸런스 게임을 모두 마쳤는지 (결과 화면 진입 가능 여부)
