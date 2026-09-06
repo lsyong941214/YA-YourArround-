@@ -19,6 +19,13 @@
 -- 가능성이 높아 실제로 사라질 데이터는 없어 보이지만, 혹시 다른 경로로 이미 쌓인 pick
 -- 행이 있다면 그 문항 참조(question_id)/작성자(user_id) 정보만 사라지고 side/card_idx/pick
 -- 값 자체는 그대로 남는다. blind_test_questions 테이블 자체는 지우지 않고 그대로 둔다.
+--
+-- user_id 컬럼에는 이 앱 스키마엔 없는 RLS 정책 "picks_insert_own"(auth.uid() = user_id
+-- 조건)이 걸려있어서, 컬럼을 지우려면 이 정책부터 지워야 한다. 나머지 정책
+-- picks_insert_related/picks_select_related는 이 앱이 원래 쓰는 정책 그대로라 손대지 않는다.
+
+-- 0) user_id를 참조하는, 이 앱 스키마엔 없는 정책 제거
+drop policy if exists "picks_insert_own" on public.blind_test_picks;
 
 -- 1) 기존 기본키 / 외래키 제거
 alter table public.blind_test_picks drop constraint if exists blind_test_picks_pkey;
