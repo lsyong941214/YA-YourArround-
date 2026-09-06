@@ -29,6 +29,11 @@ Next.js + Tailwind CSS 기반 웹으로 1차 개발 후, 웹앱 형태로 제공
      [supabase/alter_blnd_categ.sql](supabase/alter_blnd_categ.sql)을 실행한다 — 주변인 테스트 문항이
      카테고리별(일상/음식/여행지) 랜덤 10개로 늘어나면서 `blind_test_requests.card_ids` 컬럼 추가와
      `blind_test_picks.card_idx` 상한(5 → 10) 확장이 필요하다.
+   - 이미 예전 버전(결과서 화면 도입 전)의 `schema.sql`을 실행해둔 프로젝트라면
+     [supabase/alter_blnd_rslt.sql](supabase/alter_blnd_rslt.sql)을 실행한다 — 주변인 테스트 결과서
+     화면(연락하기/이장님 확인요청/종료하기)에 필요한 `blind_test_requests.req_actn`/`memb_actn`/
+     `link_mtc_id` 컬럼과 `status` 값 `done` 추가, 상태 전이를 처리하는
+     `blnd_submit_actn()` 함수를 만든다.
 4. Authentication > Providers > Email에서 **"Confirm email"을 끈다**
 — 이 앱은 로그인ID를 합성 이메일(`{login_id}@jubyeon.local`)로 변환해 쓰기 때문에 실제 메일함이 없다.
 켜져 있으면 가입 후 로그인이 막힌다.

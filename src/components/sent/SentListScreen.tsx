@@ -14,6 +14,7 @@ import {
 } from "@/lib/store/matc_store";
 import {
   BlndReq,
+  game_go,
   memb_list as blnd_memb_list,
   sent_list as blnd_sent_list,
 } from "@/lib/store/blnd_store";
@@ -71,9 +72,9 @@ export default function SentListScreen() {
 
   function go_item(sent_item: SentItem) {
     if (sent_item.kind === "blnd") {
-      // 요청자(sent) 쪽은 아직 상대가 결정하지 않았거나(pend) 거절한(rjct) 경우
-      // 수락/거절 화면 대신 자신이 보낸 요청 내용만 읽기 전용으로 확인
-      if (sent_item.dir === "sent" && sent_item.item.stat !== "acpt") {
+      // 요청자(sent) 쪽은 아직 게임이 시작되지 않은 경우(대기중이거나, 게임 시작 전 거절된
+      // 경우) 수락/거절 화면 대신 자신이 보낸 요청 내용만 읽기 전용으로 확인
+      if (sent_item.dir === "sent" && !game_go(sent_item.item)) {
         setBlndSelId(sent_item.item.blnd_id);
         return;
       }
@@ -185,6 +186,7 @@ function StatBadge({ kind, stat }: { kind: "matc" | "blnd"; stat: string }) {
   }
   if (stat === "pend") return <Badge tone="wait">대기중</Badge>;
   if (stat === "acpt") return <Badge tone="ok">수락됨</Badge>;
+  if (stat === "done") return <Badge tone="ok">결과 확인됨</Badge>;
   return <Badge tone="off">거절됨</Badge>;
 }
 

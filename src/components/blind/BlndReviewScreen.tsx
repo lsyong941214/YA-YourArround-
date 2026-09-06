@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
-import { BlndReq, find_req, side_of, updt_req } from "@/lib/store/blnd_store";
+import { BlndReq, find_req, game_go, side_of, updt_req } from "@/lib/store/blnd_store";
 import { curr_user } from "@/lib/store/auth_store";
 import BlndGameScreen from "./BlndGameScreen";
 
@@ -47,7 +47,7 @@ export default function BlndReviewScreen({ blnd_id }: { blnd_id: string }) {
     );
   }
 
-  if (blnd_item.stat === "acpt") {
+  if (game_go(blnd_item)) {
     const my_side = side_of(blnd_item, my_user);
     if (my_side) {
       return <BlndGameScreen blnd_id={blnd_id} item={blnd_item} side={my_side} />;
@@ -110,14 +110,18 @@ export default function BlndReviewScreen({ blnd_id }: { blnd_id: string }) {
         {blnd_item.stat === "acpt" && (
           <div className="mt-4 rounded-2xl bg-emerald-50 p-4">
             <p className="text-sm font-bold text-emerald-700">수락했어요!</p>
-            <p className="mt-1 text-xs text-emerald-600">
-              밸런스 게임으로 서로의 성향을 알아가는 기능은 다음 업데이트에서 제공될 예정이에요.
-            </p>
+            <p className="mt-1 text-xs text-emerald-600">두 분이 밸런스 게임으로 성향을 알아가는 중이에요.</p>
+          </div>
+        )}
+        {blnd_item.stat === "done" && (
+          <div className="mt-4 rounded-2xl bg-emerald-50 p-4">
+            <p className="text-sm font-bold text-emerald-700">결과 확인이 끝났어요</p>
+            <p className="mt-1 text-xs text-emerald-600">두 분이 주변인 테스트 결과를 확인하고 다음 단계로 진행했어요.</p>
           </div>
         )}
         {blnd_item.stat === "rjct" && (
           <div className="mt-4 rounded-2xl bg-gray-50 p-4">
-            <p className="text-sm font-bold text-gray-700">거절한 요청이에요</p>
+            <p className="text-sm font-bold text-gray-700">거절되었거나 종료된 요청이에요</p>
           </div>
         )}
       </div>

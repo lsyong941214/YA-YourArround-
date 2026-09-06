@@ -9,14 +9,22 @@
 import { calc_age } from "@/lib/store/auth_store";
 import { supabase } from "@/lib/supabase/client";
 import { DEFAULT_CARD_IDS, pick_categ_ids } from "@/lib/data/blnd_questions";
+import { get_mbti_cpat } from "@/lib/data/mbti_cpat";
 
-export type BlndStat = "pend" | "acpt" | "rjct";
+// pend: 상대 응답 대기 / acpt: 수락(게임 진행중~결과 대기) / rjct: 거절 또는 한쪽이 결과에서
+// 종료하기를 눌러 끝남 / done: 결과에서 서로 연락하기로 했거나(둘 다 ctct), 이장님 확인 없이
+// 바로 매칭이 시작된 경우(둘 다 rvw)
+export type BlndStat = "pend" | "acpt" | "rjct" | "done";
 
 // 밸런스 게임 카드 선택지 (a = 첫번째 카드, b = 두번째 카드)
 export type BlndPick = "a" | "b";
 
 // 밸런스 게임 총 카드 수 - 질문 은행(blnd_questions.ts)에서 카테고리별로 뽑은 문항 합계
 export const BLND_CARD_CNT = 10;
+
+// 결과 화면에서 참여자가 고르는 행동
+// ctct: 연락하기(직접 연락) / rvw: 이장님에게 확인요청 / end: 종료하기(매칭 종료)
+export type BlndActn = "ctct" | "rvw" | "end";
 
 export type BlndReq = {
   blnd_id: string;
@@ -48,6 +56,9 @@ export type BlndReq = {
   req_picks?: BlndPick[];
   memb_picks?: BlndPick[];
   card_ids: string[];
+  req_actn?: BlndActn | null;
+  memb_actn?: BlndActn | null;
+  link_mtc_id?: string | null;
   made_at: number;
 };
 
@@ -77,6 +88,9 @@ type BlndRow = {
   seen: boolean;
   created_at: string;
   card_ids: string[] | null;
+  req_actn: BlndActn | null;
+  memb_actn: BlndActn | null;
+  link_mtc_id: string | null;
   requester: ProfRow;
   chief: ProfRow;
   resident: ProfRow;
@@ -124,6 +138,9 @@ function row_to_blnd(row: BlndRow): BlndReq {
     req_picks: picks_of(row, "req"),
     memb_picks: picks_of(row, "memb"),
     card_ids: row.card_ids?.length === BLND_CARD_CNT ? row.card_ids : DEFAULT_CARD_IDS,
+    req_actn: row.req_actn,
+    memb_actn: row.memb_actn,
+    link_mtc_id: row.link_mtc_id,
     made_at: new Date(row.created_at).getTime(),
   };
 }
@@ -242,5 +259,75 @@ export async function submit_pick(blnd_id: string, side: BlndSide, pick: BlndPic
   if (!item_now) return undefined;
   const card_idx = pick_list(item_now, side).length + 1;
   await supabase.from("blind_test_picks").insert({ blind_test_id: blnd_id, side, card_idx, pick });
+  return find_req(blnd_id);
+}
+
+// 두 사람이 밸런스 게임을 모두 마쳤는지 (결과 화면 진입 가능 여부)
+export function both_picked(item: BlndReq): boolean {
+  return pick_list(item, "req").length >= BLND_CARD_CNT && pick_list(item, "memb").length >= BLND_CARD_CNT;
+}
+
+// `/blind/[blnd_id]`에서 정적 안내(수락/거절 대기, 사전 거절) 대신 게임·결과 화면으로
+// 바로 들어가야 하는 상태인지 - 게임이 한 번이라도 시작됐으면(수락 이후) 계속 이쪽으로 취급한다
+export function game_go(item: BlndReq): boolean {
+  return item.stat === "acpt" || item.stat === "done" || both_picked(item);
+}
+
+// 선택지 일치 점수 (일치 문항 1개당 10점, 최대 100점)
+export function calc_pick_scor(item: BlndReq): number {
+  const req_pk = item.req_picks ?? [];
+  const memb_pk = item.memb_picks ?? [];
+  const cnt = Math.min(req_pk.length, memb_pk.length, BLND_CARD_CNT);
+  let match_cnt = 0;
+  for (let i = 0; i < cnt; i += 1) {
+    if (req_pk[i] === memb_pk[i]) match_cnt += 1;
+  }
+  return match_cnt * 10;
+}
+
+// 최종 결과 점수 = (MBTI 궁합 점수 / 2) + (선택지 일치 점수 / 2), 100점 만점
+export function calc_rslt_scor(item: BlndReq): number {
+  const mbti_scor = get_mbti_cpat(item.req_mbti, item.memb_mbti);
+  const pick_scor = calc_pick_scor(item);
+  return Math.round(mbti_scor / 2 + pick_scor / 2);
+}
+
+export type BlndTier = "oppo" | "rvw" | "ok" | "good" | "best";
+
+// 점수 구간별 결과 등급
+export function blnd_tier(scor: number): BlndTier {
+  if (scor <= 20) return "oppo";
+  if (scor <= 50) return "rvw";
+  if (scor <= 70) return "ok";
+  if (scor <= 90) return "good";
+  return "best";
+}
+
+export const BLND_TIER_MSG: Record<BlndTier, string> = {
+  oppo: "오히려 반대라서 끌리는데요? 연락 해볼까요?",
+  rvw: "두 분은 취향이 많이 다르신 것 같아요. 이장님에게 확인요청 해볼까요?",
+  ok: "통하는게 많아요, 메시지 해볼까요?",
+  good: "정말 잘 맞는 두 분, 이제는 직접 연락해보세요!",
+  best: "천생연분인데요!? 좋은 만남 기대할게요!",
+};
+
+// 등급별로 "종료하기" 버튼이 노출되는지 (아주 잘 맞는 등급은 종료 버튼이 없다)
+export function blnd_tier_end_ok(tier: BlndTier): boolean {
+  return tier !== "good" && tier !== "best";
+}
+
+// 등급별로 결과 화면에서 고를 수 있는 행동(종료 제외) - "rvw" 등급만 이장님 확인요청, 나머지는 연락하기
+export function blnd_tier_actn(tier: BlndTier): Extract<BlndActn, "ctct" | "rvw"> {
+  return tier === "rvw" ? "rvw" : "ctct";
+}
+
+// 결과 화면에서 "연락하기/이장님에게 확인요청/종료하기"를 고른다.
+// 서버(Postgres 함수 blnd_submit_actn)에서 상태 전이를 원자적으로 처리한다:
+// - 한쪽이라도 종료 -> 매칭 종료(rjct), 이장님께 이미 전달된 확인요청이 있으면 취소
+// - 확인요청(rvw): 첫 요청은 이장님에게 1건 전달(match_requests 생성), 둘 다 요청하면 이장님
+//   전달 없이 바로 매칭 시작(done)
+// - 연락하기(ctct): 둘 다 연락하기를 고르면 매칭 종료 없이 바로 결과 확정(done)
+export async function submit_actn(blnd_id: string, actn: BlndActn): Promise<BlndReq | undefined> {
+  await supabase.rpc("blnd_submit_actn", { p_blnd_id: blnd_id, p_actn: actn });
   return find_req(blnd_id);
 }

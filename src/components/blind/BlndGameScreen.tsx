@@ -75,7 +75,7 @@ export default function BlndGameScreen({
       </header>
 
       {both_done ? (
-        <DoneView />
+        <DoneView blnd_id={blnd_id} />
       ) : my_done ? (
         <WaitView />
       ) : (
@@ -250,7 +250,7 @@ function WaitView() {
         <span className="h-2.5 w-2.5 animate-bounce rounded-full bg-[#6C63E0] [animation-delay:-0.15s]" />
         <span className="h-2.5 w-2.5 animate-bounce rounded-full bg-[#6C63E0]" />
       </div>
-      <p className="text-sm font-bold text-gray-900">상대방의 선택을 기다리는 중 ...</p>
+      <p className="text-sm font-bold text-gray-900">상대방의 선택을 기다리고 있어요.</p>
       <p className="text-xs leading-relaxed text-gray-400">
         모든 카드를 다 골랐어요!
         <br />
@@ -260,14 +260,20 @@ function WaitView() {
   );
 }
 
-function DoneView() {
+function DoneView({ blnd_id }: { blnd_id: string }) {
+  const rout_nav = useRouter();
+
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-3 px-8 text-center">
       <PartyPopper className="h-9 w-9 text-[#6C63E0]" />
       <p className="text-sm font-bold text-gray-900">두 분 모두 선택을 마쳤어요!</p>
-      <p className="text-xs leading-relaxed text-gray-400">
-        성향 점수 결과 화면은 다음 업데이트에서 제공될 예정이에요.
-      </p>
+      <button
+        type="button"
+        onClick={() => rout_nav.push(`/blind/${blnd_id}/result`)}
+        className="mt-2 rounded-full bg-[#6C63E0] px-6 py-3 text-sm font-bold text-white shadow-md transition active:opacity-90"
+      >
+        이제 결과를 보러 갈까요?
+      </button>
     </div>
   );
 }

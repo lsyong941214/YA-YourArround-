@@ -8,6 +8,7 @@ const STAT_LBL: Record<BlndReq["stat"], string> = {
   pend: "수락 대기중",
   acpt: "수락됨",
   rjct: "거절됨",
+  done: "결과 확인됨",
 };
 
 export default function BlndSentPeekModal({
