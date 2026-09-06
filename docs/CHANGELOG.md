@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## v0.3.14 - 주변인 테스트 카드 선택이 저장 안 되던 근본 원인(question_id) 해결
+- v0.3.13에서 추가한 에러 로그로 확인된 실제 원인: 배포된 Supabase 프로젝트의
+  `blind_test_picks` 테이블에 이 저장소의 `schema.sql`에는 없는 `question_id` NOT NULL
+  컬럼이 남아있어서(과거 다른 설계의 흔적으로 보임), 앱이 `{ blind_test_id, side, card_idx,
+  pick }`만 넣는 insert가 매번 `null value in column "question_id" ... violates not-null
+  constraint`로 실패하고 있었다
+  - `question_id`는 이 앱 어디에서도 쓰지 않으므로(카드 순서는 `card_idx`로만 구분), 컬럼은
+    남겨두고 NOT NULL 제약만 제거하는 `supabase/alter_blnd_picks_qid.sql` 마이그레이션 추가
+
 ## v0.3.13 - 주변인 테스트 카드 선택 저장 실패 시 진행이 안 되던 문제 수정
 - `submit_pick()`이 `blind_test_picks` insert 에러를 확인하지 않고 그냥 다시 조회만 해서, 저장이
   실패해도 화면에는 아무 표시가 없어 같은 문항(항상 1번째 선택지)이 반복되고 진행도("1/10")도
