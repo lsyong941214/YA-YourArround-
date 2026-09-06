@@ -8,14 +8,15 @@
  */
 import { calc_age } from "@/lib/store/auth_store";
 import { supabase } from "@/lib/supabase/client";
+import { DEFAULT_CARD_IDS, pick_categ_ids } from "@/lib/data/blnd_questions";
 
 export type BlndStat = "pend" | "acpt" | "rjct";
 
 // 밸런스 게임 카드 선택지 (a = 첫번째 카드, b = 두번째 카드)
 export type BlndPick = "a" | "b";
 
-// 밸런스 게임 총 카드 수 (현재 버전: 1번 카드만 실제 문항, 2~5번은 "추후 공개" placeholder)
-export const BLND_CARD_CNT = 5;
+// 밸런스 게임 총 카드 수 - 질문 은행(blnd_questions.ts)에서 카테고리별로 뽑은 문항 합계
+export const BLND_CARD_CNT = 10;
 
 export type BlndReq = {
   blnd_id: string;
@@ -46,6 +47,7 @@ export type BlndReq = {
   seen_flag?: boolean;
   req_picks?: BlndPick[];
   memb_picks?: BlndPick[];
+  card_ids: string[];
   made_at: number;
 };
 
@@ -74,6 +76,7 @@ type BlndRow = {
   status: BlndStat;
   seen: boolean;
   created_at: string;
+  card_ids: string[] | null;
   requester: ProfRow;
   chief: ProfRow;
   resident: ProfRow;
@@ -120,6 +123,7 @@ function row_to_blnd(row: BlndRow): BlndReq {
     seen_flag: row.seen,
     req_picks: picks_of(row, "req"),
     memb_picks: picks_of(row, "memb"),
+    card_ids: row.card_ids?.length === BLND_CARD_CNT ? row.card_ids : DEFAULT_CARD_IDS,
     made_at: new Date(row.created_at).getTime(),
   };
 }
@@ -136,6 +140,7 @@ export async function add_req(
       chief_id: inp.jang_id,
       resident_id: inp.memb_id,
       message: inp.msg_txt,
+      card_ids: pick_categ_ids(),
     })
     .select(SEL_JOIN)
     .single();

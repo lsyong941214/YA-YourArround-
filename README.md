@@ -25,6 +25,10 @@ Next.js + Tailwind CSS 기반 웹으로 1차 개발 후, 웹앱 형태로 제공
      [supabase/alter_blnd_picks.sql](supabase/alter_blnd_picks.sql)을 실행한다 — 배포된 프로젝트의
      `blind_test_picks` 테이블에 `card_idx` 컬럼이 빠져 있어(스키마가 완전히 적용되지 못한 것으로
      보임) 요청 생성 자체가 실패하던 문제를 고친다.
+   - 이미 예전 버전(문항 5개 고정)의 `schema.sql`을 실행해둔 프로젝트라면
+     [supabase/alter_blnd_categ.sql](supabase/alter_blnd_categ.sql)을 실행한다 — 주변인 테스트 문항이
+     카테고리별(일상/음식/여행지) 랜덤 10개로 늘어나면서 `blind_test_requests.card_ids` 컬럼 추가와
+     `blind_test_picks.card_idx` 상한(5 → 10) 확장이 필요하다.
 4. Authentication > Providers > Email에서 **"Confirm email"을 끈다**
 — 이 앱은 로그인ID를 합성 이메일(`{login_id}@jubyeon.local`)로 변환해 쓰기 때문에 실제 메일함이 없다.
 켜져 있으면 가입 후 로그인이 막힌다.
@@ -100,10 +104,6 @@ jubyeon-web/
   재현해야 확실히 검증되므로, 앱 종료 후 재접속했을 때 실제로 이어지는지 한 번 확인해보면 좋겠다.
 
 ## TODO (다음 작업 예정)
-- 주변인 테스트(밸런스 게임) 카드 구성을 이미지 + 하단 문구 조합으로 변경, 이미지가 없는 문항은
-  문구만 출력되도록 처리
-- 주변인 테스트 카드 이미지가 계속 동일하게 보이는 현상 원인 확인 (이미지 파일이 없어서
-  플레이스홀더로 대체되고 있는 것인지, 다른 버그인지 확인 필요)
 - 주변인 테스트 진행 중, 요청을 받은 주민 쪽에서 테스트를 종료/거절할 수 있는 버튼(이벤트) 추가
 
 ## 실행 방법

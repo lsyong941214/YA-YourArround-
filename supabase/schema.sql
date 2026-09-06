@@ -82,16 +82,17 @@ create table public.blind_test_requests (
   message           text not null default '',
   status            text not null default 'pend' check (status in ('pend', 'acpt', 'rjct')),
   seen              boolean not null default false,
+  card_ids          text[] not null default '{}', -- 이번 테스트에 쓸 문항 id 10개 (신청 시 카테고리별 랜덤 선정, 순서 고정)
   created_at        timestamptz not null default now()
 );
 create index idx_blind_test_requests_resident on public.blind_test_requests (resident_id, status);
 create index idx_blind_test_requests_requester on public.blind_test_requests (requester_id);
 
--- blind_test_picks: 밸런스 게임 카드별 선택 (신청자/대상 각자 최대 5장, 카드 순서 보존)
+-- blind_test_picks: 밸런스 게임 카드별 선택 (신청자/대상 각자 최대 10장, 카드 순서 보존)
 create table public.blind_test_picks (
   blind_test_id     uuid not null references public.blind_test_requests(id) on delete cascade,
   side              text not null check (side in ('req', 'memb')), -- req=신청자, memb=대상 주민
-  card_idx          smallint not null check (card_idx between 1 and 5),
+  card_idx          smallint not null check (card_idx between 1 and 10),
   pick              text not null check (pick in ('a', 'b')),
   picked_at         timestamptz not null default now(),
   primary key (blind_test_id, side, card_idx)

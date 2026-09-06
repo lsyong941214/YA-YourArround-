@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, Heart, Lock, PartyPopper } from "lucide-react";
+import { ChevronLeft, Heart, PartyPopper } from "lucide-react";
 import {
   BLND_CARD_CNT,
   BlndPick,
@@ -12,10 +12,7 @@ import {
   pick_list,
   submit_pick,
 } from "@/lib/store/blnd_store";
-
-// 1번 카드만 현재 버전에서 실제 문항으로 제공, 2~5번은 "추후 공개됩니다." placeholder
-const Q1_A_IMG = "/assets/blnd/q1_a.png";
-const Q1_B_IMG = "/assets/blnd/q1_b.png";
+import { BlndQuestion, find_question } from "@/lib/data/blnd_questions";
 
 export default function BlndGameScreen({
   blnd_id,
@@ -84,6 +81,7 @@ export default function BlndGameScreen({
       ) : (
         <PlayView
           step_idx={my_step}
+          card_ids={cur_item.card_ids}
           phase={phase}
           trans_dir={trans_dir}
           onStart={() => setPhase("choice")}
@@ -96,39 +94,49 @@ export default function BlndGameScreen({
 
 function PlayView({
   step_idx,
+  card_ids,
   phase,
   trans_dir,
   onStart,
   onPick,
 }: {
   step_idx: number;
+  card_ids: string[];
   phase: "deck" | "choice";
   trans_dir: "in" | "out";
   onStart: () => void;
   onPick: (pick_val: BlndPick) => void;
 }) {
+  const question = find_question(card_ids[step_idx]);
+
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-8 px-6 pb-16">
-      <div className="flex gap-2" role="status" aria-label="밸런스 게임 진행 상태">
+      <div className="flex gap-1.5" role="status" aria-label="밸런스 게임 진행 상태">
         {Array.from({ length: BLND_CARD_CNT }).map((_, dot_idx) => (
           <span
             key={dot_idx}
-            className={`h-2 w-2 rounded-full transition-all duration-300 ${
-              dot_idx < step_idx ? "w-5 bg-[#6C63E0]" : "bg-[#E3E1FA]"
+            className={`h-1.5 w-1.5 rounded-full transition-all duration-300 ${
+              dot_idx < step_idx ? "w-4 bg-[#6C63E0]" : "bg-[#E3E1FA]"
             }`}
           />
         ))}
       </div>
 
-      {phase === "deck" ? (
+      {phase === "deck" || !question ? (
         <DeckStack remaining={BLND_CARD_CNT - step_idx} onStart={onStart} />
       ) : (
         <div
           key={step_idx}
           className={trans_dir === "out" ? "animate-card-out" : "animate-card-in"}
         >
-          <ChoiceCards step_idx={step_idx} onPick={onPick} disabled={trans_dir === "out"} />
+          <ChoiceCards question={question} onPick={onPick} disabled={trans_dir === "out"} />
         </div>
+      )}
+
+      {phase === "choice" && question && (
+        <p className="-mt-6 text-xs font-bold text-[#6C63E0]">
+          {step_idx + 1}/{BLND_CARD_CNT}
+        </p>
       )}
 
       <p className="text-center text-xs text-gray-400">
@@ -173,80 +181,63 @@ function DeckStack({ remaining, onStart }: { remaining: number; onStart: () => v
 }
 
 function ChoiceCards({
-  step_idx,
+  question,
   onPick,
   disabled,
 }: {
-  step_idx: number;
+  question: BlndQuestion;
   onPick: (pick_val: BlndPick) => void;
   disabled?: boolean;
 }) {
-  const is_q1 = step_idx === 0;
-
   return (
     <div className="flex items-center justify-center gap-2">
-      {is_q1 ? (
-        <ChoiceCard onClick={() => onPick("a")} disabled={disabled}>
-          <img
-            src={Q1_A_IMG}
-            alt="매일 만나지만 1시간만 데이트"
-            className="h-full w-full rounded-3xl object-cover"
-          />
-        </ChoiceCard>
-      ) : (
-        <PlaceholderCard onClick={() => onPick("a")} disabled={disabled} />
-      )}
+      <ChoiceCard label={question.a_label} img={question.a_img} onClick={() => onPick("a")} disabled={disabled} />
 
       <span className="z-10 shrink-0 rounded-full bg-[#6C63E0] px-2.5 py-1 text-[11px] font-bold text-white shadow-sm">
         VS
       </span>
 
-      {is_q1 ? (
-        <ChoiceCard onClick={() => onPick("b")} disabled={disabled}>
-          <img
-            src={Q1_B_IMG}
-            alt="한 달에 한 번 만나서 2박 3일 데이트"
-            className="h-full w-full rounded-3xl object-cover"
-          />
-        </ChoiceCard>
-      ) : (
-        <PlaceholderCard onClick={() => onPick("b")} disabled={disabled} />
-      )}
+      <ChoiceCard label={question.b_label} img={question.b_img} onClick={() => onPick("b")} disabled={disabled} />
     </div>
   );
 }
 
+// 카드에 이미지가 있으면 이미지 위에, 없으면 카드 배경에 하단 문구만 출력한다
 function ChoiceCard({
-  children,
+  label,
+  img,
   onClick,
   disabled,
 }: {
-  children: React.ReactNode;
+  label: string;
+  img?: string;
   onClick: () => void;
   disabled?: boolean;
 }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      className="h-56 w-32 shrink-0 overflow-hidden rounded-3xl shadow-md transition active:scale-95 disabled:pointer-events-none"
-    >
-      {children}
-    </button>
-  );
-}
+  if (!img) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        disabled={disabled}
+        className="flex h-56 w-32 shrink-0 flex-col items-center justify-end gap-2 rounded-3xl bg-gradient-to-br from-[#B7B1F5] to-[#8A82EA] px-3 pb-4 text-center shadow-md transition active:scale-95 disabled:pointer-events-none"
+      >
+        <span className="text-sm font-bold leading-snug text-white">{label}</span>
+      </button>
+    );
+  }
 
-function PlaceholderCard({ onClick, disabled }: { onClick: () => void; disabled?: boolean }) {
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className="flex h-56 w-32 shrink-0 flex-col items-center justify-center gap-2 rounded-3xl border-2 border-dashed border-[#D8D4F7] bg-[#F1F0FD] px-2 text-center transition active:scale-95 disabled:pointer-events-none"
+      className="relative h-56 w-32 shrink-0 overflow-hidden rounded-3xl shadow-md transition active:scale-95 disabled:pointer-events-none"
     >
-      <Lock className="h-6 w-6 text-[#B3ACEB]" />
-      <span className="text-xs font-bold leading-snug text-[#8C85D6]">추후 공개됩니다.</span>
+      <img src={img} alt={label} className="h-full w-full object-cover" />
+      <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent px-2 pb-2.5 pt-6 text-xs font-bold leading-snug text-white">
+        {label}
+      </span>
     </button>
   );
 }
