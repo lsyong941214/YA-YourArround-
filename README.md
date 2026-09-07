@@ -117,9 +117,46 @@ jubyeon-web/
 
 ## TODO (다음 작업 예정)
 - 소셜 로그인(카카오/네이버/구글) 실제 연동 — 각 사 Client ID 발급 후 `/login`의 로그인 버튼을
-  실제 OAuth 흐름으로 교체 (현재는 로그인ID/비밀번호 임시 로그인(`/login/local`)만 동작)
+  실제 OAuth 흐름으로 교체 (현재는 로그인ID/비밀번호 임시 로그인(`/login/local`)만 동작).
+  `src/lib/auth/soc_auth.ts`의 세 함수 모두 500ms 대기 후 아무 일도 안 하는 스텁이라, 지금은
+  버튼을 눌러도 아무 에러 없이 조용히 `/login`으로 되돌아간다.
 - 메시징(채팅) 시스템 구현 — 매칭 성사 화면(`MatchedScreen.tsx`)의 "채팅 시작하기" 버튼이 아직
   빈 함수(`do_chat`)로만 있어서, 실시간 채팅 기능(저장/알림 포함) 구현 필요
+- `src/components/resident/MembDetail.tsx`(`/resident/[memb_id]`), `src/components/chief/ChiefDetail.tsx`
+  (`/chief/[jang_id]`), `src/components/chief/ChiefReviews.tsx`(`/chief/[jang_id]/reviews`) 정리 —
+  전부 `jang_data.ts`/`memb_data.ts` 목업 데이터를 쓰는 죽은 라우트로, 실제 네비게이션 어디서도
+  연결되지 않는다 (실제 매칭/주변인 테스트 흐름은 `/cntc/[uid]` → `ReqSendScreen`
+  (`/chief/[jang_id]/request/[memb_id]`)을 탄다). 특히 `MembDetail.tsx`의 "이장님께 요청하기" /
+  "직접 매칭시도" 버튼은 여기 안내대로 "다음 업데이트에서 제공될 예정이에요" 메시지만 띄우는
+  진짜 스텁이다. 실제로 못 쓰는 화면이니 완전히 지우거나, 살릴 거면 실제 데이터로 다시 연결해야 한다.
+- 홈 화면 "가이드 보기" 버튼(`HomeScreen.tsx`)과 하단 탭바 "마을"/"메시지" 탭
+  (`BottomTabBar.tsx`)에 onClick/onTap이 아예 없다 — 눌러도 반응 없음. 기능을 만들거나, 만들
+  때까지는 비활성 표시라도 해야 한다.
+- 홈 화면 포인트 배지("P 12,450")가 실제 데이터가 아니라 하드코딩된 값이다 — 포인트 시스템을
+  붙이거나 값을 빼야 한다.
+
+## 버그로 의심되는 부분 (실제 계정으로 재현 필요 — 아직 코드 리딩만 한 상태)
+- **후기 유실 가능성**: `src/lib/store/revw_store.ts`의 `add_revw()`가 insert 에러를 완전히
+  무시한다. `MatchedScreen.tsx`의 `do_revw()`는 insert 성공 여부와 무관하게 곧바로
+  `updt_req(req_id, {rvwd_flag:true})`를 호출하므로, insert가 실패해도(예: `chief_reviews.
+  match_request_id` unique 제약 위반 등) 리뷰가 저장되지 않은 채 "이미 리뷰함"으로 표시돼
+  다시 시도할 방법이 없어진다.
+- **주변인 테스트 결과 액션 실패가 은폐됨**: `src/lib/store/blnd_store.ts`의 `submit_actn()`이
+  RPC(`blnd_submit_actn`)의 에러와 응답을 아예 읽지 않는다. 서버가 `forbidden`/`bad_stat`/
+  `not_found`로 거부해도 호출부(`BlndGameScreen`/`BlndRsltScreen`)는 성공한 것처럼 넘어간다.
+- **결과서 화면의 모순 가능성**: `BlndRsltScreen.tsx`의 `DonePanel`이 "이장님 확인 없이 바로
+  매칭이 시작됐어요!" 성공 패널을 `item.link_mtc_id`가 있다는 사실만으로 띄운다. 이장이 두
+  번째 확인요청 전에 이미 그 `match_requests` 행을 거절(`c_rjct`)했더라도 화면엔 여전히
+  매칭 성공으로 표시될 수 있다.
+- 여러 조회 함수(`matc_store.list_by`, `blnd_store.list_by`, `cntc_store.list_chf_of`/
+  `list_res_of`, `invt_store.list_code` 등)가 쿼리 에러를 삼키고 빈 배열을 반환한다 — 뱃지/목록이
+  "진짜 데이터 없음"과 "조회 실패"를 구분하지 못한다.
+- `HomeScreen.tsx`의 "내 역할"(주민↔이장님) 전환이 `updt_curr()`를 `await` 하지 않는
+  fire-and-forget 방식이다. DB 저장이 실패해도 화면은 바뀐 것처럼 보이다가, 새로고침하면
+  역할이 원래대로 되돌아갈 수 있다. `updt_curr()` 자체도 update 에러를 무시한다.
+- `blind_test_requests`/`match_requests`의 RLS(`blind_update_related`/`match_update_related`)가
+  당사자 양쪽 모두에게 모든 컬럼 update 권한을 열어줘서, 클라이언트 코드는 막아뒀지만 DB
+  레벨에서는 요청자가 자기 자신의 `pend` 요청을 수락/거절 처리하는 것도 막혀있지 않다.
 
 ## 실행 방법
 ```bash
