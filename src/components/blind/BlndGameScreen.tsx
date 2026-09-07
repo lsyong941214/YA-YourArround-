@@ -10,9 +10,11 @@ import {
   BlndSide,
   find_req,
   pick_list,
+  submit_actn,
   submit_pick,
 } from "@/lib/store/blnd_store";
 import { BlndQuestion, find_question } from "@/lib/data/blnd_questions";
+import BlndEndConfirmModal from "./BlndEndConfirmModal";
 
 export default function BlndGameScreen({
   blnd_id,
@@ -29,12 +31,16 @@ export default function BlndGameScreen({
   // 카드 전환 애니메이션 방향 - "out": 고른 카드가 뒤로 넘어감, "in": 다음 카드가 나타남
   const [trans_dir, setTransDir] = useState<"in" | "out">("in");
   const [err_msg, setErrMsg] = useState("");
+  const [end_confirm_flag, setEndConfirmFlag] = useState(false);
+  const [end_busy_flag, setEndBusyFlag] = useState(false);
 
   const opp_side: BlndSide = side === "req" ? "memb" : "req";
   const my_step = pick_list(cur_item, side).length;
   const opp_step = pick_list(cur_item, opp_side).length;
   const my_done = my_step >= BLND_CARD_CNT;
   const both_done = my_done && opp_step >= BLND_CARD_CNT;
+  // 요청받은 주민(memb) 쪽만 진행 중간에 테스트를 종료할 수 있다 - 요청한 쪽(req)은 불가
+  const end_ok = side === "memb" && !both_done;
 
   // 내가 5장을 다 고른 뒤엔, 상대방도 다 골랐는지 주기적으로 확인
   useEffect(() => {
@@ -67,19 +73,44 @@ export default function BlndGameScreen({
     setTransDir("in");
   }
 
+  async function do_end() {
+    setEndBusyFlag(true);
+    await submit_actn(blnd_id, "end");
+    rout_nav.replace(`/blind/${blnd_id}`);
+  }
+
   return (
     <main className="flex min-h-dvh w-full flex-col bg-white">
-      <header className="flex items-center gap-2 px-4 pb-2 pt-5">
-        <button
-          type="button"
-          onClick={() => rout_nav.back()}
-          aria-label="뒤로가기"
-          className="flex h-9 w-9 items-center justify-center text-gray-500"
-        >
-          <ChevronLeft className="h-6 w-6" />
-        </button>
-        <h1 className="text-base font-bold text-gray-900">주변인 테스트</h1>
+      <header className="flex items-center justify-between gap-2 px-4 pb-2 pt-5">
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => rout_nav.back()}
+            aria-label="뒤로가기"
+            className="flex h-9 w-9 items-center justify-center text-gray-500"
+          >
+            <ChevronLeft className="h-6 w-6" />
+          </button>
+          <h1 className="text-base font-bold text-gray-900">주변인 테스트</h1>
+        </div>
+        {end_ok && (
+          <button
+            type="button"
+            onClick={() => setEndConfirmFlag(true)}
+            className="pr-1 text-xs font-bold text-gray-400"
+          >
+            종료하기
+          </button>
+        )}
       </header>
+
+      {end_confirm_flag && (
+        <BlndEndConfirmModal
+          busy_flag={end_busy_flag}
+          onClose={() => setEndConfirmFlag(false)}
+          onConfirm={do_end}
+        />
+      )}
 
       {both_done ? (
         <DoneView blnd_id={blnd_id} />

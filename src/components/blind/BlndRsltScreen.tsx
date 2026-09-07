@@ -6,6 +6,7 @@ import { ChevronLeft, Handshake } from "lucide-react";
 import { curr_user } from "@/lib/store/auth_store";
 import { get_mbti_cpat } from "@/lib/data/mbti_cpat";
 import AvatarCircle from "@/components/common/AvatarCircle";
+import BlndEndConfirmModal from "./BlndEndConfirmModal";
 import {
   BlndActn,
   BlndReq,
@@ -35,6 +36,7 @@ export default function BlndRsltScreen({ blnd_id }: { blnd_id: string }) {
   const [item, setItem] = useState<BlndReq | undefined | null>(null);
   const [my_user, setMyUser] = useState<{ user_id: string } | null | undefined>(undefined);
   const [busy_flag, setBusyFlag] = useState(false);
+  const [end_confirm_flag, setEndConfirmFlag] = useState(false);
 
   useEffect(() => {
     find_req(blnd_id).then((found) => setItem(found ?? undefined));
@@ -157,10 +159,28 @@ export default function BlndRsltScreen({ blnd_id }: { blnd_id: string }) {
           ) : my_actn ? (
             <WaitPanel tier={tier} />
           ) : (
-            <DecisionPanel tier={tier} busy_flag={busy_flag} onActn={do_actn} />
+            <DecisionPanel
+              tier={tier}
+              // 요청받은 주민(memb) 쪽만 결과에서 매칭을 종료할 수 있다 - 요청한 쪽(req)은 불가
+              end_ok={my_side === "memb" && blnd_tier_end_ok(tier)}
+              busy_flag={busy_flag}
+              onActn={do_actn}
+              onEndClick={() => setEndConfirmFlag(true)}
+            />
           )}
         </div>
       </div>
+
+      {end_confirm_flag && (
+        <BlndEndConfirmModal
+          busy_flag={busy_flag}
+          onClose={() => setEndConfirmFlag(false)}
+          onConfirm={async () => {
+            setEndConfirmFlag(false);
+            await do_actn("end");
+          }}
+        />
+      )}
     </main>
   );
 }
@@ -184,15 +204,18 @@ function ScorRow({ label, scor }: { label: string; scor: number }) {
 
 function DecisionPanel({
   tier,
+  end_ok,
   busy_flag,
   onActn,
+  onEndClick,
 }: {
   tier: BlndTier;
+  end_ok: boolean;
   busy_flag: boolean;
   onActn: (actn: BlndActn) => void;
+  onEndClick: () => void;
 }) {
   const main_actn = blnd_tier_actn(tier);
-  const end_ok = blnd_tier_end_ok(tier);
 
   return (
     <div className="space-y-2">
@@ -207,7 +230,7 @@ function DecisionPanel({
       {end_ok && (
         <button
           type="button"
-          onClick={() => onActn("end")}
+          onClick={onEndClick}
           disabled={busy_flag}
           className="w-full rounded-2xl border border-gray-200 py-3.5 text-sm font-bold text-gray-700 transition active:opacity-90 disabled:opacity-60"
         >
