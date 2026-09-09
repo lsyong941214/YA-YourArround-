@@ -41,6 +41,12 @@ Next.js + Tailwind CSS 기반 웹으로 1차 개발 후, 웹앱 형태로 제공
      관리하는 예전 설계(`question_id`/`user_id` 컬럼, `(blind_test_id, side, question_id)`
      기본키)로 남아있어서, 지금 앱 코드가 기대하는 `(blind_test_id, side, card_idx)` 기본키와
      달라 카드를 고를 때마다 저장이 막히던 문제를 고친다.
+   - 이미 예전 버전(주변인 테스트 진행 상태를 폴링으로만 확인하던)의 `schema.sql`을 실행해둔
+     프로젝트라면 [supabase/alter_blnd_rtme.sql](supabase/alter_blnd_rtme.sql)을 실행한다 —
+     `blind_test_requests`/`blind_test_picks` 두 테이블을 `supabase_realtime` publication에
+     추가해, 상대방의 수락·거절/카드 선택/결과 화면 행동이 새로고침 없이 바로 반영되게 한다.
+     이 파일을 실행하지 않으면 화면은 기존처럼 몇 초 간격 폴링으로만 갱신된다(실시간까지는 아니지만
+     동작 자체는 그대로 유지됨).
 4. Authentication > Providers > Email에서 **"Confirm email"을 끈다**
 — 이 앱은 로그인ID를 합성 이메일(`{login_id}@jubyeon.local`)로 변환해 쓰기 때문에 실제 메일함이 없다.
 켜져 있으면 가입 후 로그인이 막힌다.
@@ -92,8 +98,9 @@ jubyeon-web/
 
 - `/home` (`src/app/(main)/home/page.tsx`) : **홈 대시보드**
   - `src/components/home/HomeScreen.tsx`: 상단 헤더(로고/알림/포인트), 프로필 카드, 내 역할·이장님 연락처 카드, 가이드 투어, 이장님 추천 주민 리스트, 하단 탭바
-  - 프로필 사진(작은 연필 버튼) 클릭 시 `ProfEditModal`에서 사진 업로드(로컬 미리보기) + 소개 문구 수정 가능
-    - TODO: 실제 서버(Supabase Storage 등) 업로드 연동
+  - 프로필 사진(작은 연필 버튼) 클릭 시 `ProfEditModal`에서 사진 업로드 + 소개 문구 수정 가능
+    - 사진은 로컬 미리보기가 아니라 Supabase Storage(`prof-img` 버킷)에 실제 업로드되고,
+      공개 URL이 `profiles.avatar_url`에 저장된다 (`src/lib/supabase/stor_upld.ts`)
   - "내 역할" 카드를 탭하면 주민 ↔ 이장님 전환, 매칭 관련 문구도 함께 변경
   - "이장님 연락처" 카드는 역할과 무관하게 항상 동일하게 노출
   - 가이드 투어 버튼, 하단 탭바는 디자인만 반영되어 있고 동작은 추후 개발 예정
@@ -114,6 +121,13 @@ jubyeon-web/
   (이번에 하단 탭바가 전역 고정되면서 이 진입점 자체도 어느 화면에서나 갈 수 있게 됨).
   다만 이 저장소는 실제 Supabase 프로젝트에 붙어 있어 로그인 계정으로 직접 시나리오를
   재현해야 확실히 검증되므로, 앱 종료 후 재접속했을 때 실제로 이어지는지 한 번 확인해보면 좋겠다.
+- **주변인 테스트 실시간 업데이트**: 요청 수락/거절, 카드 선택, 결과 화면 행동(연락하기/확인요청/
+  종료하기)을 `sub_blnd()`(`src/lib/store/blnd_store.ts`)로 Supabase Realtime
+  구독해 상대방 화면 변화가 새로고침 없이 바로 반영되도록 `BlndReviewScreen`/`BlndGameScreen`/
+  `BlndRsltScreen`에 연결했다(기존 폴링은 이벤트를 놓쳤을 때를 대비한 보조 수단으로 남겨뒀다).
+  다만 이 기능은 [supabase/alter_blnd_rtme.sql](supabase/alter_blnd_rtme.sql)로 두 테이블을
+  `supabase_realtime` publication에 추가해야 동작하고, Realtime 자체가 로컬에서 재현하기
+  어려워 두 계정으로 동시에 접속해 직접 확인해보는 걸 권한다.
 
 ## TODO (다음 작업 예정)
 - 주변인 테스트 진행 중, 요청을 받은 주민 쪽에서 테스트를 종료/거절할 수 있는 버튼(이벤트) 추가

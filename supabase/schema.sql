@@ -398,3 +398,12 @@ create policy "prof_img_delete_own" on storage.objects
   for delete using (
     bucket_id = 'prof-img' and (storage.foldername(name))[1] = auth.uid()::text
   );
+
+-- ============================================================
+-- Realtime: 주변인 테스트 진행 상태(수락/거절, 카드 선택, 결과 화면 행동)를 폴링 없이
+-- 실시간으로 받기 위해 두 테이블을 supabase_realtime publication에 추가한다 (2026-09-09).
+-- Realtime도 각 테이블의 select RLS 정책을 그대로 따르므로 당사자에게만 이벤트가 간다.
+-- ============================================================
+alter publication supabase_realtime add table public.blind_test_requests;
+alter publication supabase_realtime add table public.blind_test_picks;
+  );

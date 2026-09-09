@@ -19,6 +19,7 @@ import {
   calc_rslt_scor,
   find_req,
   side_of,
+  sub_blnd,
   submit_actn,
 } from "@/lib/store/blnd_store";
 
@@ -46,7 +47,17 @@ export default function BlndRsltScreen({ blnd_id }: { blnd_id: string }) {
   const opp_actn = item && my_side ? (my_side === "req" ? item.memb_actn : item.req_actn) : null;
   const rslt_open = !!item && item.stat === "acpt" && !!my_actn && !opp_actn;
 
-  // 아직 결과가 확정 안 됐는데 이미 내 결정은 냈고, 상대 결정을 기다리는 중이면 주기적으로 다시 확인
+  // 상대방이 결과 화면에서 행동(연락하기/확인요청/종료하기)을 고르면 Realtime으로 바로 반영한다
+  useEffect(() => {
+    return sub_blnd(blnd_id, () => {
+      find_req(blnd_id).then((next) => {
+        if (next) setItem(next);
+      });
+    });
+  }, [blnd_id]);
+
+  // Realtime 이벤트를 놓쳤을 때를 대비한 보조 폴링 - 아직 결과가 확정 안 됐는데 이미 내
+  // 결정은 냈고, 상대 결정을 기다리는 중이면 주기적으로 다시 확인
   useEffect(() => {
     if (!rslt_open) return;
     const timer_id = window.setInterval(() => {

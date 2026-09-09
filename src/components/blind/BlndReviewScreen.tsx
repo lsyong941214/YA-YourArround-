@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
-import { BlndReq, find_req, game_go, side_of, updt_req } from "@/lib/store/blnd_store";
+import { BlndReq, find_req, game_go, side_of, sub_blnd, updt_req } from "@/lib/store/blnd_store";
 import { curr_user } from "@/lib/store/auth_store";
 import BlndGameScreen from "./BlndGameScreen";
 
@@ -16,6 +16,15 @@ export default function BlndReviewScreen({ blnd_id }: { blnd_id: string }) {
   useEffect(() => {
     find_req(blnd_id).then((found) => setBlndItem(found ?? undefined));
     curr_user().then(setMyUser);
+  }, [blnd_id]);
+
+  // 상대방이 수락/거절하거나 카드를 고르면 새로고침 없이 바로 반영한다
+  useEffect(() => {
+    return sub_blnd(blnd_id, () => {
+      find_req(blnd_id).then((found) => {
+        if (found) setBlndItem(found);
+      });
+    });
   }, [blnd_id]);
 
   async function do_acpt() {

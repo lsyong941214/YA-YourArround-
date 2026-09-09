@@ -10,6 +10,7 @@ import {
   BlndSide,
   find_req,
   pick_list,
+  sub_blnd,
   submit_pick,
 } from "@/lib/store/blnd_store";
 import { BlndQuestion, find_question } from "@/lib/data/blnd_questions";
@@ -36,7 +37,18 @@ export default function BlndGameScreen({
   const my_done = my_step >= BLND_CARD_CNT;
   const both_done = my_done && opp_step >= BLND_CARD_CNT;
 
-  // 내가 5장을 다 고른 뒤엔, 상대방도 다 골랐는지 주기적으로 확인
+  // 상대방이 카드를 고를 때마다 Realtime으로 바로 반영한다 (내가 대기 중이 아니어도 구독해
+  // 두면, 마지막 카드를 거의 동시에 고르는 경우에도 "둘 다 완료" 상태가 지연 없이 잡힌다)
+  useEffect(() => {
+    return sub_blnd(blnd_id, () => {
+      find_req(blnd_id).then((latest_item) => {
+        if (latest_item) setCurItem(latest_item);
+      });
+    });
+  }, [blnd_id]);
+
+  // Realtime 이벤트를 놓쳤을 때를 대비한 보조 폴링 - 내가 5장을 다 고른 뒤, 상대방도 다
+  // 골랐는지 주기적으로 확인
   useEffect(() => {
     if (!my_done || both_done) return;
     const timer_id = window.setInterval(() => {

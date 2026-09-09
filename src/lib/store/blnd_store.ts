@@ -343,3 +343,27 @@ export async function submit_actn(blnd_id: string, actn: BlndActn): Promise<Blnd
   await supabase.rpc("blnd_submit_actn", { p_blnd_id: blnd_id, p_actn: actn });
   return find_req(blnd_id);
 }
+
+// 이 주변인 테스트에 변화(수락·거절, 카드 선택, 결과 화면 행동)가 생기면 Supabase Realtime으로
+// on_chg 를 호출한다. 상대방 화면이 바뀌자마자 내 화면도 다시 조회해 갱신하는 용도라, 새 데이터를
+// 직접 넘기지 않고 "다시 불러오라"는 신호로만 쓴다. 언마운트 시 반환된 함수로 구독을 해제해야 한다.
+// (supabase/alter_blnd_rtme.sql 로 blind_test_requests/blind_test_picks 를
+// supabase_realtime publication에 추가해야 이벤트가 온다)
+export function sub_blnd(blnd_id: string, on_chg: () => void): () => void {
+  const chan = supabase
+    .channel(`blnd_${blnd_id}`)
+    .on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "blind_test_requests", filter: `id=eq.${blnd_id}` },
+      on_chg
+    )
+    .on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "blind_test_picks", filter: `blind_test_id=eq.${blnd_id}` },
+      on_chg
+    )
+    .subscribe();
+  return () => {
+    supabase.removeChannel(chan);
+  };
+}
