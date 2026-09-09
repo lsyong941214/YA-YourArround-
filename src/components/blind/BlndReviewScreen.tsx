@@ -12,6 +12,10 @@ export default function BlndReviewScreen({ blnd_id }: { blnd_id: string }) {
   const [blnd_item, setBlndItem] = useState<BlndReq | undefined | null>(null);
 
   const [my_user, setMyUser] = useState<{ user_id: string } | null | undefined>(undefined);
+  // 게임 화면(BlndGameScreen)에 한 번 들어갔으면, 진행 중 상대방이 종료/거절해서 상태가
+  // rjct로 바뀌어도 이 화면(정적 안내)으로 되돌아오지 않고 게임 화면이 계속 떠 있게 한다 -
+  // 그래야 게임 화면 쪽 "상대방이 더 이상의 진행을 원치 않는 것 같습니다" 팝업을 볼 수 있다
+  const [game_ent, setGameEnt] = useState(false);
 
   useEffect(() => {
     find_req(blnd_id).then((found) => setBlndItem(found ?? undefined));
@@ -26,6 +30,10 @@ export default function BlndReviewScreen({ blnd_id }: { blnd_id: string }) {
       });
     });
   }, [blnd_id]);
+
+  useEffect(() => {
+    if (blnd_item && game_go(blnd_item)) setGameEnt(true);
+  }, [blnd_item]);
 
   async function do_acpt() {
     await updt_req(blnd_id, { stat: "acpt" });
@@ -56,7 +64,7 @@ export default function BlndReviewScreen({ blnd_id }: { blnd_id: string }) {
     );
   }
 
-  if (game_go(blnd_item)) {
+  if (game_ent || game_go(blnd_item)) {
     const my_side = side_of(blnd_item, my_user);
     if (my_side) {
       return <BlndGameScreen blnd_id={blnd_id} item={blnd_item} side={my_side} />;

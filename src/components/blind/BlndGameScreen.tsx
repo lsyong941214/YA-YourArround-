@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, Heart, PartyPopper } from "lucide-react";
 import {
@@ -11,6 +11,7 @@ import {
   find_req,
   pick_list,
   sub_blnd,
+  submit_actn,
   submit_pick,
 } from "@/lib/store/blnd_store";
 import { BlndQuestion, find_question } from "@/lib/data/blnd_questions";
@@ -30,12 +31,16 @@ export default function BlndGameScreen({
   // 카드 전환 애니메이션 방향 - "out": 고른 카드가 뒤로 넘어감, "in": 다음 카드가 나타남
   const [trans_dir, setTransDir] = useState<"in" | "out">("in");
   const [err_msg, setErrMsg] = useState("");
+  const [end_busy, setEndBusy] = useState(false);
+  // 내가 방금 "종료하기"를 눌러 rjct로 바뀐 경우는 상대방용 팝업을 내 화면에 띄우지 않는다
+  const ending_ref = useRef(false);
 
   const opp_side: BlndSide = side === "req" ? "memb" : "req";
   const my_step = pick_list(cur_item, side).length;
   const opp_step = pick_list(cur_item, opp_side).length;
   const my_done = my_step >= BLND_CARD_CNT;
   const both_done = my_done && opp_step >= BLND_CARD_CNT;
+  const rjct_flag = cur_item.stat === "rjct" && !ending_ref.current;
 
   // 상대방이 카드를 고를 때마다 Realtime으로 바로 반영한다 (내가 대기 중이 아니어도 구독해
   // 두면, 마지막 카드를 거의 동시에 고르는 경우에도 "둘 다 완료" 상태가 지연 없이 잡힌다)
@@ -79,6 +84,16 @@ export default function BlndGameScreen({
     setTransDir("in");
   }
 
+  // 요청을 받은 주민 쪽에서 진행 중인 주변인 테스트를 종료/거절한다. 누른 본인은 상대방용
+  // 팝업 없이 바로 홈으로 돌아간다 (ending_ref로 표시해 실시간 갱신에 의한 팝업을 막는다)
+  async function do_end() {
+    if (end_busy) return;
+    ending_ref.current = true;
+    setEndBusy(true);
+    await submit_actn(blnd_id, "end");
+    rout_nav.push("/home");
+  }
+
   return (
     <main className="flex min-h-dvh w-full flex-col bg-white">
       <header className="flex items-center gap-2 px-4 pb-2 pt-5">
@@ -90,7 +105,17 @@ export default function BlndGameScreen({
         >
           <ChevronLeft className="h-6 w-6" />
         </button>
-        <h1 className="text-base font-bold text-gray-900">주변인 테스트</h1>
+        <h1 className="flex-1 text-base font-bold text-gray-900">주변인 테스트</h1>
+        {side === "memb" && !both_done && !rjct_flag && (
+          <button
+            type="button"
+            onClick={do_end}
+            disabled={end_busy}
+            className="text-xs font-bold text-gray-400 disabled:opacity-50"
+          >
+            종료하기
+          </button>
+        )}
       </header>
 
       {both_done ? (
@@ -108,6 +133,8 @@ export default function BlndGameScreen({
           onPick={do_pick}
         />
       )}
+
+      {rjct_flag && <RjctPopup onConfirm={() => rout_nav.push("/home")} />}
     </main>
   );
 }
@@ -298,6 +325,27 @@ function DoneView({ blnd_id }: { blnd_id: string }) {
       >
         이제 결과를 보러 갈까요?
       </button>
+    </div>
+  );
+}
+
+// 상대방이 진행 중이던 주변인 테스트를 종료/거절했을 때 뜨는 안내 팝업 - "확인" 하나만 눌러
+// 메인 화면(홈)으로 돌아가게 한다
+function RjctPopup({ onConfirm }: { onConfirm: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-6">
+      <div className="w-full max-w-xs rounded-2xl bg-white p-6 text-center shadow-lg">
+        <p className="text-sm font-bold leading-relaxed text-gray-900">
+          상대방이 더 이상의 진행을 원치 않는 것 같습니다.
+        </p>
+        <button
+          type="button"
+          onClick={onConfirm}
+          className="mt-5 w-full rounded-2xl bg-[#6C63E0] py-3 text-sm font-bold text-white transition active:opacity-90"
+        >
+          확인
+        </button>
+      </div>
     </div>
   );
 }
