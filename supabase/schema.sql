@@ -406,4 +406,3 @@ create policy "prof_img_delete_own" on storage.objects
 -- ============================================================
 alter publication supabase_realtime add table public.blind_test_requests;
 alter publication supabase_realtime add table public.blind_test_picks;
-  );
