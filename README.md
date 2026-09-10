@@ -47,6 +47,12 @@ Next.js + Tailwind CSS 기반 웹으로 1차 개발 후, 웹앱 형태로 제공
      추가해, 상대방의 수락·거절/카드 선택/결과 화면 행동이 새로고침 없이 바로 반영되게 한다.
      이 파일을 실행하지 않으면 화면은 기존처럼 몇 초 간격 폴링으로만 갱신된다(실시간까지는 아니지만
      동작 자체는 그대로 유지됨).
+   - 이미 예전 버전의 `schema.sql`을 실행해둔 프로젝트라면
+     [supabase/alter_revw_scop.sql](supabase/alter_revw_scop.sql)을 실행한다 — 이장님 리뷰
+     작성 정책(`reviews_insert_own`)이 `reviewer_id = 본인` 확인만 하고 그 사람이 실제 해당
+     `match_request_id`의 당사자(신청자/대상 주민)인지는 검증하지 않아서, 매칭과 무관한
+     사람도 다른 사람의 `match_request_id`(UUID)만 알면 임의의 이장에게 가짜 리뷰를 남길 수
+     있었던 문제를 고친다 (로컬 테스트 환경에서 직접 재현 후 확인).
 4. Authentication > Providers > Email에서 **"Confirm email"을 끈다**
 — 이 앱은 로그인ID를 합성 이메일(`{login_id}@jubyeon.local`)로 변환해 쓰기 때문에 실제 메일함이 없다.
 켜져 있으면 가입 후 로그인이 막힌다.

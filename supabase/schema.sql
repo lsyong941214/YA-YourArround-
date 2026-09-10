@@ -198,10 +198,22 @@ create policy "picks_insert_related" on public.blind_test_picks
   );
 
 -- chief_reviews: 이장님 리뷰는 공개 정보라 누구나 조회 가능, 작성은 리뷰어 본인만
+-- (reviewer_id = 본인 확인만으로는 부족하다 -- match_request_id/chief_id를 검증하지 않으면
+-- 그 매칭과 무관한 사람도 id만 알면 임의의 이장에게 가짜 리뷰를 남길 수 있다. 그래서
+-- 이 리뷰가 가리키는 match_requests 행의 실제 당사자(requester/resident)인지, chief_id가
+-- 그 매칭의 이장과 일치하는지까지 함께 확인한다)
 create policy "reviews_select_all" on public.chief_reviews
   for select using (true);
 create policy "reviews_insert_own" on public.chief_reviews
-  for insert with check (auth.uid() = reviewer_id);
+  for insert with check (
+    auth.uid() = reviewer_id
+    and exists (
+      select 1 from public.match_requests m
+      where m.id = match_request_id
+        and m.chief_id = chief_id
+        and (auth.uid() = m.requester_id or auth.uid() = m.resident_id)
+    )
+  );
 
 -- invite_codes: 발급/조회는 이장 본인만. 주민은 코드를 조회하지 못한다(코드 열거 방지) --
 -- 주민의 코드 사용은 아래 use_invt_code() 함수가 대신 처리한다.
