@@ -134,6 +134,21 @@ comment on table public.invite_codes is '이장이 발급하는 1회용 초대�
 comment on column public.invite_codes.code is '사람이 눈으로 읽고 옮겨 적는 코드. 혼동 문자(0/O/1/I/L) 제외 8자리.';
 
 -- ============================================================
+-- chat_messages: 연결 성사(r_acpt)된 두 사람의 채팅 메시지 (2026-09-11)
+-- ============================================================
+-- 이장은 매칭을 중개할 뿐 채팅 당사자가 아니므로 대화 내용을 볼 수 없다 -- RLS는
+-- match_requests.status = 'r_acpt' 이고 auth.uid()가 requester_id/resident_id 중
+-- 하나일 때만 조회/작성을 허용한다 (아래 두 정책이 매 요청마다 이 조건을 직접 검사).
+create table public.chat_messages (
+  id                  uuid primary key default gen_random_uuid(),
+  match_request_id    uuid not null references public.match_requests(id) on delete cascade,
+  sender_id           uuid not null references public.profiles(id) on delete cascade,
+  body                text not null check (char_length(btrim(body)) > 0 and char_length(body) <= 2000),
+  created_at          timestamptz not null default now()
+);
+create index idx_chat_messages_match on public.chat_messages (match_request_id, created_at);
+
+-- ============================================================
 -- Row Level Security
 -- ============================================================
 alter table public.profiles enable row level security;
@@ -143,6 +158,7 @@ alter table public.blind_test_requests enable row level security;
 alter table public.blind_test_picks enable row level security;
 alter table public.chief_reviews enable row level security;
 alter table public.invite_codes enable row level security;
+alter table public.chat_messages enable row level security;
 
 -- profiles: 로그인한 누구나 다른 프로필을 조회 가능(추천/탐색 화면에 필요), 본인만 등록/수정
 create policy "profiles_select_authenticated" on public.profiles
@@ -229,6 +245,27 @@ create policy "invt_select_own" on public.invite_codes
   for select using (auth.uid() = chief_id);
 create policy "invt_delete_own_unused" on public.invite_codes
   for delete using (auth.uid() = chief_id and used_by is null);
+
+-- chat_messages: 연결 성사(r_acpt)된 매칭의 신청자/대상 주민만 조회·작성 (이장 제외)
+create policy "chat_select_related" on public.chat_messages
+  for select using (
+    exists (
+      select 1 from public.match_requests m
+      where m.id = match_request_id
+        and m.status = 'r_acpt'
+        and (auth.uid() = m.requester_id or auth.uid() = m.resident_id)
+    )
+  );
+create policy "chat_insert_related" on public.chat_messages
+  for insert with check (
+    auth.uid() = sender_id
+    and exists (
+      select 1 from public.match_requests m
+      where m.id = match_request_id
+        and m.status = 'r_acpt'
+        and (auth.uid() = m.requester_id or auth.uid() = m.resident_id)
+    )
+  );
 
 -- ============================================================
 -- use_invt_code: 주민이 초대코드를 입력해 이장과 연결한다
@@ -418,3 +455,8 @@ create policy "prof_img_delete_own" on storage.objects
 -- ============================================================
 alter publication supabase_realtime add table public.blind_test_requests;
 alter publication supabase_realtime add table public.blind_test_picks;
+
+-- ============================================================
+-- Realtime: 채팅 메시지도 폴링 없이 실시간으로 받기 위해 publication에 추가한다 (2026-09-11).
+-- ============================================================
+alter publication supabase_realtime add table public.chat_messages;

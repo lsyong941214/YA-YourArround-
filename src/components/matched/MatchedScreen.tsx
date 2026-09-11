@@ -40,8 +40,9 @@ export default function MatchedScreen({ req_id }: { req_id: string }) {
     setRevwOpen(false);
   }
 
-  // TODO: 채팅 기능 연동
-  function do_chat() {}
+  function do_chat() {
+    rout_nav.push(`/chat/${req_id}`);
+  }
 
   if (req_item === null) {
     return <main className="h-dvh w-full bg-white" />;
