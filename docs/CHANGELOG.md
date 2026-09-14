@@ -1,5 +1,22 @@
 # CHANGELOG
 
+## v0.3.17 - "결과 확인됨" 주변인 테스트 진입 시 크래시 수정 (realtime 채널 중복 구독)
+- 매칭 현황에서 "결과 확인됨"(`done`) 상태의 주변인 테스트 항목을 누르면
+  `/blind/[blnd_id]`에서 "Application error: a client-side exception has occurred"로
+  화면이 죽는 문제 — Playwright로 Supabase 응답을 모킹해 실제 브라우저에서 재현하고
+  콘솔 스택트레이스까지 확보해 원인을 확정했다.
+  - `BlndReviewScreen`이 `sub_blnd(blnd_id, ...)`로 실시간 구독(`blnd_${blnd_id}` 토픽)을
+    거는데, 상태가 `acpt`/`done`이 되면 이 컴포넌트는 언마운트되지 않은 채 자식으로
+    `BlndGameScreen`을 렌더링하고, `BlndGameScreen`도 자기 `useEffect`에서 **같은
+    `blnd_id`로 또 `sub_blnd`를 호출**한다. 두 번째 구독이 이미 `subscribe()`된 것과
+    동일한 토픽에 `.on()`을 추가하려다 `@supabase/realtime-js`가 "cannot add
+    postgres_changes callbacks ... after subscribe()" 예외를 던지고, `useEffect` 안에서
+    발생한 이 예외를 어디서도 잡지 않아 화면 렌더링이 그대로 중단됐다.
+  - `BlndReviewScreen`이 게임 화면으로 위임하는 동안(`show_game`)에는 자기 realtime
+    구독을 갖지 않도록 수정 — 그 이후의 실시간 갱신은 `BlndGameScreen`의 구독이 전담한다.
+  - 로컬 `npm run dev` + Playwright로 실제 브라우저에서 크래시 재현 → 수정 후 재현 안 됨을
+    모두 확인.
+
 ## v0.3.16 - 매칭 데이터 정합성 근본 조치 (자기매칭·역할 불일치 차단, "내 역할" 토글 가드)
 - v0.3.15에서 클라이언트 방어 코드로 크래시는 막았지만, 실제로 그런 행이 "왜" 생길 수
   있었는지 원인을 더 파봤다: 홈 화면 "내 역할" 카드(`HomeScreen.do_togl_role`)가 같은
