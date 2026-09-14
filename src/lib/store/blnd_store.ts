@@ -107,7 +107,11 @@ function picks_of(row: BlndRow, side: BlndSide): BlndPick[] {
     .map((p_item) => p_item.pick);
 }
 
-function row_to_blnd(row: BlndRow): BlndReq {
+// 신청자/이장/대상 주민 중 하나라도 profiles JOIN이 비어있으면(RLS로 막혔거나, 탈퇴 등으로
+// 데이터가 정합성이 깨진 경우) 그대로 필드에 접근하면 클라이언트가 통째로 죽으므로 null로
+// 걸러내 "존재하지 않는 요청"처럼 안전하게 처리한다
+function row_to_blnd(row: BlndRow): BlndReq | null {
+  if (!row.requester || !row.chief || !row.resident) return null;
   return {
     blnd_id: row.id,
     req_uid: row.requester_id,
@@ -164,7 +168,9 @@ export async function add_req(
   if (error || !data) {
     return { err_msg: error?.message ?? "주변인 테스트 요청에 실패했어요." };
   }
-  return { item: row_to_blnd(data as unknown as BlndRow) };
+  const item_val = row_to_blnd(data as unknown as BlndRow);
+  if (!item_val) return { err_msg: "주변인 테스트 요청에 실패했어요." };
+  return { item: item_val };
 }
 
 export async function find_req(blnd_id: string): Promise<BlndReq | undefined> {
@@ -174,7 +180,7 @@ export async function find_req(blnd_id: string): Promise<BlndReq | undefined> {
     .eq("id", blnd_id)
     .maybeSingle();
   if (error || !data) return undefined;
-  return row_to_blnd(data as unknown as BlndRow);
+  return row_to_blnd(data as unknown as BlndRow) ?? undefined;
 }
 
 export type UpdtBlndPatch = { stat?: BlndStat; seen_flag?: boolean };
@@ -194,7 +200,9 @@ async function list_by(filters: Record<string, string>, order_desc = false): Pro
   if (order_desc) query = query.order("created_at", { ascending: false });
   const { data, error } = await query;
   if (error || !data) return [];
-  return (data as unknown as BlndRow[]).map(row_to_blnd);
+  return (data as unknown as BlndRow[])
+    .map(row_to_blnd)
+    .filter((item_val): item_val is BlndReq => item_val !== null);
 }
 
 // 특정 주민(memb_id)이 받은 대기중 주변인 테스트 요청

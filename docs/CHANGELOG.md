@@ -1,5 +1,18 @@
 # CHANGELOG
 
+## v0.3.15 - 매칭 결과 화면에서 profiles JOIN이 비면 앱 전체가 죽던 문제 수정
+- `매칭 현황`에서 성사된 매칭을 눌러 `/matched/[req_id]`로 들어가면 "Application error:
+  a client-side exception has occurred"로 화면이 통째로 죽는 문제 - `matc_store.ts`의
+  `row_to_matc()`가 `match_requests`에 JOIN된 `requester`/`chief`/`resident` profiles
+  중 하나가 비어 있으면(관련 프로필이 지워졌거나 그 시점에 조회가 막힌 경우 PostgREST가
+  해당 중첩 관계를 `null`로 돌려줌) 곧바로 `.user_name` 등을 읽어 `TypeError`를 던지고
+  있었다 - 이 예외를 어디서도 잡지 않아 렌더링이 그대로 중단됨
+  - `row_to_matc()`/`row_to_blnd()`가 이제 관련 프로필이 하나라도 없으면 `null`을 돌려주고,
+    호출부(`find_req`/`list_by`/`add_req`)에서 그 행을 "존재하지 않는 연결"처럼 걸러내도록
+    수정 (`matc_store.ts`, `blnd_store.ts`)
+  - 이 종류의 다른 미처리 예외에도 화면이 통째로 죽지 않도록 `src/app/error.tsx`(Next.js
+    에러 바운더리)를 추가 - "다시 시도"/"홈으로" 버튼이 있는 복구 화면을 보여준다
+
 ## v0.3.14 - 주변인 테스트 카드 선택이 저장 안 되던 근본 원인(question_id) 해결
 - v0.3.13에서 추가한 에러 로그로 확인된 실제 원인: 배포된 Supabase 프로젝트의
   `blind_test_picks` 테이블이 문항을 `blind_test_questions`라는 별도 테이블로 관리하는

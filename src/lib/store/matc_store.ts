@@ -85,7 +85,11 @@ type MatcRow = {
 const SEL_JOIN =
   "*, requester:profiles!match_requests_requester_id_fkey(*), chief:profiles!match_requests_chief_id_fkey(*), resident:profiles!match_requests_resident_id_fkey(*)";
 
-function row_to_matc(row: MatcRow): MatcReq {
+// 신청자/이장/대상 주민 중 하나라도 profiles JOIN이 비어있으면(RLS로 막혔거나, 탈퇴 등으로
+// 데이터가 정합성이 깨진 경우) 그대로 필드에 접근하면 클라이언트가 통째로 죽으므로 null로
+// 걸러내 "존재하지 않는 연결"처럼 안전하게 처리한다
+function row_to_matc(row: MatcRow): MatcReq | null {
+  if (!row.requester || !row.chief || !row.resident) return null;
   return {
     req_id: row.id,
     req_uid: row.requester_id,
@@ -143,7 +147,9 @@ export async function add_req(
   if (error || !data) {
     return { err_msg: error?.message ?? "연결 요청에 실패했어요." };
   }
-  return { item: row_to_matc(data as unknown as MatcRow) };
+  const item_val = row_to_matc(data as unknown as MatcRow);
+  if (!item_val) return { err_msg: "연결 요청에 실패했어요." };
+  return { item: item_val };
 }
 
 export async function find_req(req_id: string): Promise<MatcReq | undefined> {
@@ -153,7 +159,7 @@ export async function find_req(req_id: string): Promise<MatcReq | undefined> {
     .eq("id", req_id)
     .maybeSingle();
   if (error || !data) return undefined;
-  return row_to_matc(data as unknown as MatcRow);
+  return row_to_matc(data as unknown as MatcRow) ?? undefined;
 }
 
 export type UpdtReqPatch = {
@@ -195,7 +201,9 @@ async function list_by(filters: Record<string, string | string[]>, order_desc = 
   if (order_desc) query = query.order("created_at", { ascending: false });
   const { data, error } = await query;
   if (error || !data) return [];
-  return (data as unknown as MatcRow[]).map(row_to_matc);
+  return (data as unknown as MatcRow[])
+    .map(row_to_matc)
+    .filter((item_val): item_val is MatcReq => item_val !== null);
 }
 
 // 특정 이장님(jang_id)에게 들어온 요청 전체 (상태 무관)
