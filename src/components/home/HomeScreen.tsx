@@ -3,8 +3,18 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Bell, ChevronRight, Crown, Pencil, Ticket, Users } from "lucide-react";
-import { jang_pend_cnt, jang_prog_cnt, memb_prop_cnt, sent_used_cnt } from "@/lib/store/matc_store";
-import { memb_pend_cnt, sent_used_cnt as blnd_sent_used_cnt } from "@/lib/store/blnd_store";
+import {
+  has_active_role as matc_has_active_role,
+  jang_pend_cnt,
+  jang_prog_cnt,
+  memb_prop_cnt,
+  sent_used_cnt,
+} from "@/lib/store/matc_store";
+import {
+  has_active_role as blnd_has_active_role,
+  memb_pend_cnt,
+  sent_used_cnt as blnd_sent_used_cnt,
+} from "@/lib/store/blnd_store";
 import { AuthRole, AuthUser, curr_user, updt_curr } from "@/lib/store/auth_store";
 import { list_chf_of, list_res_of } from "@/lib/store/cntc_store";
 import AvatarCircle from "@/components/common/AvatarCircle";
@@ -21,6 +31,7 @@ export default function HomeScreen() {
   const [sent_used_val, setSentUsedVal] = useState(0);
   const [prop_val, setPropVal] = useState(0);
   const [cntc_list, setCntcList] = useState<AuthUser[]>([]);
+  const [role_lock_msg, setRoleLockMsg] = useState("");
 
   async function load_cntc(uid_val: string, role_val: AuthRole) {
     setCntcList(await (role_val === "chief" ? list_res_of(uid_val) : list_chf_of(uid_val)));
@@ -60,11 +71,25 @@ export default function HomeScreen() {
     return null;
   }
 
-  function do_togl_role() {
+  // 진행중인 매칭/주변인 테스트가 있는 채로 역할을 바꾸면 chief_id/resident_id가 가리키는
+  // 사람의 실제 역할이 그 행이 만들어질 때와 달라져 화면(매칭 현황 등)이 앞뒤가 안 맞는
+  // 상태로 깨질 수 있다(profiles를 스냅샷 없이 매번 최신값으로 JOIN해서 보여주기 때문).
+  // 그래서 역할을 바꾸기 전에 어느 쪽 역할로든 진행중인 건이 있는지 먼저 확인한다.
+  async function do_togl_role() {
+    if (!me_item) return;
+    setRoleLockMsg("");
+    const [matc_active, blnd_active] = await Promise.all([
+      matc_has_active_role(me_item.user_id),
+      blnd_has_active_role(me_item.user_id),
+    ]);
+    if (matc_active || blnd_active) {
+      setRoleLockMsg("진행중인 매칭이 있어 지금은 역할을 바꿀 수 없어요. 매칭을 완료하거나 종료한 뒤 다시 시도해주세요.");
+      return;
+    }
     const next_role = user_role === "res" ? "chief" : "res";
     setUserRole(next_role);
     updt_curr({ user_role: next_role });
-    load_cntc(me_item!.user_id, next_role);
+    load_cntc(me_item.user_id, next_role);
   }
 
   function go_invt() {
@@ -159,6 +184,9 @@ export default function HomeScreen() {
             </div>
             <p className="mt-1 text-lg font-extrabold text-gray-900">{role_lbl}</p>
           </button>
+          {role_lock_msg && (
+            <p className="mt-1 text-[11px] leading-relaxed text-red-500">{role_lock_msg}</p>
+          )}
           <button
             type="button"
             onClick={go_matc}

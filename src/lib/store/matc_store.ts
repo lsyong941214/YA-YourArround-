@@ -265,6 +265,19 @@ export async function sent_used_cnt(req_uid: string): Promise<number> {
   return (await sent_list(req_uid)).filter((r_item) => r_item.stat !== "c_rjct" && r_item.stat !== "r_rjct").length;
 }
 
+// user_id가 신청자/이장/대상 주민 중 어느 역할로든 걸려있는 "진행중"(아직 최종 상태가
+// 아닌) 매칭 요청이 있는지 - 홈 화면 "내 역할" 토글 직전에 확인해서, 진행중인 매칭이 있는
+// 채로 역할을 바꿔버리면(예: 이장으로 진행중이던 매칭의 chief_id가 갑자기 res 역할이 되는
+// 등) match_requests가 표현하는 상태가 깨지는 걸 막는 용도
+export async function has_active_role(user_id: string): Promise<boolean> {
+  const { count } = await supabase
+    .from("match_requests")
+    .select("id", { count: "exact", head: true })
+    .or(`requester_id.eq.${user_id},chief_id.eq.${user_id},resident_id.eq.${user_id}`)
+    .in("status", ["pend", "c_acpt"]);
+  return (count ?? 0) > 0;
+}
+
 // 매칭 요청 단계별 표시 문구/톤
 // 대기중(pend) -> 수락 대기중(c_acpt) -> 요청거부(c_rjct/r_rjct) 또는 수락완료(r_acpt)
 export function matc_stat_lbl(stat: MatcStat): string {

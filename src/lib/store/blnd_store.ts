@@ -240,6 +240,18 @@ export async function sent_used_cnt(req_uid: string): Promise<number> {
   return (await sent_list(req_uid)).filter((b_item) => b_item.stat !== "rjct").length;
 }
 
+// user_id가 신청자/이장/대상 주민 중 어느 역할로든 걸려있는 "진행중"(아직 최종 상태가
+// 아닌) 주변인 테스트가 있는지 - matc_store.ts의 has_active_role과 같은 용도
+// (홈 화면 "내 역할" 토글 가드)
+export async function has_active_role(user_id: string): Promise<boolean> {
+  const { count } = await supabase
+    .from("blind_test_requests")
+    .select("id", { count: "exact", head: true })
+    .or(`requester_id.eq.${user_id},chief_id.eq.${user_id},resident_id.eq.${user_id}`)
+    .in("status", ["pend", "acpt"]);
+  return (count ?? 0) > 0;
+}
+
 // 특정 주민(memb_id)이 "요청받은" 주변인 테스트 전체 (상태 무관 - 이장님 검토 단계 없이
 // 요청이 바로 주민에게 전달되므로 pend 포함 전체를 노출)
 export async function memb_list(memb_id: string): Promise<BlndReq[]> {

@@ -53,6 +53,15 @@ Next.js + Tailwind CSS 기반 웹으로 1차 개발 후, 웹앱 형태로 제공
      `match_request_id`의 당사자(신청자/대상 주민)인지는 검증하지 않아서, 매칭과 무관한
      사람도 다른 사람의 `match_request_id`(UUID)만 알면 임의의 이장에게 가짜 리뷰를 남길 수
      있었던 문제를 고친다 (로컬 테스트 환경에서 직접 재현 후 확인).
+   - 이미 예전 버전의 `schema.sql`을 실행해둔 프로젝트라면
+     [supabase/alter_matc_intg.sql](supabase/alter_matc_intg.sql)을 실행한다 — 홈 화면
+     "내 역할" 토글로 같은 계정이 res/chief 역할을 자유롭게 오갈 수 있는데도, 지금까지는
+     `match_requests`/`blind_test_requests`에 자기매칭(신청자=대상 주민)이나 역할이 맞지
+     않는 행(예: `chief_id`가 실제로는 `res` 역할)이 들어가는 걸 막는 장치가 전혀 없어서,
+     매칭 결과 화면에서 `TypeError`로 "Application error"가 뜨는 문제로 이어질 수 있었다.
+     이 파일은 먼저 그런 행이 이미 있는지 점검하는 조회 쿼리를 실행한 뒤(있다면 CHECK 제약
+     추가가 실패하므로 결과를 보고 먼저 정리), 자기매칭을 막는 CHECK 제약과 역할을
+     검증하는 트리거를 추가한다.
 4. Authentication > Providers > Email에서 **"Confirm email"을 끈다**
 — 이 앱은 로그인ID를 합성 이메일(`{login_id}@jubyeon.local`)로 변환해 쓰기 때문에 실제 메일함이 없다.
 켜져 있으면 가입 후 로그인이 막힌다.
