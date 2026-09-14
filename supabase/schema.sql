@@ -65,7 +65,11 @@ create table public.match_requests (
   reject_message    text,   -- 거절 짧은 메시지
   seen              boolean not null default false,  -- 대상 주민이 제안을 확인했는지
   reviewed          boolean not null default false,  -- 연결 성사 후 이장님 리뷰를 남겼는지
-  created_at        timestamptz not null default now()
+  created_at        timestamptz not null default now(),
+  -- 신청자가 자기 자신을 대상 주민으로 지정하는 자기매칭 차단 (홈 화면 "내 역할" 토글로
+  -- 같은 계정이 주민/이장 역할을 오갈 수 있어, 막아두지 않으면 자기 자신에게 연결 요청을
+  -- 보낼 수 있었다)
+  constraint match_requests_no_self_chk check (requester_id <> resident_id)
 );
 create index idx_match_requests_chief on public.match_requests (chief_id, status);
 create index idx_match_requests_resident on public.match_requests (resident_id, status);
@@ -87,7 +91,9 @@ create table public.blind_test_requests (
   req_actn          text check (req_actn in ('ctct', 'rvw', 'end')),   -- 결과 화면에서 신청자가 고른 행동
   memb_actn         text check (memb_actn in ('ctct', 'rvw', 'end')),  -- 결과 화면에서 대상 주민이 고른 행동
   link_mtc_id       uuid references public.match_requests(id) on delete set null, -- 확인요청/연락하기로 만들어진 매칭 요청
-  created_at        timestamptz not null default now()
+  created_at        timestamptz not null default now(),
+  -- match_requests와 동일한 이유로 자기매칭 차단
+  constraint blind_test_requests_no_self_chk check (requester_id <> resident_id)
 );
 create index idx_blind_test_requests_resident on public.blind_test_requests (resident_id, status);
 create index idx_blind_test_requests_requester on public.blind_test_requests (requester_id);
@@ -419,6 +425,55 @@ $$;
 
 revoke all on function public.blnd_submit_actn(uuid, text) from public;
 grant execute on function public.blnd_submit_actn(uuid, text) to authenticated;
+
+-- ============================================================
+-- matc_role_chk: match_requests/blind_test_requests의 chief_id/resident_id/
+-- requester_id가 가리키는 profiles의 실제 user_role이 기대하는 역할과 맞는지 검증
+-- (2026-09-14, "내 역할" 토글로 인한 데이터 정합성 문제 대응)
+-- ============================================================
+-- 홈 화면 "내 역할" 카드는 같은 계정의 profiles.user_role을 res <-> chief로 자유롭게
+-- 바꿀 수 있게 해주는데, match_requests/blind_test_requests는 신청자/이장/대상 주민
+-- 프로필을 스냅샷으로 저장하지 않고 매번 최신 profiles를 JOIN해서 보여준다(파일 상단 주석
+-- 참고). 그래서 지금까지는 chief_id 자리에 실제로는 res 역할인 사람이, resident_id/
+-- requester_id 자리에 실제로는 chief 역할인 사람이 들어가도 막는 장치가 전혀 없었고,
+-- 그런 행이 생기면 "이장님"으로 표시돼야 할 사람이 주민으로 표시되는 등 화면이 앞뒤가 안
+-- 맞는 상태로 깨질 수 있었다. 이 트리거는 INSERT/UPDATE 시점에 역할을 검증해 그런 행이
+-- 애초에 생기지 않게 막는다(이미 들어간 행은 고치지 않는다 - 데이터를 보고 사람이 판단할 것).
+create or replace function public.matc_role_chk()
+returns trigger
+language plpgsql
+set search_path = public
+as $$
+declare
+  chief_role text;
+  resd_role  text;
+  reqr_role  text;
+begin
+  select user_role into chief_role from public.profiles where id = new.chief_id;
+  select user_role into resd_role  from public.profiles where id = new.resident_id;
+  select user_role into reqr_role  from public.profiles where id = new.requester_id;
+  if chief_role is distinct from 'chief' then
+    raise exception 'chief_id(%)는 이장(chief) 역할이 아닙니다', new.chief_id;
+  end if;
+  if resd_role is distinct from 'res' then
+    raise exception 'resident_id(%)는 주민(res) 역할이 아닙니다', new.resident_id;
+  end if;
+  if reqr_role is distinct from 'res' then
+    raise exception 'requester_id(%)는 주민(res) 역할이 아닙니다', new.requester_id;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists matc_role_chk on public.match_requests;
+create trigger matc_role_chk
+  before insert or update of chief_id, resident_id, requester_id on public.match_requests
+  for each row execute function public.matc_role_chk();
+
+drop trigger if exists blnd_role_chk on public.blind_test_requests;
+create trigger blnd_role_chk
+  before insert or update of chief_id, resident_id, requester_id on public.blind_test_requests
+  for each row execute function public.matc_role_chk();
 
 -- ============================================================
 -- Storage: 프로필 사진 / 사진첩 앨범 버킷 (2026-08-24, 온보딩 도입과 함께 추가)

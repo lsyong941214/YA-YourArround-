@@ -1,5 +1,42 @@
 # CHANGELOG
 
+## v0.3.16 - 매칭 데이터 정합성 근본 조치 (자기매칭·역할 불일치 차단, "내 역할" 토글 가드)
+- v0.3.15에서 클라이언트 방어 코드로 크래시는 막았지만, 실제로 그런 행이 "왜" 생길 수
+  있었는지 원인을 더 파봤다: 홈 화면 "내 역할" 카드(`HomeScreen.do_togl_role`)가 같은
+  계정의 `profiles.user_role`을 `res` <-> `chief`로 아무 제약 없이 즉시 바꿀 수 있게
+  해주는데, `match_requests`/`blind_test_requests`는 신청자/이장/대상 주민 프로필을
+  스냅샷 없이 매번 최신 `profiles`로 JOIN해서 보여주도록 설계돼 있다(각 store 파일 상단
+  주석). 그래서 지금까지 DB에는
+  - 신청자와 대상 주민이 같은 사람인 자기매칭(`requester_id = resident_id`)
+  - `chief_id` 자리에 실제로는 `res` 역할인 사람, `resident_id`/`requester_id` 자리에
+    실제로는 `chief` 역할인 사람이 들어가는 역할 불일치
+  를 막는 장치가 전혀 없었다 - 진행중인 매칭이 있는 상태에서 "내 역할"을 눌러 역할을
+  바꾸면 이런 행이 만들어질 수 있었고, 이게 화면이 앞뒤가 안 맞는 상태로 렌더링되다
+  처리되지 않은 예외로 이어지는 근본 원인 중 하나로 보인다.
+- **DB**: `match_requests`/`blind_test_requests`에 자기매칭을 막는 CHECK 제약
+  (`*_no_self_chk`)과, INSERT/UPDATE 시점에 `chief_id`/`resident_id`/`requester_id`가
+  가리키는 profiles의 실제 `user_role`이 기대하는 역할과 맞는지 검증하는 트리거
+  (`matc_role_chk`)를 추가 (`schema.sql`, 기존 프로젝트용
+  `supabase/alter_matc_intg.sql` - 실행 전 위반 행이 있는지 점검하는 조회 쿼리 포함)
+- **클라이언트**: `matc_store.ts`/`blnd_store.ts`에 `has_active_role()`을 추가하고,
+  `HomeScreen.do_togl_role()`이 역할을 바꾸기 전에 어느 쪽 역할로든 진행중인(`pend`/
+  `c_acpt`/`acpt`) 매칭·주변인 테스트가 있으면 역할 전환을 막고 안내 문구를 보여주도록 수정
+  - DB 트리거는 새로 생기는 행만 막을 뿐 역할을 바꾸는 순간 자체를 막지는 못해서, 실제
+    사고를 막으려면 이 클라이언트 가드가 더 중요하다
+
+## v0.3.15 - 매칭 결과 화면에서 profiles JOIN이 비면 앱 전체가 죽던 문제 수정
+- `매칭 현황`에서 성사된 매칭을 눌러 `/matched/[req_id]`로 들어가면 "Application error:
+  a client-side exception has occurred"로 화면이 통째로 죽는 문제 - `matc_store.ts`의
+  `row_to_matc()`가 `match_requests`에 JOIN된 `requester`/`chief`/`resident` profiles
+  중 하나가 비어 있으면(관련 프로필이 지워졌거나 그 시점에 조회가 막힌 경우 PostgREST가
+  해당 중첩 관계를 `null`로 돌려줌) 곧바로 `.user_name` 등을 읽어 `TypeError`를 던지고
+  있었다 - 이 예외를 어디서도 잡지 않아 렌더링이 그대로 중단됨
+  - `row_to_matc()`/`row_to_blnd()`가 이제 관련 프로필이 하나라도 없으면 `null`을 돌려주고,
+    호출부(`find_req`/`list_by`/`add_req`)에서 그 행을 "존재하지 않는 연결"처럼 걸러내도록
+    수정 (`matc_store.ts`, `blnd_store.ts`)
+  - 이 종류의 다른 미처리 예외에도 화면이 통째로 죽지 않도록 `src/app/error.tsx`(Next.js
+    에러 바운더리)를 추가 - "다시 시도"/"홈으로" 버튼이 있는 복구 화면을 보여준다
+
 ## v0.3.14 - 주변인 테스트 카드 선택이 저장 안 되던 근본 원인(question_id) 해결
 - v0.3.13에서 추가한 에러 로그로 확인된 실제 원인: 배포된 Supabase 프로젝트의
   `blind_test_picks` 테이블이 문항을 `blind_test_questions`라는 별도 테이블로 관리하는
