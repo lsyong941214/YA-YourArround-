@@ -22,14 +22,24 @@ export default function BlndReviewScreen({ blnd_id }: { blnd_id: string }) {
     curr_user().then(setMyUser);
   }, [blnd_id]);
 
-  // 상대방이 수락/거절하거나 카드를 고르면 새로고침 없이 바로 반영한다
+  // 게임 화면(BlndGameScreen)으로 넘어가면 그쪽이 같은 blnd_id로 자기 realtime 구독을 새로
+  // 갖는다 - 이 화면(부모)은 그 시점부터 렌더링만 위임할 뿐 그대로 마운트된 상태로 남아있어서,
+  // 여기서도 계속 구독을 들고 있으면 같은 토픽(`blnd_${blnd_id}`)에 두 번째 `.on()`을
+  // 호출하게 돼 supabase-js가 "cannot add postgres_changes callbacks ... after subscribe()"
+  // 예외를 던지고, 처리되지 않은 채 화면이 통째로 죽는다. 그래서 게임 화면으로 넘어간 뒤에는
+  // 이 화면에서 구독을 갖지 않는다(정적 안내를 보여주는 동안에만 필요)
+  const show_game = game_ent || (blnd_item ? game_go(blnd_item) : false);
+
+  // 상대방이 수락/거절하면 새로고침 없이 바로 반영한다 (카드 선택/게임 진행 이후는
+  // BlndGameScreen이 자기 구독으로 처리함)
   useEffect(() => {
+    if (show_game) return;
     return sub_blnd(blnd_id, () => {
       find_req(blnd_id).then((found) => {
         if (found) setBlndItem(found);
       });
     });
-  }, [blnd_id]);
+  }, [blnd_id, show_game]);
 
   useEffect(() => {
     if (blnd_item && game_go(blnd_item)) setGameEnt(true);
@@ -64,7 +74,7 @@ export default function BlndReviewScreen({ blnd_id }: { blnd_id: string }) {
     );
   }
 
-  if (game_ent || game_go(blnd_item)) {
+  if (show_game) {
     const my_side = side_of(blnd_item, my_user);
     if (my_side) {
       return <BlndGameScreen blnd_id={blnd_id} item={blnd_item} side={my_side} />;
