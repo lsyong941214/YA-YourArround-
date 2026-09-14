@@ -62,6 +62,15 @@ Next.js + Tailwind CSS 기반 웹으로 1차 개발 후, 웹앱 형태로 제공
      이 파일은 먼저 그런 행이 이미 있는지 점검하는 조회 쿼리를 실행한 뒤(있다면 CHECK 제약
      추가가 실패하므로 결과를 보고 먼저 정리), 자기매칭을 막는 CHECK 제약과 역할을
      검증하는 트리거를 추가한다.
+   - 이미 예전 버전의 `schema.sql`을 실행해둔 프로젝트라면
+     [supabase/alter_blnd_ctct_mtc.sql](supabase/alter_blnd_ctct_mtc.sql)을 실행한다 —
+     주변인 테스트 결과서 화면에서 둘 다 "연락하기"를 고른 경우, 예전에는
+     `blind_test_requests.status`만 `done`으로 바뀔 뿐 채팅으로 이어질 `match_requests`가
+     전혀 만들어지지 않았다. 결과서 화면에 채팅으로 바로 연결되는 "연락하기" 버튼이
+     생기면서, 이제 둘 다 확인요청(`rvw`)을 고른 경우와 동일하게 `match_requests`를
+     `r_acpt` 상태로 직접 만들도록 `blnd_submit_actn()`을 수정한다(함수 재정의라 몇 번
+     실행해도 안전하다). **이 마이그레이션 적용 전에 이미 `done`이 된(둘 다 연락하기를
+     고른) 기존 건에는 소급 적용되지 않아** 그 건들은 "연락하기" 버튼이 안 보인다.
 4. Authentication > Providers > Email에서 **"Confirm email"을 끈다**
 — 이 앱은 로그인ID를 합성 이메일(`{login_id}@jubyeon.local`)로 변환해 쓰기 때문에 실제 메일함이 없다.
 켜져 있으면 가입 후 로그인이 막힌다.

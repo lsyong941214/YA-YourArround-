@@ -415,8 +415,18 @@ begin
     return jsonb_build_object('stat', 'ok');
   end if;
 
+  -- 둘 다 "연락하기"를 고르면 이장님 확인요청(rvw)과 마찬가지로 바로 연결된 것으로 보고
+  -- match_requests를 r_acpt 상태로 직접 만든다 - 결과서 화면의 "연락하기" 버튼이 채팅
+  -- (/chat/[req_id])으로 이어지려면 그 대상이 될 match_requests 행이 있어야 하기 때문
   if p_actn = 'ctct' and opp_actn = 'ctct' then
-    update public.blind_test_requests set status = 'done' where id = p_blnd_id;
+    if b.link_mtc_id is null then
+      insert into public.match_requests (requester_id, chief_id, resident_id, message, status)
+      values (b.requester_id, b.chief_id, b.resident_id, '주변인 테스트에서 서로 연락하기를 선택했어요.', 'r_acpt')
+      returning id into mtc_id;
+      update public.blind_test_requests set link_mtc_id = mtc_id, status = 'done' where id = p_blnd_id;
+    else
+      update public.blind_test_requests set status = 'done' where id = p_blnd_id;
+    end if;
   end if;
 
   return jsonb_build_object('stat', 'ok');
