@@ -8,6 +8,12 @@
 
 export type BlndCateg = "daily" | "food" | "trip";
 
+export const BLND_CATEG_LBL: Record<BlndCateg, string> = {
+  daily: "일상",
+  food: "음식",
+  trip: "여행지",
+};
+
 export type BlndQuestion = {
   q_id: string;
   categ: BlndCateg;
