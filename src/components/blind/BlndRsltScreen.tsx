@@ -25,6 +25,14 @@ import {
   submit_actn,
 } from "@/lib/store/blnd_store";
 
+// 주제별 선택 결과 팝업에서 카테고리를 한눈에 구분하기 위한 색상 (일치/불일치 표시에 쓰는
+// 초록/주황과 겹치지 않는 색으로 골랐다)
+const CATEG_COLOR: Record<BlndCateg, { text: string; chip: string }> = {
+  daily: { text: "text-[#6C63E0]", chip: "bg-[#F1F0FD]" },
+  food: { text: "text-[#DB2777]", chip: "bg-[#FCE7F3]" },
+  trip: { text: "text-[#0284C7]", chip: "bg-[#E0F2FE]" },
+};
+
 const TIER_TAG: Record<BlndTier, string> = {
   oppo: "반전 매력",
   rvw: "다름 발견",
@@ -109,6 +117,11 @@ export default function BlndRsltScreen({ blnd_id }: { blnd_id: string }) {
   const pick_scor = calc_pick_scor(item);
   const rslt_scor = calc_rslt_scor(item);
   const tier = blnd_tier(rslt_scor);
+  // 둘 다 "연락하기"를 골라 done이 된 경우는 바로 위 패널(DonePanel)에 이미 채팅으로
+  // 가는 "연락하기" 버튼이 있으니, 여기서 또 띄우면 버튼이 중복된다. 그 경우를 제외하고
+  // 채팅으로 이어질 매칭(match_requests)이 있으면 안내 문구 아래에 바로가기 버튼을 보여준다
+  const panel_has_chat_btn = item.stat === "done" && item.req_actn === "ctct" && item.memb_actn === "ctct";
+  const show_msg_btn = !!item.link_mtc_id && !panel_has_chat_btn;
 
   return (
     <main className="flex min-h-dvh w-full flex-col bg-white pb-10">
@@ -181,6 +194,16 @@ export default function BlndRsltScreen({ blnd_id }: { blnd_id: string }) {
         </div>
 
         <p className="mt-6 text-base font-bold leading-snug text-gray-900">{BLND_TIER_MSG[tier]}</p>
+
+        {show_msg_btn && (
+          <button
+            type="button"
+            onClick={() => rout_nav.push(`/chat/${item.link_mtc_id}`)}
+            className="mt-4 w-full rounded-2xl bg-[#6C63E0] py-3.5 text-sm font-bold text-white transition active:opacity-90"
+          >
+            메시지하기
+          </button>
+        )}
       </div>
 
       {picks_open && <PicksModal item={item} onClose={() => setPicksOpen(false)} />}
@@ -217,22 +240,22 @@ function PersonMini({
 
 function ScorRow({ label, scor }: { label: string; scor: number }) {
   const pct = Math.max(0, Math.min(100, scor));
-  // 채워진 막대 폭이 너무 좁으면 점수 글자가 안에 안 들어가므로, 그럴 땐 막대 바깥(오른쪽)에 표기한다
-  const label_inside = pct >= 22;
+  // 점수 글자는 항상 배경이 있는 칩(chip)에 넣어서, 막대 안(보라색)이든 트랙 위(연보라색)든
+  // 뒤 배경과 무관하게 대비가 보장되게 한다. 채워진 막대가 칩이 들어갈 만큼 넓으면 막대
+  // 오른쪽 끝 안쪽에, 너무 좁으면 채워진 막대 바로 바깥쪽(오른쪽)에 놓는다
+  const label_inside = pct >= 26;
 
   return (
     <div>
       <p className="text-sm font-bold text-gray-600">{label}</p>
-      <div className="relative mt-1.5 h-8 w-full overflow-hidden rounded-full bg-[#E3E1FA]">
+      <div className="relative mt-1.5 h-9 w-full overflow-hidden rounded-full bg-[#E3E1FA]">
         <div
           className="h-full rounded-full bg-[#6C63E0] transition-all duration-500"
           style={{ width: `${pct}%` }}
         />
         <span
-          className={`absolute inset-y-0 flex items-center text-sm font-extrabold ${
-            label_inside ? "right-3 text-white" : "text-[#6C63E0]"
-          }`}
-          style={label_inside ? undefined : { left: `calc(${pct}% + 8px)` }}
+          className="absolute top-1/2 -translate-y-1/2 whitespace-nowrap rounded-full bg-white px-2.5 py-1 text-sm font-extrabold text-[#4B3FA8] shadow-sm"
+          style={label_inside ? { right: "6px" } : { left: `calc(${pct}% + 6px)` }}
         >
           {scor}점
         </span>
@@ -375,23 +398,30 @@ function PicksModal({ item, onClose }: { item: BlndReq; onClose: () => void }) {
         </div>
 
         <div className="space-y-5 overflow-y-auto px-5 py-4">
-          {grouped.map((g_item) => (
-            <div key={g_item.categ}>
-              <p className="mb-2 text-xs font-bold text-[#6C63E0]">{BLND_CATEG_LBL[g_item.categ]}</p>
-              <div className="space-y-2">
-                {g_item.rows.map((r_item) => (
-                  <PickQRow
-                    key={r_item.q_id}
-                    req_name={item.req_name}
-                    memb_name={item.memb_name}
-                    question={r_item.question}
-                    req_pick={r_item.req_pick}
-                    memb_pick={r_item.memb_pick}
-                  />
-                ))}
+          {grouped.map((g_item) => {
+            const categ_color = CATEG_COLOR[g_item.categ];
+            return (
+              <div key={g_item.categ}>
+                <span
+                  className={`mb-2 inline-block rounded-full px-2.5 py-1 text-xs font-bold ${categ_color.chip} ${categ_color.text}`}
+                >
+                  {BLND_CATEG_LBL[g_item.categ]}
+                </span>
+                <div className="mt-2 space-y-2">
+                  {g_item.rows.map((r_item) => (
+                    <PickQRow
+                      key={r_item.q_id}
+                      req_name={item.req_name}
+                      memb_name={item.memb_name}
+                      question={r_item.question}
+                      req_pick={r_item.req_pick}
+                      memb_pick={r_item.memb_pick}
+                    />
+                  ))}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </div>
@@ -411,37 +441,54 @@ function PickQRow({
   req_pick?: BlndPick;
   memb_pick?: BlndPick;
 }) {
+  // 같은 쪽을 골랐으면(일치) 초록, 서로 다른 쪽을 골랐으면(불일치) 주황으로 구분해
+  // 한눈에 "같이 골랐는지"를 알 수 있게 한다
+  const same = !!req_pick && !!memb_pick && req_pick === memb_pick;
+
   return (
     <div className="rounded-2xl border border-gray-100 p-3">
       <PickOption
         label={question.a_label}
         names={[req_pick === "a" ? req_name : null, memb_pick === "a" ? memb_name : null]}
+        same={same}
       />
       <p className="my-1 text-center text-[10px] font-bold text-gray-300">VS</p>
       <PickOption
         label={question.b_label}
         names={[req_pick === "b" ? req_name : null, memb_pick === "b" ? memb_name : null]}
+        same={same}
       />
     </div>
   );
 }
 
-function PickOption({ label, names }: { label: string; names: (string | null)[] }) {
+function PickOption({
+  label,
+  names,
+  same,
+}: {
+  label: string;
+  names: (string | null)[];
+  same: boolean;
+}) {
   const picked_by = names.filter((n_val): n_val is string => !!n_val);
   const active = picked_by.length > 0;
+  const tone_cls = !active
+    ? ""
+    : same
+      ? "bg-emerald-50"
+      : "bg-amber-50";
+  const label_cls = !active
+    ? "text-gray-400"
+    : same
+      ? "font-bold text-emerald-700"
+      : "font-bold text-amber-700";
+  const name_cls = same ? "text-emerald-600" : "text-amber-600";
 
   return (
-    <div
-      className={`flex items-center justify-between gap-2 rounded-xl px-3 py-2 ${
-        active ? "bg-[#F1F0FD]" : ""
-      }`}
-    >
-      <span className={`text-xs leading-snug ${active ? "font-bold text-gray-900" : "text-gray-400"}`}>
-        {label}
-      </span>
-      {active && (
-        <span className="shrink-0 text-[10px] font-bold text-[#6C63E0]">{picked_by.join(", ")}</span>
-      )}
+    <div className={`flex items-center justify-between gap-2 rounded-xl px-3 py-2 ${tone_cls}`}>
+      <span className={`text-xs leading-snug ${label_cls}`}>{label}</span>
+      {active && <span className={`shrink-0 text-[10px] font-bold ${name_cls}`}>{picked_by.join(", ")}</span>}
     </div>
   );
 }
