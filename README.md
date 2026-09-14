@@ -123,6 +123,9 @@ jubyeon-web/
   - 이장: 1회용 초대코드 발급 / 복사 / 폐기, 사용 여부 확인
   - 주민: 받은 코드를 입력해 이장과 연결
   - 코드를 가지고 있다는 것 자체가 이장의 승인이라, 사용 후 별도 수락 단계는 없음
+- `/chat/[req_id]` (`src/app/chat/[req_id]/page.tsx`) : **채팅** — 연결 성사된 두 사람의 실시간 대화
+  - `src/components/chat/ChatScreen.tsx`: 매칭 성사 화면(`/matched/[req_id]`)의 "채팅 시작하기"에서 진입
+  - `chat_messages` 테이블 + Supabase Realtime, 이장은 대화 당사자가 아니라 접근 불가(RLS)
 - `/resident/[memb_id]` (`src/app/resident/[memb_id]/page.tsx`) : **주민 상세 프로필**
   - 홈 화면의 "이장님 추천 주민" 카드를 클릭하면 이동
   - `src/components/resident/MembDetail.tsx`: 프로필/소개 정보 + 하단 "이장님께 요청하기" / "직접 매칭시도" 버튼(추후 업데이트 예정 안내)
@@ -147,12 +150,32 @@ jubyeon-web/
   Realtime 이벤트가 실제 브라우저까지 도달해 화면이 갱신되는지, 종료/거절 팝업과 홈 이동
   라우팅 같은 프론트엔드 동작은 아직 실제 환경에서 확인 전**이다 — 로컬 `npm run dev` +
   실제 브라우저로 두 계정 동시 접속해 확인해보는 걸 권한다.
+- **메시징(채팅) 시스템**: `npm run build`(타입체크) 통과에 더해, **2026-09-13에 로컬 Postgres에
+  `schema.sql`을 그대로 적용한 시뮬레이션 환경에서 `chat_messages` RLS 정책을 케이스별로 직접
+  실행 검증 완료** — (1) 신청자/대상 주민은 서로의 메시지를 정상적으로 주고받음, (2) 이장 계정은
+  같은 매칭의 채팅을 조회해도 0건만 보임(대화 비공개 확인), (3) 무관한 제3자는 조회·작성 모두
+  거부됨, (4) 본인이 아닌 sender_id로 메시지를 위장해 보내는 시도 거부됨, (5) 아직 매칭
+  성사(`r_acpt`) 전(`pend`)인 매칭방에는 당사자여도 메시지 작성이 거부됨, (6) 빈 메시지·2000자
+  초과 메시지는 체크 제약으로 거부됨 — 총 9개 케이스 모두 의도한 대로 동작함을 확인.
+  다만 이 검증도 DB 레이어에 한정된다: **Realtime 이벤트가 실제 브라우저까지 도달해 채팅창이
+  갱신되는지, 실제 두 계정으로 메시지를 주고받는 UI 동작은 아직 실제 Supabase 환경에서 확인
+  전**이다 — 실제 프로젝트에 `supabase/alter_chat_msgs.sql`을 적용한 뒤 `npm run dev` +
+  두 계정 동시 접속으로 확인해보는 걸 권한다.
 
 ## TODO (다음 작업 예정)
 - 소셜 로그인(카카오/네이버/구글) 실제 연동 — 각 사 Client ID 발급 후 `/login`의 로그인 버튼을
   실제 OAuth 흐름으로 교체 (현재는 로그인ID/비밀번호 임시 로그인(`/login/local`)만 동작)
-- 메시징(채팅) 시스템 구현 — 매칭 성사 화면(`MatchedScreen.tsx`)의 "채팅 시작하기" 버튼이 아직
-  빈 함수(`do_chat`)로만 있어서, 실시간 채팅 기능(저장/알림 포함) 구현 필요
+- ~~메시징(채팅) 시스템 구현~~ (2026-09-11 구현 완료, 아래 "확인 필요" 참고)
+  - 채팅 알림(새 메시지 배지/푸시 등)은 아직 없음 — 필요하면 후속 작업으로
+
+## 메시징(채팅) 시스템 (2026-09-11)
+- 매칭 성사(`match_requests.status = 'r_acpt'`) 후 `MatchedScreen.tsx`의 "채팅 시작하기" →
+  `/chat/[req_id]` (`ChatScreen.tsx`)로 이동해 실시간 채팅
+- `public.chat_messages` 테이블(`supabase/schema.sql`, 델타는 `supabase/alter_chat_msgs.sql`) +
+  Supabase Realtime(`chat_store.ts`의 `sub_chat`)로 새 메시지를 폴링 없이 즉시 수신
+- 이장은 매칭을 중개할 뿐 채팅 당사자가 아니므로, RLS가 `status = 'r_acpt'`이고
+  `auth.uid()`가 신청자(`requester_id`)/대상 주민(`resident_id`) 중 하나일 때만 조회·작성을
+  허용한다 — 이장은 대화 내용을 볼 수 없음
 
 ## 실행 방법
 ```bash
