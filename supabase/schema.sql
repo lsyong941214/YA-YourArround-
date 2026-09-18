@@ -155,6 +155,40 @@ create table public.chat_messages (
 create index idx_chat_messages_match on public.chat_messages (match_request_id, created_at);
 
 -- ============================================================
+-- reports / user_blocks: 사용자 신고·차단 (2026-09-18, 서비스 출시 체크리스트 대응)
+-- ============================================================
+-- 원클릭 신고: 신고자는 자신이 접수한 신고만 조회 가능(신고당한 사람은 누가 신고했는지 알 수
+-- 없다). 24시간 이내 대응 등 운영 처리는 이 앱 범위 밖이라 관리자 화면은 아직 없고,
+-- Supabase 서비스 롤(RLS 우회)로 직접 조회/처리하는 것을 전제로 한다.
+create table public.reports (
+  id            uuid primary key default gen_random_uuid(),
+  reporter_id   uuid not null references public.profiles(id) on delete cascade,
+  target_id     uuid not null references public.profiles(id) on delete cascade,
+  reason        text not null check (reason in ('fake_prof', 'illegal_ad', 'abuse', 'spam', 'etc')),
+  detail        text not null default '',
+  status        text not null default 'open' check (status in ('open', 'in_prog', 'done')),
+  created_at    timestamptz not null default now(),
+  constraint reports_no_self_chk check (reporter_id <> target_id)
+);
+create index idx_reports_target on public.reports (target_id);
+create index idx_reports_status on public.reports (status, created_at);
+
+comment on table public.reports is '사용자 신고. status는 관리자가 서비스 롤로 직접 갱신(24시간 대응 SLA는 운영 절차, 앱 밖).';
+
+-- 차단: 차단한 쪽(blocker)만 자신의 차단 목록을 보고 관리할 수 있다. 한쪽만 차단해도
+-- 상대가 눈치채지 못하도록, 차단당한 쪽(blocked_id)은 이 테이블을 아예 조회할 수 없다.
+create table public.user_blocks (
+  blocker_id    uuid not null references public.profiles(id) on delete cascade,
+  blocked_id    uuid not null references public.profiles(id) on delete cascade,
+  created_at    timestamptz not null default now(),
+  primary key (blocker_id, blocked_id),
+  constraint user_blocks_no_self_chk check (blocker_id <> blocked_id)
+);
+create index idx_user_blocks_blocked on public.user_blocks (blocked_id);
+
+comment on table public.user_blocks is '차단 목록(blocker_id -> blocked_id). 연락처/추천 목록 조회 시 클라이언트가 이 목록으로 걸러낸다.';
+
+-- ============================================================
 -- Row Level Security
 -- ============================================================
 alter table public.profiles enable row level security;
@@ -165,6 +199,8 @@ alter table public.blind_test_picks enable row level security;
 alter table public.chief_reviews enable row level security;
 alter table public.invite_codes enable row level security;
 alter table public.chat_messages enable row level security;
+alter table public.reports enable row level security;
+alter table public.user_blocks enable row level security;
 
 -- profiles: 로그인한 누구나 다른 프로필을 조회 가능(추천/탐색 화면에 필요), 본인만 등록/수정
 create policy "profiles_select_authenticated" on public.profiles
@@ -272,6 +308,20 @@ create policy "chat_insert_related" on public.chat_messages
         and (auth.uid() = m.requester_id or auth.uid() = m.resident_id)
     )
   );
+
+-- reports: 신고는 본인 명의로만 접수, 조회도 본인이 접수한 신고만 (target_id는 조회 불가)
+create policy "reports_insert_own" on public.reports
+  for insert with check (auth.uid() = reporter_id);
+create policy "reports_select_own" on public.reports
+  for select using (auth.uid() = reporter_id);
+
+-- user_blocks: 차단한 본인만 자신의 차단 목록을 만들고, 보고, 해제할 수 있다
+create policy "blocks_insert_own" on public.user_blocks
+  for insert with check (auth.uid() = blocker_id);
+create policy "blocks_select_own" on public.user_blocks
+  for select using (auth.uid() = blocker_id);
+create policy "blocks_delete_own" on public.user_blocks
+  for delete using (auth.uid() = blocker_id);
 
 -- ============================================================
 -- use_invt_code: 주민이 초대코드를 입력해 이장과 연결한다

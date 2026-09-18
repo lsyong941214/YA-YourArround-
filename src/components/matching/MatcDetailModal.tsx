@@ -40,6 +40,7 @@ export default function MatcDetailModal({
   const prof_data: ProfileViewData | null =
     prof_who === "req"
       ? {
+          user_id: req_item.req_uid,
           ini_char: req_item.req_ini,
           ton_hex: req_item.req_ton,
           img_url: req_item.req_img,
@@ -54,6 +55,7 @@ export default function MatcDetailModal({
         }
       : prof_who === "memb"
         ? {
+            user_id: req_item.memb_id,
             ini_char: req_item.ini_char,
             ton_hex: req_item.ton_hex,
             img_url: req_item.memb_img,

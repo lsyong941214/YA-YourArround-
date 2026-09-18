@@ -8,6 +8,7 @@
  * - 명명 규칙: "단어_단어_..." 형태, 각 단어는 최대 4자
  */
 import { AuthUser, calc_age } from "@/lib/store/auth_store";
+import { list_blkd_ids } from "@/lib/store/safe_store";
 import { supabase } from "@/lib/supabase/client";
 
 export type CntcItem = {
@@ -57,29 +58,31 @@ function row_to_user(row: ProfRow): AuthUser {
   };
 }
 
-// 주민(res_uid) 기준 저장된 연락처 - 이장 프로필 목록
+// 주민(res_uid) 기준 저장된 연락처 - 이장 프로필 목록 (내가 차단한 이장은 제외)
 export async function list_chf_of(res_uid: string): Promise<AuthUser[]> {
   const { data, error } = await supabase
     .from("village_contacts")
     .select("profiles!village_contacts_chief_id_fkey(*)")
     .eq("resident_id", res_uid);
   if (error || !data) return [];
+  const blkd_ids = await list_blkd_ids();
   return data
     .map((row) => row.profiles as unknown as ProfRow)
-    .filter((p_row): p_row is ProfRow => !!p_row)
+    .filter((p_row): p_row is ProfRow => !!p_row && !blkd_ids.includes(p_row.id))
     .map(row_to_user);
 }
 
-// 이장(chf_uid) 기준 연결된 주민 - 주민 프로필 목록
+// 이장(chf_uid) 기준 연결된 주민 - 주민 프로필 목록 (내가 차단한 주민은 제외)
 export async function list_res_of(chf_uid: string): Promise<AuthUser[]> {
   const { data, error } = await supabase
     .from("village_contacts")
     .select("profiles!village_contacts_resident_id_fkey(*)")
     .eq("chief_id", chf_uid);
   if (error || !data) return [];
+  const blkd_ids = await list_blkd_ids();
   return data
     .map((row) => row.profiles as unknown as ProfRow)
-    .filter((p_row): p_row is ProfRow => !!p_row)
+    .filter((p_row): p_row is ProfRow => !!p_row && !blkd_ids.includes(p_row.id))
     .map(row_to_user);
 }
 
