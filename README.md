@@ -75,6 +75,12 @@ Next.js + Tailwind CSS 기반 웹으로 1차 개발 후, 웹앱 형태로 제공
      [supabase/alter_rept_blck.sql](supabase/alter_rept_blck.sql)을 실행한다 — 신고
      (`reports`)/차단(`user_blocks`) 테이블을 추가한다. 프로필 보기 팝업의 "신고하기"/
      "차단하기" 버튼과 연락처 목록의 차단 필터링이 이 테이블 없이는 동작하지 않는다.
+   - 이미 예전 버전의 `schema.sql`을 실행해둔 프로젝트라면(위 `alter_rept_blck.sql`을 먼저
+     적용한 뒤) [supabase/alter_acct_stat.sql](supabase/alter_acct_stat.sql)을 실행한다 —
+     `profiles.acct_stat`(정상/정지/영구차단) 컬럼과, 서로 다른 신고자 3명 이상이 같은
+     계정을 신고하면 자동으로 정지시키는 `reports_auto_susp` 트리거를 추가한다. 로그인 시
+     `sess_stat()`이 정지/차단 계정을 안내 화면(`/suspended`)으로 보내는 것도 이 컬럼이
+     있어야 동작한다.
 4. Authentication > Providers > Email에서 **"Confirm email"을 끈다**
 — 이 앱은 로그인ID를 합성 이메일(`{login_id}@jubyeon.local`)로 변환해 쓰기 때문에 실제 메일함이 없다.
 켜져 있으면 가입 후 로그인이 막힌다.
@@ -184,9 +190,12 @@ jubyeon-web/
   항목별 현재 상태와 세부 TODO는 [docs/LAUNCH_CHECKLIST.md](docs/LAUNCH_CHECKLIST.md) 참고
   - ✅ 연령 검증(만 19세 미만 가입 차단, 온보딩), 금칙어(불법 광고 의심 문구) 필터링(소개글/
     채팅), 신고·차단 MVP(프로필 보기 팝업의 "신고하기"/"차단하기", 차단 시 연락처 목록에서
-    숨김) 구현 완료 — DB는 `supabase/alter_rept_blck.sql` 실행 필요(위 "Supabase 설정" 참고)
-  - ❌ 남은 항목: 계정 영구 정지 정책, 신고 24시간 대응 관리자 화면, AI 기반 이미지 검증,
-    수사기관 협조 체계, 결제 환불 절차 — 세부는 LAUNCH_CHECKLIST.md 참고
+    숨김), 반복 신고 자동 정지 + 계정 정지/영구 차단 안내 화면(`/suspended`) 구현 완료 — DB는
+    `supabase/alter_rept_blck.sql` → `supabase/alter_acct_stat.sql` 순서로 실행 필요(위
+    "Supabase 설정" 참고)
+  - ❌ 남은 항목: 정지(susp)→영구 차단(ban) 전환은 관리자가 SQL로 수동 처리(관리자 화면
+    없음), 신고 24시간 대응 관리자 화면, AI 기반 이미지 검증, 수사기관 협조 체계, 결제 환불
+    절차 — 세부는 LAUNCH_CHECKLIST.md 참고
 
 ## 메시징(채팅) 시스템 (2026-09-11)
 - 매칭 성사(`match_requests.status = 'r_acpt'`) 후 `MatchedScreen.tsx`의 "채팅 시작하기" →

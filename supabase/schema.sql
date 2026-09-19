@@ -32,6 +32,9 @@ create table public.profiles (
   ton_hex       text not null,
   matc_done     int not null default 0,
   matc_max      int not null default 5,
+  -- actv=정상 / susp=정지(신고 누적 등으로 자동/수동 정지, 본인은 계속 로그인 시도 가능하나
+  -- 로그인 직후 안내 화면(/suspended)으로 보내진다) / ban=영구 차단(관리자가 susp를 보고 확정)
+  acct_stat     text not null default 'actv' check (acct_stat in ('actv', 'susp', 'ban')),
   created_at    timestamptz not null default now()
 );
 
@@ -534,6 +537,45 @@ drop trigger if exists blnd_role_chk on public.blind_test_requests;
 create trigger blnd_role_chk
   before insert or update of chief_id, resident_id, requester_id on public.blind_test_requests
   for each row execute function public.matc_role_chk();
+
+-- ============================================================
+-- reports_auto_susp: 신고가 일정 건수 이상 쌓이면 대상 계정을 자동으로 정지(susp)한다
+-- (2026-09-19, 서비스 출시 체크리스트 6번 "반복 위반자 영구 차단" 대응)
+-- ============================================================
+-- 서로 다른 신고자 3명 이상이 같은 대상을 신고하면 자동 정지 -- 한 사람이 같은 대상을
+-- 여러 번 신고해서 정지시키는 어뷰징을 막기 위해 reporter_id 기준으로 distinct 카운트한다.
+-- SECURITY DEFINER로 실행해서, 일반 유저에게 남의 profiles.acct_stat을 바꿀 권한을 열어주지
+-- 않고도(RLS는 본인 프로필만 수정 가능) 신고 누적만으로 자동 정지가 가능하게 한다.
+-- susp(정지)에서 ban(영구 차단)으로의 전환은 관리자가 신고 내역을 검토해 수동으로 확정한다
+-- (관리자 화면이 아직 없어 Supabase SQL Editor에서 직접 `update profiles set acct_stat = 'ban'
+-- where id = ...`로 처리 -- 5/10번 항목과 함께 관리자 화면이 생기면 그쪽으로 옮긴다).
+create or replace function public.reports_auto_susp()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  rptr_cnt int;
+begin
+  select count(distinct reporter_id) into rptr_cnt
+  from public.reports
+  where target_id = new.target_id and status = 'open';
+
+  if rptr_cnt >= 3 then
+    update public.profiles
+    set acct_stat = 'susp'
+    where id = new.target_id and acct_stat = 'actv';
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists reports_auto_susp on public.reports;
+create trigger reports_auto_susp
+  after insert on public.reports
+  for each row execute function public.reports_auto_susp();
 
 -- ============================================================
 -- Storage: 프로필 사진 / 사진첩 앨범 버킷 (2026-08-24, 온보딩 도입과 함께 추가)

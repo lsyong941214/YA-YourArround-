@@ -7,7 +7,7 @@
  *   아무 이장에게나 바로 upsert)는 제거했고, 이를 허용하던 RLS 정책도 함께 내렸다.
  * - 명명 규칙: "단어_단어_..." 형태, 각 단어는 최대 4자
  */
-import { AuthUser, calc_age } from "@/lib/store/auth_store";
+import { AcctStat, AuthUser, calc_age } from "@/lib/store/auth_store";
 import { list_blkd_ids } from "@/lib/store/safe_store";
 import { supabase } from "@/lib/supabase/client";
 
@@ -21,6 +21,7 @@ type ProfRow = {
   id: string;
   user_name: string;
   user_role: "res" | "chief";
+  acct_stat: AcctStat;
   birth_dt: string | null;
   user_job: string | null;
   user_mbti: string | null;
@@ -41,6 +42,7 @@ function row_to_user(row: ProfRow): AuthUser {
     user_id: row.id,
     user_name: row.user_name,
     user_role: row.user_role,
+    acct_stat: row.acct_stat,
     birth_dt: row.birth_dt ?? undefined,
     user_age: calc_age(row.birth_dt),
     user_job: row.user_job ?? undefined,
@@ -58,7 +60,12 @@ function row_to_user(row: ProfRow): AuthUser {
   };
 }
 
-// 주민(res_uid) 기준 저장된 연락처 - 이장 프로필 목록 (내가 차단한 이장은 제외)
+// 내가 차단했거나, 정지/영구 차단된 상대를 걸러낸다 - list_chf_of/list_res_of가 공유
+function vsbl_row(p_row: ProfRow | null, blkd_ids: string[]): p_row is ProfRow {
+  return !!p_row && p_row.acct_stat === "actv" && !blkd_ids.includes(p_row.id);
+}
+
+// 주민(res_uid) 기준 저장된 연락처 - 이장 프로필 목록 (차단/정지된 이장은 제외)
 export async function list_chf_of(res_uid: string): Promise<AuthUser[]> {
   const { data, error } = await supabase
     .from("village_contacts")
@@ -68,11 +75,11 @@ export async function list_chf_of(res_uid: string): Promise<AuthUser[]> {
   const blkd_ids = await list_blkd_ids();
   return data
     .map((row) => row.profiles as unknown as ProfRow)
-    .filter((p_row): p_row is ProfRow => !!p_row && !blkd_ids.includes(p_row.id))
+    .filter((p_row) => vsbl_row(p_row, blkd_ids))
     .map(row_to_user);
 }
 
-// 이장(chf_uid) 기준 연결된 주민 - 주민 프로필 목록 (내가 차단한 주민은 제외)
+// 이장(chf_uid) 기준 연결된 주민 - 주민 프로필 목록 (차단/정지된 주민은 제외)
 export async function list_res_of(chf_uid: string): Promise<AuthUser[]> {
   const { data, error } = await supabase
     .from("village_contacts")
@@ -82,7 +89,7 @@ export async function list_res_of(chf_uid: string): Promise<AuthUser[]> {
   const blkd_ids = await list_blkd_ids();
   return data
     .map((row) => row.profiles as unknown as ProfRow)
-    .filter((p_row): p_row is ProfRow => !!p_row && !blkd_ids.includes(p_row.id))
+    .filter((p_row) => vsbl_row(p_row, blkd_ids))
     .map(row_to_user);
 }
 

@@ -22,11 +22,13 @@
 import { supabase } from "@/lib/supabase/client";
 
 export type AuthRole = "res" | "chief";
+export type AcctStat = "actv" | "susp" | "ban";
 
 export type AuthUser = {
   user_id: string;
   user_name: string;
   user_role: AuthRole;
+  acct_stat: AcctStat;
   birth_dt?: string; // YYYY-MM-DD
   user_age?: number; // birth_dt 에서 파생 - DB에 저장하지 않는다
   user_job?: string;
@@ -47,6 +49,7 @@ type ProfRow = {
   id: string;
   user_name: string;
   user_role: AuthRole;
+  acct_stat: AcctStat;
   birth_dt: string | null;
   user_job: string | null;
   user_mbti: string | null;
@@ -87,6 +90,7 @@ function row_to_user(row: ProfRow): AuthUser {
     user_id: row.id,
     user_name: row.user_name,
     user_role: row.user_role,
+    acct_stat: row.acct_stat,
     birth_dt: row.birth_dt ?? undefined,
     user_age: calc_age(row.birth_dt),
     user_job: row.user_job ?? undefined,
@@ -122,28 +126,39 @@ export async function find_user(user_id: string): Promise<AuthUser | undefined> 
  * 세션/프로필 상태
  * - "none": 로그인 안 됨            -> /login
  * - "onbd": 로그인은 됐는데 프로필 행이 없음 -> /onbd (최초 로그인 온보딩)
- * - "done": 로그인 + 프로필 모두 있음  -> /home
+ * - "susp": 로그인 + 프로필은 있지만 정지(susp)/영구 차단(ban) 상태 -> /suspended
+ * - "done": 로그인 + 프로필 모두 있고 정상(actv) -> /home
  * 소셜 로그인을 붙여도 "가입 직후엔 프로필이 없다"는 상태는 동일하므로 이 분기를 그대로 쓴다.
  */
-export type SessStat = "none" | "onbd" | "done";
+export type SessStat = "none" | "onbd" | "susp" | "done";
 
 export async function sess_stat(): Promise<SessStat> {
   const { data: sess_data } = await supabase.auth.getUser();
   const auth_user = sess_data.user;
   if (!auth_user) return "none";
   const found = await find_user(auth_user.id);
-  return found ? "done" : "onbd";
+  if (!found) return "onbd";
+  return found.acct_stat === "actv" ? "done" : "susp";
 }
 
 // 상태별 이동 경로 - 로그인/온보딩 화면이 공통으로 쓰는 라우팅 규칙
 export function stat_path(stat_val: SessStat): string {
   if (stat_val === "none") return "/login";
   if (stat_val === "onbd") return "/onbd";
+  if (stat_val === "susp") return "/suspended";
   return "/home";
 }
 
-// 현재 로그인된 유저 (세션이 없거나 프로필 미작성이면 null)
+// 현재 로그인된 유저 (세션이 없거나 프로필 미작성, 정지/영구 차단이면 null) - 일반 화면은
+// 이 함수 하나로 "쓸 수 있는 상태인지"까지 함께 걸러진다. 정지 안내 화면(/suspended)처럼
+// acct_stat과 무관하게 본인 프로필을 봐야 하는 예외는 curr_user_any()를 쓴다.
 export async function curr_user(): Promise<AuthUser | null> {
+  const found = await curr_user_any();
+  return found && found.acct_stat === "actv" ? found : null;
+}
+
+// acct_stat과 무관하게 현재 로그인된 유저 프로필을 그대로 돌려준다
+export async function curr_user_any(): Promise<AuthUser | null> {
   const { data: sess_data } = await supabase.auth.getUser();
   const auth_user = sess_data.user;
   if (!auth_user) return null;
