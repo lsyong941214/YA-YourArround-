@@ -567,9 +567,14 @@ create trigger blnd_role_chk
 -- 여러 번 신고해서 정지시키는 어뷰징을 막기 위해 reporter_id 기준으로 distinct 카운트한다.
 -- SECURITY DEFINER로 실행해서, 일반 유저에게 남의 profiles.acct_stat을 바꿀 권한을 열어주지
 -- 않고도(RLS는 본인 프로필만 수정 가능) 신고 누적만으로 자동 정지가 가능하게 한다.
--- susp(정지)에서 ban(영구 차단)으로의 전환은 관리자가 신고 내역을 검토해 수동으로 확정한다
--- (관리자 화면이 아직 없어 Supabase SQL Editor에서 직접 `update profiles set acct_stat = 'ban'
--- where id = ...`로 처리 -- 5/10번 항목과 함께 관리자 화면이 생기면 그쪽으로 옮긴다).
+-- susp(정지)에서 ban(영구 차단)으로의 전환, 정지 해제(actv로 복구)는 관리자가 /admin
+-- 화면(profiles_update_admin RLS 정책)에서 처리한다.
+--
+-- set_config('app.trust_sys_updt', ...)는 바로 아래 profiles_guard_priv_cols 트리거에게
+-- "이 UPDATE는 신뢰할 수 있는 시스템 로직이 만든 것"이라고 알려주는 트랜잭션 범위(is_local
+-- = true) 플래그다. SECURITY DEFINER라도 auth.uid()는 여전히 "신고를 접수한 사람"을
+-- 가리켜 관리자가 아니므로, 이 플래그가 없으면 아래 update가 profiles_guard_priv_cols에
+-- 막힌다. is_local=true라 이 UPDATE가 속한 트랜잭션이 끝나면 자동으로 꺼진다.
 create or replace function public.reports_auto_susp()
 returns trigger
 language plpgsql
@@ -584,6 +589,7 @@ begin
   where target_id = new.target_id and status = 'open';
 
   if rptr_cnt >= 3 then
+    perform set_config('app.trust_sys_updt', 'true', true);
     update public.profiles
     set acct_stat = 'susp'
     where id = new.target_id and acct_stat = 'actv';
@@ -597,6 +603,50 @@ drop trigger if exists reports_auto_susp on public.reports;
 create trigger reports_auto_susp
   after insert on public.reports
   for each row execute function public.reports_auto_susp();
+
+-- ============================================================
+-- profiles_guard_priv_cols: acct_stat/is_admin은 관리자만 바꿀 수 있게 강제한다
+-- ============================================================
+-- "profiles_update_own" RLS 정책(auth.uid() = id)은 컬럼 단위 제한이 없어서, 그대로 두면
+-- 정지(susp)/영구 차단(ban)된 유저가 자기 프로필을 수정하는 평범한 API 호출(예: 마이페이지
+-- 프로필 저장) 경로로 acct_stat을 'actv'로, 심지어 is_admin을 true로까지 직접 바꿔치기할 수
+-- 있다("profiles_update_admin" 정책과 OR로 합쳐지므로 USING 자체는 본인 행에서 항상 통과함).
+-- RLS의 WITH CHECK만으로는 "바뀌기 전 값"과 비교가 어려워(같은 문에서 self-select가 신뢰할
+-- 수 없음) 대신 트리거로 막는다 - 두 컬럼 중 하나라도 바뀌려는 시도가 있으면, 이 UPDATE를
+-- 실행하는 세션(auth.uid())이 관리자가 아닌 한 예외를 던져 전체 UPDATE를 되돌린다.
+-- reports_auto_susp()처럼 신뢰할 수 있는 시스템 로직이 트랜잭션 범위 플래그
+-- (app.trust_sys_updt)를 미리 세팅해뒀다면 관리자가 아니어도 통과시킨다.
+-- auth.role() = 'authenticated'(PostgREST를 통해 들어온, 즉 이 앱을 거친 요청)일 때만 강제한다
+-- - 트리거는 RLS와 달리 BYPASSRLS/테이블 소유자 권한으로도 건너뛸 수 없어서, 이 조건이
+-- 없으면 최초 관리자를 지정하는 SQL Editor의 `update profiles set is_admin = true ...`
+-- (README/각 alter 파일 하단에 적어둔 절차) 자체가 막혀버린다. SQL Editor/서비스 롤 접속은
+-- auth.role()이 'authenticated'가 아니므로(보통 요청 JWT가 없음) 이 트리거를 그대로 통과한다.
+create or replace function public.profiles_guard_priv_cols()
+returns trigger
+language plpgsql
+set search_path = public
+as $$
+declare
+  actr_admn boolean;
+begin
+  if (new.acct_stat is distinct from old.acct_stat or new.is_admin is distinct from old.is_admin)
+     and auth.role() = 'authenticated' then
+    if coalesce(current_setting('app.trust_sys_updt', true), '') = 'true' then
+      return new;
+    end if;
+    select is_admin into actr_admn from public.profiles where id = auth.uid();
+    if not coalesce(actr_admn, false) then
+      raise exception 'acct_stat/is_admin은 관리자만 변경할 수 있습니다';
+    end if;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists profiles_guard_priv_cols on public.profiles;
+create trigger profiles_guard_priv_cols
+  before update on public.profiles
+  for each row execute function public.profiles_guard_priv_cols();
 
 -- ============================================================
 -- Storage: 프로필 사진 / 사진첩 앨범 버킷 (2026-08-24, 온보딩 도입과 함께 추가)
