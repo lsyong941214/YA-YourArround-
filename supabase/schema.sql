@@ -35,6 +35,9 @@ create table public.profiles (
   -- actv=정상 / susp=정지(신고 누적 등으로 자동/수동 정지, 본인은 계속 로그인 시도 가능하나
   -- 로그인 직후 안내 화면(/suspended)으로 보내진다) / ban=영구 차단(관리자가 susp를 보고 확정)
   acct_stat     text not null default 'actv' check (acct_stat in ('actv', 'susp', 'ban')),
+  -- 신고 처리 화면(/admin)에 들어갈 수 있는 운영자. 앱 안에는 이 값을 켜는 UI가 없다 -
+  -- 첫 관리자는 Supabase SQL Editor에서 직접 `update profiles set is_admin = true where id = ...`
+  is_admin      boolean not null default false,
   created_at    timestamptz not null default now()
 );
 
@@ -212,6 +215,15 @@ create policy "profiles_insert_own" on public.profiles
   for insert with check (auth.uid() = id);
 create policy "profiles_update_own" on public.profiles
   for update using (auth.uid() = id);
+-- 관리자(is_admin)는 신고 처리 결과로 다른 유저의 acct_stat(정지/영구차단/복구)을 바꿀 수 있다.
+-- 같은 명령(update)에 대한 permissive 정책은 OR로 합쳐지므로, 본인 수정 정책은 그대로 유지된다.
+-- 컬럼 단위 제한은 아니라 이론상 이 정책으로 다른 유저의 프로필 전체(또는 is_admin)까지
+-- 바꿀 수 있다 -- /admin 화면은 acct_stat만 바꾸도록 만들지만, 신뢰 경계는 "관리자는 신뢰된
+-- 운영자"라는 전제다. 최초 관리자 지정 자체는 이 정책이 존재하기 전이라 SQL로만 가능하다.
+create policy "profiles_update_admin" on public.profiles
+  for update using (
+    exists (select 1 from public.profiles p where p.id = auth.uid() and p.is_admin)
+  );
 
 -- village_contacts: 당사자(주민 또는 이장)만 조회.
 -- INSERT 정책은 일부러 두지 않는다 -- 연결은 아래 use_invt_code() 함수(SECURITY DEFINER)로만
@@ -312,11 +324,20 @@ create policy "chat_insert_related" on public.chat_messages
     )
   );
 
--- reports: 신고는 본인 명의로만 접수, 조회도 본인이 접수한 신고만 (target_id는 조회 불가)
+-- reports: 신고는 본인 명의로만 접수, 조회도 본인이 접수한 신고만 (target_id는 조회 불가).
+-- 관리자(is_admin)는 신고 처리(/admin)를 위해 전체 신고를 조회·상태 변경할 수 있다.
 create policy "reports_insert_own" on public.reports
   for insert with check (auth.uid() = reporter_id);
 create policy "reports_select_own" on public.reports
   for select using (auth.uid() = reporter_id);
+create policy "reports_select_admin" on public.reports
+  for select using (
+    exists (select 1 from public.profiles p where p.id = auth.uid() and p.is_admin)
+  );
+create policy "reports_update_admin" on public.reports
+  for update using (
+    exists (select 1 from public.profiles p where p.id = auth.uid() and p.is_admin)
+  );
 
 -- user_blocks: 차단한 본인만 자신의 차단 목록을 만들고, 보고, 해제할 수 있다
 create policy "blocks_insert_own" on public.user_blocks
