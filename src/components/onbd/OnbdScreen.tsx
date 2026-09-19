@@ -11,11 +11,13 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Camera } from "lucide-react";
-import { AuthRole, make_prof, sess_stat, stat_path } from "@/lib/store/auth_store";
+import { AuthRole, calc_age, make_prof, sess_stat, stat_path } from "@/lib/store/auth_store";
 import { MBTI_LIST } from "@/lib/data/mbti_list";
 import { upld_img } from "@/lib/supabase/stor_upld";
+import { BAD_WORD_MSG, has_bad_word } from "@/lib/text_filt";
 
 const BIO_MAX = 60;
+const MIN_AGE = 19; // 청소년보호법 - 만 19세 미만 가입 차단
 
 export default function OnbdScreen() {
   const rout_nav = useRouter();
@@ -67,6 +69,15 @@ export default function OnbdScreen() {
   async function do_save() {
     if (!done_flag) return;
     setErrMsg("");
+    const age_val = calc_age(birth_dt);
+    if (age_val === undefined || age_val < MIN_AGE) {
+      setErrMsg(`만 ${MIN_AGE}세 미만은 가입할 수 없어요.`);
+      return;
+    }
+    if (has_bad_word(user_bio)) {
+      setErrMsg(BAD_WORD_MSG);
+      return;
+    }
     setSaveBusy(true);
     const { user, err_msg: mk_err } = await make_prof({
       user_name: user_name.trim(),

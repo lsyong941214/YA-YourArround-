@@ -1,10 +1,14 @@
 "use client";
 
-import { Heart, X } from "lucide-react";
+import { useState } from "react";
+import { Flag, Heart, ShieldOff, X } from "lucide-react";
 import PhotoCrsl from "@/components/proposal/PhotoCrsl";
+import ReportModal from "@/components/common/ReportModal";
 import { AuthUser } from "@/lib/store/auth_store";
+import { block_user, report_user, RptRsn } from "@/lib/store/safe_store";
 
 export type ProfileViewData = {
+  user_id?: string; // 있어야 신고하기/차단하기 버튼이 뜬다 (내 프로필 보기 등엔 안 넘긴다)
   ini_char: string;
   ton_hex: string;
   img_url?: string | null;
@@ -21,6 +25,7 @@ export type ProfileViewData = {
 // 실제 유저(AuthUser) -> 프로필 보기 팝업 데이터 변환
 export function auth_to_prof(u_item: AuthUser): ProfileViewData {
   return {
+    user_id: u_item.user_id,
     ini_char: u_item.ini_char,
     ton_hex: u_item.ton_hex,
     img_url: u_item.user_img,
@@ -48,6 +53,29 @@ export default function ProfileViewModal({
   onHeart?: () => void;
   liked?: boolean;
 }) {
+  const [rept_open, setReptOpen] = useState(false);
+  const [rept_done, setReptDone] = useState(false);
+  const [blkd_flag, setBlkdFlag] = useState(false);
+  const [safe_busy, setSafeBusy] = useState(false);
+
+  async function do_report(reason: RptRsn, detail: string) {
+    if (!prof_item.user_id) return;
+    setSafeBusy(true);
+    const { ok_flag } = await report_user(prof_item.user_id, reason, detail);
+    setSafeBusy(false);
+    setReptOpen(false);
+    if (ok_flag) setReptDone(true);
+  }
+
+  async function do_block() {
+    if (!prof_item.user_id || safe_busy) return;
+    if (!window.confirm(`${prof_item.user_name}님을 차단할까요? 이후 연락처/추천 목록에서 보이지 않아요.`)) return;
+    setSafeBusy(true);
+    const { ok_flag } = await block_user(prof_item.user_id);
+    setSafeBusy(false);
+    if (ok_flag) setBlkdFlag(true);
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center">
       <div className="max-h-[92dvh] w-full max-w-sm overflow-y-auto rounded-t-3xl bg-white sm:rounded-3xl">
@@ -102,6 +130,35 @@ export default function ProfileViewModal({
               <p className="text-sm leading-relaxed text-gray-600">{prof_item.user_bio}</p>
             </div>
           )}
+
+          {prof_item.user_id && (
+            <div className="mt-4 flex items-center gap-3 text-xs text-gray-400">
+              {rept_done ? (
+                <span className="text-[#F26B12]">신고가 접수됐어요.</span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setReptOpen(true)}
+                  disabled={safe_busy}
+                  className="flex items-center gap-1 disabled:opacity-40"
+                >
+                  <Flag className="h-3.5 w-3.5" /> 신고하기
+                </button>
+              )}
+              {blkd_flag ? (
+                <span className="text-gray-400">차단했어요.</span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={do_block}
+                  disabled={safe_busy}
+                  className="flex items-center gap-1 disabled:opacity-40"
+                >
+                  <ShieldOff className="h-3.5 w-3.5" /> 차단하기
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="space-y-2 px-5 pb-6 pt-5">
@@ -129,6 +186,14 @@ export default function ProfileViewModal({
           </button>
         </div>
       </div>
+
+      {rept_open && (
+        <ReportModal
+          target_name={prof_item.user_name}
+          onClose={() => setReptOpen(false)}
+          onSubmit={do_report}
+        />
+      )}
     </div>
   );
 }

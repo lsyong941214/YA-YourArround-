@@ -6,6 +6,7 @@
  * - 명명 규칙: "단어_단어_..." 형태, 각 단어는 최대 4자
  */
 import { supabase } from "@/lib/supabase/client";
+import { BAD_WORD_MSG, has_bad_word } from "@/lib/text_filt";
 
 export type ChatMsg = {
   msg_id: string;
@@ -50,6 +51,7 @@ export async function send_msg(
 ): Promise<{ item?: ChatMsg; err_msg?: string }> {
   const trim_txt = body_txt.trim();
   if (!trim_txt) return { err_msg: "메시지를 입력해주세요." };
+  if (has_bad_word(trim_txt)) return { err_msg: BAD_WORD_MSG };
   const { data, error } = await supabase
     .from("chat_messages")
     .insert({ match_request_id: req_id, sender_id: send_id, body: trim_txt })

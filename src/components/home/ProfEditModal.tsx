@@ -12,6 +12,7 @@ import { X } from "lucide-react";
 import { AuthUser, calc_age } from "@/lib/store/auth_store";
 import { MBTI_LIST } from "@/lib/data/mbti_list";
 import { upld_img, upld_many } from "@/lib/supabase/stor_upld";
+import { BAD_WORD_MSG, has_bad_word } from "@/lib/text_filt";
 
 const BIO_MAX = 60;
 const PHOT_MAX = 6;
@@ -80,6 +81,10 @@ export default function ProfEditModal({ init_user, onClose, onSave }: Props) {
   function do_save() {
     if (!prev_img) {
       setErrMsg("프로필 사진은 필수예요.");
+      return;
+    }
+    if (has_bad_word(bio_txt)) {
+      setErrMsg(BAD_WORD_MSG);
       return;
     }
     onSave({

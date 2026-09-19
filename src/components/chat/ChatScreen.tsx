@@ -36,6 +36,7 @@ export default function ChatScreen({ req_id }: { req_id: string }) {
   const [msg_list, setMsgList] = useState<ChatMsg[]>([]);
   const [draft_txt, setDraftTxt] = useState("");
   const [busy, setBusy] = useState(false);
+  const [err_msg, setErrMsg] = useState("");
   const bottom_ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -59,13 +60,14 @@ export default function ChatScreen({ req_id }: { req_id: string }) {
   async function do_send() {
     if (!my_id || busy || !draft_txt.trim()) return;
     setBusy(true);
+    setErrMsg("");
     const send_txt = draft_txt;
     setDraftTxt("");
-    const { item, err_msg } = await send_msg(req_id, my_id, send_txt);
+    const { item, err_msg: send_err } = await send_msg(req_id, my_id, send_txt);
     if (item) {
       setMsgList((prev) => (prev.some((m_item) => m_item.msg_id === item.msg_id) ? prev : [...prev, item]));
     } else {
-      console.error("메시지 전송 실패:", err_msg);
+      setErrMsg(send_err ?? "메시지를 보내지 못했어요.");
       setDraftTxt(send_txt);
     }
     setBusy(false);
@@ -125,6 +127,7 @@ export default function ChatScreen({ req_id }: { req_id: string }) {
         <div ref={bottom_ref} />
       </div>
 
+      {err_msg && <p className="px-4 pb-1 text-[11px] text-red-400">{err_msg}</p>}
       <div className="flex items-center gap-2 border-t border-gray-100 px-3 py-3">
         <input
           type="text"
