@@ -61,7 +61,7 @@ export default function BottomTabBar() {
   }
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-20 flex justify-around border-t border-gray-100 bg-white py-2">
+    <nav className="fixed inset-x-0 bottom-0 z-20 mx-auto flex max-w-[430px] justify-around border-t border-gray-100 bg-white py-2">
       <TabItem icon={<Home className="h-5 w-5" />} lbl_txt="홈" actv={on_home} onTap={go_home} />
       <TabItem
         icon={<Heart className="h-5 w-5" fill={matc_badge_cnt > 0 ? "currentColor" : "none"} />}

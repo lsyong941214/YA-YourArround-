@@ -78,7 +78,7 @@ export default function MembDetail({ memb_id }: { memb_id: string }) {
         </div>
       </div>
 
-      <div className="fixed inset-x-0 bottom-0 space-y-2 border-t border-gray-100 bg-white px-6 pb-8 pt-4">
+      <div className="fixed inset-x-0 bottom-0 mx-auto max-w-[430px] space-y-2 border-t border-gray-100 bg-white px-6 pb-8 pt-4">
         <p
           className={`text-center text-xs text-[#F26B12] transition-opacity ${
             note_msg ? "opacity-100" : "opacity-0"

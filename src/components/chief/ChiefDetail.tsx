@@ -174,7 +174,7 @@ export default function ChiefDetail({ jang_id }: { jang_id: string }) {
       </section>
 
       {/* 하단 고정 버튼 */}
-      <div className="fixed inset-x-0 bottom-0 border-t border-gray-100 bg-white px-5 pb-8 pt-4">
+      <div className="fixed inset-x-0 bottom-0 mx-auto max-w-[430px] border-t border-gray-100 bg-white px-5 pb-8 pt-4">
         <button
           type="button"
           onClick={do_req_jang}

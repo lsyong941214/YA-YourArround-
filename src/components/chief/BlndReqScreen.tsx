@@ -124,7 +124,7 @@ export default function BlndReqScreen({
         {err_msg && <p className="mt-2 text-xs text-red-400">{err_msg}</p>}
       </div>
 
-      <div className="fixed inset-x-0 bottom-0 grid grid-cols-2 gap-3 border-t border-gray-100 bg-white px-5 pb-8 pt-4">
+      <div className="fixed inset-x-0 bottom-0 mx-auto grid max-w-[430px] grid-cols-2 gap-3 border-t border-gray-100 bg-white px-5 pb-8 pt-4">
         <button
           type="button"
           onClick={() => rout_nav.back()}
