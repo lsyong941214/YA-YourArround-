@@ -117,11 +117,6 @@ export default function BlndRsltScreen({ blnd_id }: { blnd_id: string }) {
   const pick_scor = calc_pick_scor(item);
   const rslt_scor = calc_rslt_scor(item);
   const tier = blnd_tier(rslt_scor);
-  // 둘 다 "연락하기"를 골라 done이 된 경우는 바로 위 패널(DonePanel)에 이미 채팅으로
-  // 가는 "연락하기" 버튼이 있으니, 여기서 또 띄우면 버튼이 중복된다. 그 경우를 제외하고
-  // 채팅으로 이어질 매칭(match_requests)이 있으면 안내 문구 아래에 바로가기 버튼을 보여준다
-  const panel_has_chat_btn = item.stat === "done" && item.req_actn === "ctct" && item.memb_actn === "ctct";
-  const show_msg_btn = !!item.link_mtc_id && !panel_has_chat_btn;
 
   return (
     // 이 화면은 하단 탭바 없이 단독으로 쓰이는 화면이라(app/blind/[blnd_id]/result), 그동안
@@ -200,16 +195,6 @@ export default function BlndRsltScreen({ blnd_id }: { blnd_id: string }) {
           </div>
 
           <p className="mt-6 text-base font-bold leading-snug text-gray-900">{BLND_TIER_MSG[tier]}</p>
-
-          {show_msg_btn && (
-            <button
-              type="button"
-              onClick={() => rout_nav.push(`/chat/${item.link_mtc_id}`)}
-              className="mt-4 w-full rounded-2xl bg-[#6C63E0] py-3.5 text-sm font-bold text-white transition active:opacity-90"
-            >
-              메시지하기
-            </button>
-          )}
         </div>
       </div>
 
