@@ -206,20 +206,20 @@ jubyeon-web/
 - **서비스 출시 체크리스트 대응** (2026-09-18, 앱인토스 개발자센터 체크리스트 기준) —
   항목별 현재 상태와 세부 TODO는 [docs/LAUNCH_CHECKLIST.md](docs/LAUNCH_CHECKLIST.md) 참고
   - ✅ 연령 검증(만 19세 미만 가입 차단, 온보딩 + 2026-09-20 서버 트리거 재검증), 금칙어
-    (불법 광고 의심 문구) 필터링(소개글/채팅), 신고·차단 MVP(프로필 보기 팝업의 "신고하기"/
-    "차단하기", 차단 시 연락처 목록에서 숨김 + 2026-09-20 매칭 추천/주변인 테스트 요청
-    대상 조회에도 양방향 차단 필터 반영), 반복 신고 자동 정지 + 계정 정지/영구 차단 안내
-    화면(`/suspended`), 신고 처리 관리자 화면(`/admin` — 대기중/24시간 초과 신고 확인,
-    처리중·완료 표시, 대상 계정 정지/영구차단/정지해제) 구현 완료 — DB는
-    `supabase/alter_rept_blck.sql` → `supabase/alter_acct_stat.sql` →
-    `supabase/alter_admin.sql` → `supabase/alter_age_chk.sql` →
-    `supabase/alter_blck_pair.sql` 순서로 실행 필요(위 "Supabase 설정" 참고). `/admin`은
-    `profiles.is_admin`이 SQL로 직접 켜진 계정만 들어갈 수 있고, 앱 메뉴 어디에도 이
-    화면으로 가는 링크는 없음(URL로만 접근)
-  - ❌ 남은 항목: 채팅 화면 신고/차단 진입점, 연락처 목록 양방향 차단(현재는 요청 대상
-    조회에만 반영), 수사기관 협조 시 채팅 원문까지 조회하는 절차(지금 `/admin`은 신고
-    이력·계정 상태만 다룸, 채팅 내용은 여전히 SQL 직접 조회), AI 기반 이미지 검증, 결제
-    환불 절차 — 세부는 LAUNCH_CHECKLIST.md 참고
+    (불법 광고 의심 문구) 필터링(소개글/채팅), 신고·차단 MVP(프로필 보기 팝업 + 2026-09-20
+    채팅 화면(`ChatScreen`)에도 진입점 추가한 "신고하기"/"차단하기", 차단 시 연락처 목록에서
+    숨김 + 2026-09-20 매칭 추천/주변인 테스트 요청 대상 조회에도 양방향 차단 필터 반영),
+    반복 신고 자동 정지 + 계정 정지/영구 차단 안내 화면(`/suspended`), 신고 처리 관리자
+    화면(`/admin` — 대기중/24시간 초과 신고 확인, 처리중·완료 표시, 대상 계정 정지/
+    영구차단/정지해제) 구현 완료 — DB는 `supabase/alter_rept_blck.sql` →
+    `supabase/alter_acct_stat.sql` → `supabase/alter_admin.sql` →
+    `supabase/alter_age_chk.sql` → `supabase/alter_blck_pair.sql` 순서로 실행 필요(위
+    "Supabase 설정" 참고). `/admin`은 `profiles.is_admin`이 SQL로 직접 켜진 계정만 들어갈 수
+    있고, 앱 메뉴 어디에도 이 화면으로 가는 링크는 없음(URL로만 접근)
+  - ❌ 남은 항목: 연락처 목록 양방향 차단(현재는 요청 대상 조회에만 반영), 채팅 중 차단해도
+    대화방 자체는 계속 열려있는 문제, 수사기관 협조 시 채팅 원문까지 조회하는 절차(지금
+    `/admin`은 신고 이력·계정 상태만 다룸, 채팅 내용은 여전히 SQL 직접 조회), AI 기반 이미지
+    검증, 결제 환불 절차 — 세부는 LAUNCH_CHECKLIST.md 참고
 
 ## 메시징(채팅) 시스템 (2026-09-11)
 - 매칭 성사(`match_requests.status = 'r_acpt'`) 후 `MatchedScreen.tsx`의 "채팅 시작하기" →
