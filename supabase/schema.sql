@@ -649,6 +649,84 @@ create trigger profiles_guard_priv_cols
   for each row execute function public.profiles_guard_priv_cols();
 
 -- ============================================================
+-- profiles_age_chk: 만 19세 미만 생년월일은 서버에서도 막는다
+-- (2026-09-20, 서비스 출시 체크리스트 9번 "연령 검증" 대응)
+-- ============================================================
+-- 온보딩 화면(OnbdScreen)이 calc_age(birth_dt)로 클라이언트에서 이미 걸러내고 있지만,
+-- 그건 화면 코드일 뿐이라 API를 직접 호출하면 우회할 수 있었다. 이 트리거는 profiles에
+-- birth_dt가 새로 들어오거나(온보딩) 바뀔 때마다 같은 계산(만 나이)을 서버에서 다시
+-- 검증해서, 클라이언트를 거치지 않은 요청도 똑같이 막는다. 나이는 매일 바뀌는 값이라
+-- CHECK 제약(불변 함수만 허용)으로는 표현할 수 없어 트리거로 구현한다.
+create or replace function public.profiles_age_chk()
+returns trigger
+language plpgsql
+set search_path = public
+as $$
+begin
+  if new.birth_dt is not null
+     and date_part('year', age(current_date, new.birth_dt)) < 19 then
+    raise exception '만 19세 미만은 가입할 수 없습니다';
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists profiles_age_chk on public.profiles;
+create trigger profiles_age_chk
+  before insert or update of birth_dt on public.profiles
+  for each row execute function public.profiles_age_chk();
+
+-- ============================================================
+-- is_blkd_pair / matc_blck_chk: 서로 차단한 사이에는 연결 요청/주변인 테스트를 새로
+-- 시작할 수 없게 막는다 (2026-09-20, 서비스 출시 체크리스트 4번 "차단" 대응 확대)
+-- ============================================================
+-- user_blocks의 RLS(blocks_select_own)는 "내가 차단한 목록"만 조회를 허용해서, 클라이언트가
+-- "상대가 나를 차단했는지"는 직접 조회할 수 없다 - 지금까지 매칭 추천/주변인 테스트 요청
+-- 대상 조회(req_target.ts)는 연락처 목록(cntc_store)과 달리 이 차단 여부를 전혀 반영하지
+-- 않았다. is_blkd_pair는 SECURITY DEFINER로 양방향 차단 여부를 확인해주는 함수로, 클라이언트가
+-- 요청 대상을 보여주기 전에 미리 걸러내는 데 쓰고(req_target.find_req_target), 아래
+-- matc_blck_chk 트리거는 그 확인을 우회해 API를 직접 호출하는 경우까지 서버에서 다시 막는다.
+create or replace function public.is_blkd_pair(a_id uuid, b_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1 from public.user_blocks
+    where (blocker_id = a_id and blocked_id = b_id)
+       or (blocker_id = b_id and blocked_id = a_id)
+  );
+$$;
+
+revoke all on function public.is_blkd_pair(uuid, uuid) from public;
+grant execute on function public.is_blkd_pair(uuid, uuid) to authenticated;
+
+create or replace function public.matc_blck_chk()
+returns trigger
+language plpgsql
+set search_path = public
+as $$
+begin
+  if public.is_blkd_pair(new.requester_id, new.resident_id) then
+    raise exception '차단된 상대에게는 요청을 보낼 수 없습니다';
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists matc_blck_chk on public.match_requests;
+create trigger matc_blck_chk
+  before insert on public.match_requests
+  for each row execute function public.matc_blck_chk();
+
+drop trigger if exists blnd_blck_chk on public.blind_test_requests;
+create trigger blnd_blck_chk
+  before insert on public.blind_test_requests
+  for each row execute function public.matc_blck_chk();
+
+-- ============================================================
 -- Storage: 프로필 사진 / 사진첩 앨범 버킷 (2026-08-24, 온보딩 도입과 함께 추가)
 -- ============================================================
 -- 파일 경로 규칙: `{auth.uid()}/avat_{timestamp}.{ext}` (프로필 사진)
