@@ -71,6 +71,12 @@ Next.js + Tailwind CSS 기반 웹으로 1차 개발 후, 웹앱 형태로 제공
      `r_acpt` 상태로 직접 만들도록 `blnd_submit_actn()`을 수정한다(함수 재정의라 몇 번
      실행해도 안전하다). **이 마이그레이션 적용 전에 이미 `done`이 된(둘 다 연락하기를
      고른) 기존 건에는 소급 적용되지 않아** 그 건들은 "연락하기" 버튼이 안 보인다.
+   - 위 `alter_blnd_ctct_mtc.sql`을 이미 실행한 프로젝트인데도 결과서 화면에 "연락하기"/
+     "메시지하기" 버튼이 안 보이는 기존 건이 있다면(둘 다 연락하기를 골랐지만
+     `link_mtc_id`가 비어있는 상태로 멈춘 건 — 위 캐비어트 참고)
+     [supabase/alter_blnd_ctct_backfill.sql](supabase/alter_blnd_ctct_backfill.sql)을
+     1회 실행한다 — 이미 `done`으로 멈춘 그 건들을 찾아 `match_requests`를 소급 생성해
+     연결한다. 몇 번을 실행해도 안전하다(이미 연결된 건은 건드리지 않는다).
    - 이미 예전 버전의 `schema.sql`을 실행해둔 프로젝트라면
      [supabase/alter_rept_blck.sql](supabase/alter_rept_blck.sql)을 실행한다 — 신고
      (`reports`)/차단(`user_blocks`) 테이블을 추가한다. 프로필 보기 팝업의 "신고하기"/
