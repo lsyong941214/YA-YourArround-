@@ -124,86 +124,93 @@ export default function BlndRsltScreen({ blnd_id }: { blnd_id: string }) {
   const show_msg_btn = !!item.link_mtc_id && !panel_has_chat_btn;
 
   return (
-    <main className="flex min-h-dvh w-full flex-col bg-white pb-10">
-      <header className="flex items-center gap-2 px-4 pb-2 pt-5">
-        <button
-          type="button"
-          onClick={() => rout_nav.push("/home")}
-          aria-label="홈으로"
-          className="flex h-9 w-9 items-center justify-center text-gray-500"
-        >
-          <ChevronLeft className="h-6 w-6" />
-        </button>
-        <h1 className="text-base font-bold text-gray-900">주변인 테스트 결과서</h1>
-      </header>
-
-      <div className="flex flex-1 flex-col items-center px-6 pt-2 text-center">
-        <div className="mt-3 flex items-center gap-4">
-          <PersonMini
-            img_url={item.req_img}
-            ini_char={item.req_ini}
-            ton_hex={item.req_ton}
-            name={item.req_name}
-            mbti={item.req_mbti}
-          />
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#F1F0FD] text-[#6C63E0]">
-            <Handshake className="h-4 w-4" />
-          </div>
-          <PersonMini
-            img_url={item.memb_img}
-            ini_char={item.ini_char}
-            ton_hex={item.ton_hex}
-            name={item.memb_name}
-            mbti={item.memb_mbti}
-          />
-        </div>
-
-        <div className="mt-6 flex flex-col items-center">
-          <span className="rounded-full bg-[#F1F0FD] px-3 py-1 text-xs font-bold text-[#6C63E0]">
-            {TIER_TAG[tier]}
-          </span>
-          <p className="mt-2 text-5xl font-extrabold text-[#6C63E0]">
-            {rslt_scor}
-            <span className="text-lg font-bold text-gray-300">점</span>
-          </p>
-        </div>
-
-        <div className="mt-6 w-full space-y-4 rounded-2xl bg-[#F8F8FC] p-4">
-          <ScorRow label="MBTI 궁합" scor={mbti_scor} />
-          <ScorRow label="선택지 일치도" scor={pick_scor} />
-        </div>
-
-        <button
-          type="button"
-          onClick={() => setPicksOpen(true)}
-          className="mt-3 w-full rounded-2xl border border-[#E3E1FA] py-2.5 text-xs font-bold text-[#6C63E0] transition active:opacity-90"
-        >
-          주제별 선택 결과 보기
-        </button>
-
-        <div className="mt-8 w-full">
-          {item.stat === "rjct" ? (
-            <EndedPanel onHome={() => rout_nav.push("/home")} />
-          ) : item.stat === "done" ? (
-            <DonePanel item={item} />
-          ) : my_actn ? (
-            <WaitPanel tier={tier} />
-          ) : (
-            <DecisionPanel tier={tier} busy_flag={busy_flag} onActn={do_actn} />
-          )}
-        </div>
-
-        <p className="mt-6 text-base font-bold leading-snug text-gray-900">{BLND_TIER_MSG[tier]}</p>
-
-        {show_msg_btn && (
+    // 이 화면은 하단 탭바 없이 단독으로 쓰이는 화면이라(app/blind/[blnd_id]/result), 그동안
+    // 안쪽 요소들이 <main>의 w-full을 그대로 물려받아 웹 브라우저 같은 넓은 화면에서 점수
+    // 막대/버튼이 화면 끝까지 늘어나 보였다. 모바일 화면 폭(iPhone Pro Max 등 큰 기기 기준
+    // 430px)으로 가운데 정렬해 카드처럼 보이게 하고, 그보다 좁은 실제 모바일 화면에서는
+    // max-width가 그냥 뷰포트 폭 그대로 적용돼 기존과 동일하게 보인다.
+    <main className="flex min-h-dvh w-full justify-center bg-gray-50">
+      <div className="flex w-full max-w-[430px] flex-col bg-white pb-10">
+        <header className="flex items-center gap-2 px-4 pb-2 pt-5">
           <button
             type="button"
-            onClick={() => rout_nav.push(`/chat/${item.link_mtc_id}`)}
-            className="mt-4 w-full rounded-2xl bg-[#6C63E0] py-3.5 text-sm font-bold text-white transition active:opacity-90"
+            onClick={() => rout_nav.push("/home")}
+            aria-label="홈으로"
+            className="flex h-9 w-9 items-center justify-center text-gray-500"
           >
-            메시지하기
+            <ChevronLeft className="h-6 w-6" />
           </button>
-        )}
+          <h1 className="text-base font-bold text-gray-900">주변인 테스트 결과서</h1>
+        </header>
+
+        <div className="flex flex-1 flex-col items-center px-6 pt-2 text-center">
+          <div className="mt-3 flex items-center gap-4">
+            <PersonMini
+              img_url={item.req_img}
+              ini_char={item.req_ini}
+              ton_hex={item.req_ton}
+              name={item.req_name}
+              mbti={item.req_mbti}
+            />
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#F1F0FD] text-[#6C63E0]">
+              <Handshake className="h-4 w-4" />
+            </div>
+            <PersonMini
+              img_url={item.memb_img}
+              ini_char={item.ini_char}
+              ton_hex={item.ton_hex}
+              name={item.memb_name}
+              mbti={item.memb_mbti}
+            />
+          </div>
+
+          <div className="mt-6 flex flex-col items-center">
+            <span className="rounded-full bg-[#F1F0FD] px-3 py-1 text-xs font-bold text-[#6C63E0]">
+              {TIER_TAG[tier]}
+            </span>
+            <p className="mt-2 text-5xl font-extrabold text-[#6C63E0]">
+              {rslt_scor}
+              <span className="text-lg font-bold text-gray-300">점</span>
+            </p>
+          </div>
+
+          <div className="mt-6 w-full space-y-4 rounded-2xl bg-[#F8F8FC] p-4">
+            <ScorRow label="MBTI 궁합" scor={mbti_scor} />
+            <ScorRow label="선택지 일치도" scor={pick_scor} />
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setPicksOpen(true)}
+            className="mt-3 w-full rounded-2xl border border-[#E3E1FA] py-2.5 text-xs font-bold text-[#6C63E0] transition active:opacity-90"
+          >
+            주제별 선택 결과 보기
+          </button>
+
+          <div className="mt-8 w-full">
+            {item.stat === "rjct" ? (
+              <EndedPanel onHome={() => rout_nav.push("/home")} />
+            ) : item.stat === "done" ? (
+              <DonePanel item={item} />
+            ) : my_actn ? (
+              <WaitPanel tier={tier} />
+            ) : (
+              <DecisionPanel tier={tier} busy_flag={busy_flag} onActn={do_actn} />
+            )}
+          </div>
+
+          <p className="mt-6 text-base font-bold leading-snug text-gray-900">{BLND_TIER_MSG[tier]}</p>
+
+          {show_msg_btn && (
+            <button
+              type="button"
+              onClick={() => rout_nav.push(`/chat/${item.link_mtc_id}`)}
+              className="mt-4 w-full rounded-2xl bg-[#6C63E0] py-3.5 text-sm font-bold text-white transition active:opacity-90"
+            >
+              메시지하기
+            </button>
+          )}
+        </div>
       </div>
 
       {picks_open && <PicksModal item={item} onClose={() => setPicksOpen(false)} />}
