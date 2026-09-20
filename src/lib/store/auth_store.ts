@@ -251,7 +251,9 @@ export async function make_prof(inp: ProfInp): Promise<{ user?: AuthUser; err_ms
     .select("*")
     .single();
   if (prof_err || !prof_data) {
-    return { err_msg: "프로필 생성에 실패했어요." };
+    // profiles_age_chk 트리거처럼 서버에서 막은 경우 그 사유를 그대로 보여준다(클라이언트
+    // 검증을 우회해 API를 직접 호출한 경우에도 왜 실패했는지 알 수 있게)
+    return { err_msg: prof_err?.message ?? "프로필 생성에 실패했어요." };
   }
   return { user: row_to_user(prof_data as ProfRow) };
 }

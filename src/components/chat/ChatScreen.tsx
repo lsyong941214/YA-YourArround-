@@ -2,25 +2,46 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, Send } from "lucide-react";
+import { ChevronLeft, Send, UserRound } from "lucide-react";
 import { find_req, MatcReq } from "@/lib/store/matc_store";
 import { curr_user } from "@/lib/store/auth_store";
 import { ChatMsg, list_msgs, send_msg, sub_chat } from "@/lib/store/chat_store";
 import AvatarCircle from "@/components/common/AvatarCircle";
+import ProfileViewModal, { ProfileViewData } from "@/components/profile/ProfileViewModal";
 
-type PartnerInfo = {
-  name: string;
-  ini_char: string;
-  ton_hex: string;
-  img_url: string | null;
-};
-
-function partner_of(req_item: MatcReq, my_id: string): PartnerInfo | null {
+// 상대방 프로필 정보 - 헤더 표시와 신고하기/차단하기가 뜨는 프로필 보기 팝업(ProfileViewModal)에 함께 쓴다
+function partner_of(req_item: MatcReq, my_id: string): ProfileViewData | null {
   if (my_id === req_item.req_uid) {
-    return { name: req_item.memb_name, ini_char: req_item.ini_char, ton_hex: req_item.ton_hex, img_url: req_item.memb_img };
+    return {
+      user_id: req_item.memb_id,
+      ini_char: req_item.ini_char,
+      ton_hex: req_item.ton_hex,
+      img_url: req_item.memb_img,
+      phot_list: req_item.memb_phts,
+      user_name: req_item.memb_name,
+      user_age: req_item.memb_age,
+      user_job: req_item.memb_job,
+      user_mbti: req_item.memb_mbti,
+      user_reg: req_item.memb_reg,
+      user_bio: req_item.memb_bio,
+      tag_list: req_item.tag_list,
+    };
   }
   if (my_id === req_item.memb_id) {
-    return { name: req_item.req_name, ini_char: req_item.req_ini, ton_hex: req_item.req_ton, img_url: req_item.req_img };
+    return {
+      user_id: req_item.req_uid,
+      ini_char: req_item.req_ini,
+      ton_hex: req_item.req_ton,
+      img_url: req_item.req_img,
+      phot_list: req_item.req_phts,
+      user_name: req_item.req_name,
+      user_age: req_item.req_age,
+      user_job: req_item.req_job,
+      user_mbti: req_item.req_mbti,
+      user_reg: req_item.req_reg,
+      user_bio: req_item.req_bio,
+      tag_list: req_item.req_tags,
+    };
   }
   return null;
 }
@@ -37,6 +58,7 @@ export default function ChatScreen({ req_id }: { req_id: string }) {
   const [draft_txt, setDraftTxt] = useState("");
   const [busy, setBusy] = useState(false);
   const [err_msg, setErrMsg] = useState("");
+  const [prof_open, setProfOpen] = useState(false);
   const bottom_ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -105,19 +127,29 @@ export default function ChatScreen({ req_id }: { req_id: string }) {
         >
           <ChevronLeft className="h-6 w-6" />
         </button>
-        <AvatarCircle
-          img_url={partner.img_url}
-          ini_char={partner.ini_char}
-          ton_hex={partner.ton_hex}
-          className="flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold text-white"
-        />
-        <p className="truncate text-sm font-bold text-gray-900">{partner.name}님</p>
+        <div className="flex min-w-0 flex-1 items-center gap-2">
+          <AvatarCircle
+            img_url={partner.img_url}
+            ini_char={partner.ini_char}
+            ton_hex={partner.ton_hex}
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white"
+          />
+          <p className="truncate text-sm font-bold text-gray-900">{partner.user_name}님</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setProfOpen(true)}
+          aria-label="프로필 보기 · 신고/차단"
+          className="flex h-9 w-9 shrink-0 items-center justify-center text-gray-400"
+        >
+          <UserRound className="h-5 w-5" />
+        </button>
       </header>
 
       <div className="flex-1 space-y-2 overflow-y-auto px-4 py-4">
         {msg_list.length === 0 ? (
           <p className="pt-10 text-center text-xs text-gray-400">
-            {partner.name}님과의 새로운 대화를 시작해보세요
+            {partner.user_name}님과의 새로운 대화를 시작해보세요
           </p>
         ) : (
           msg_list.map((m_item) => (
@@ -150,6 +182,8 @@ export default function ChatScreen({ req_id }: { req_id: string }) {
           <Send className="h-4 w-4" />
         </button>
       </div>
+
+      {prof_open && <ProfileViewModal prof_item={partner} onClose={() => setProfOpen(false)} />}
     </main>
   );
 }

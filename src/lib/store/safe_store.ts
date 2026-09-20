@@ -81,3 +81,16 @@ export async function is_blkd(target_id: string): Promise<boolean> {
     .maybeSingle();
   return !!data;
 }
+
+// 나와 target_id 사이에 어느 한쪽이라도 차단했는지 (양방향) - user_blocks RLS는 "내가 차단한
+// 목록"만 조회를 허용해서 "상대가 나를 차단했는지"는 직접 조회할 수 없다. is_blkd_pair
+// RPC(SECURITY DEFINER, supabase/alter_blck_pair.sql)로 양쪽을 한번에 확인한다. 매칭 추천/
+// 주변인 테스트 요청 대상 조회(req_target.ts)에서 차단된 상대를 걸러내는 데 쓴다.
+export async function is_blkd_pair(target_id: string): Promise<boolean> {
+  const { data: sess_data } = await supabase.auth.getUser();
+  const me_uid = sess_data.user?.id;
+  if (!me_uid) return false;
+  const { data, error } = await supabase.rpc("is_blkd_pair", { a_id: me_uid, b_id: target_id });
+  if (error) return false;
+  return !!data;
+}

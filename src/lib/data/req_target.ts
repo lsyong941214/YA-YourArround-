@@ -6,6 +6,7 @@
  */
 import { find_jang } from "@/lib/data/jang_data";
 import { find_user } from "@/lib/store/auth_store";
+import { is_blkd_pair } from "@/lib/store/safe_store";
 
 export type ReqTarget = {
   jang_name: string;
@@ -46,6 +47,9 @@ export async function find_req_target(jang_id: string, memb_id: string): Promise
 
   const [chf_user, res_user] = await Promise.all([find_user(jang_id), find_user(memb_id)]);
   if (chf_user && res_user) {
+    // 나와 대상 주민 중 어느 한쪽이라도 상대를 차단했으면, 링크(URL)로 직접 들어와도
+    // "존재하지 않는 주민"처럼 취급해 연결 요청/주변인 테스트 화면에 노출하지 않는다
+    if (await is_blkd_pair(memb_id)) return undefined;
     return {
       jang_name: `${chf_user.user_name} 이장님`,
       memb_id: res_user.user_id,
