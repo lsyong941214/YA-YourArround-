@@ -23,7 +23,9 @@ create table public.profiles (
   birth_dt      date,                          -- 생년월일. 나이(user_age)는 이 값에서 앱이 파생 계산한다
   user_job      text,
   user_mbti     text,
-  user_reg      text,
+  -- 민감정보 최소 수집(체크리스트 8번) - 동/번지 등 상세 주소가 들어오지 못하도록 시/구
+  -- 단위 길이로 제한한다 (클라이언트 입력 가이드는 OnbdScreen/ProfEditModal의 REG_MAX)
+  user_reg      text check (char_length(user_reg) <= 12),
   tag_list      text[] not null default '{}',
   user_bio      text not null default '',
   avatar_url    text,                          -- Supabase Storage 프로필 사진 URL

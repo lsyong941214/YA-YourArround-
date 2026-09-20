@@ -16,6 +16,7 @@ import { BAD_WORD_MSG, has_bad_word } from "@/lib/text_filt";
 
 const BIO_MAX = 60;
 const PHOT_MAX = 6;
+const REG_MAX = 12; // 민감정보 최소 수집(체크리스트 8번) - 상세 주소 입력을 막고 시/구 단위로만 받는다
 
 type Props = {
   init_user: AuthUser;
@@ -177,10 +178,14 @@ export default function ProfEditModal({ init_user, onClose, onSave }: Props) {
             <label className="block text-xs font-medium text-gray-500">지역</label>
             <input
               value={reg_txt}
-              onChange={(ev_chg) => setRegTxt(ev_chg.target.value)}
-              placeholder="예) 서울"
+              onChange={(ev_chg) => setRegTxt(ev_chg.target.value.slice(0, REG_MAX))}
+              maxLength={REG_MAX}
+              placeholder="예) 서울 강남구"
               className="mt-1 w-full rounded-xl border border-gray-200 p-3 text-sm text-gray-800 outline-none focus:border-[#F26B12]"
             />
+            <p className="mt-1 text-[11px] text-gray-300">
+              시/구 단위까지만 입력해 주세요. 동·번지 등 상세 주소는 입력하지 마세요.
+            </p>
           </div>
         </div>
 
