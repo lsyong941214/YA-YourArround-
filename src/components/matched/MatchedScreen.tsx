@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronLeft, Handshake, Home } from "lucide-react";
 import { find_req, MatcReq, updt_req } from "@/lib/store/matc_store";
 import { add_revw } from "@/lib/store/revw_store";
@@ -11,8 +11,9 @@ import RevwModal from "./RevwModal";
 
 type ProfWho = "req" | "memb" | null;
 
-export default function MatchedScreen({ req_id }: { req_id: string }) {
+export default function MatchedScreen() {
   const rout_nav = useRouter();
+  const req_id = useSearchParams().get("req_id") ?? "";
   const [req_item, setReqItem] = useState<MatcReq | undefined | null>(null);
   const [revw_open, setRevwOpen] = useState(false);
   const [prof_who, setProfWho] = useState<ProfWho>(null);
@@ -41,7 +42,7 @@ export default function MatchedScreen({ req_id }: { req_id: string }) {
   }
 
   function do_chat() {
-    rout_nav.push(`/chat/${req_id}`);
+    rout_nav.push(`/chat?req_id=${req_id}`);
   }
 
   if (req_item === null) {

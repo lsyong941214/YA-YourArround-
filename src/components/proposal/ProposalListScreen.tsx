@@ -31,7 +31,7 @@ export default function ProposalListScreen() {
   async function do_acpt() {
     if (!sel_item) return;
     await updt_req(sel_item.req_id, { stat: "r_acpt" });
-    rout_nav.push(`/matched/${sel_item.req_id}`);
+    rout_nav.push(`/matched?req_id=${sel_item.req_id}`);
   }
 
   async function do_rjct() {
@@ -88,7 +88,7 @@ export default function ProposalListScreen() {
             <button
               key={b_item.blnd_id}
               type="button"
-              onClick={() => rout_nav.push(`/blind/${b_item.blnd_id}`)}
+              onClick={() => rout_nav.push(`/blind/review?blnd_id=${b_item.blnd_id}`)}
               className="flex items-center gap-3 rounded-2xl bg-white p-4 text-left shadow-sm transition active:opacity-90"
             >
               <div

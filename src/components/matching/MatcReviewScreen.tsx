@@ -1,15 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronLeft, Info } from "lucide-react";
 import { find_req, MatcReq, updt_req } from "@/lib/store/matc_store";
 import AcptModal from "./AcptModal";
 import RejectModal from "./RejectModal";
 import AvatarCircle from "@/components/common/AvatarCircle";
 
-export default function MatcReviewScreen({ req_id }: { req_id: string }) {
+export default function MatcReviewScreen() {
   const rout_nav = useRouter();
+  const req_id = useSearchParams().get("req_id") ?? "";
   const [req_item, setReqItem] = useState<MatcReq | undefined | null>(null);
   const [acpt_open, setAcptOpen] = useState(false);
   const [rjct_open, setRjctOpen] = useState(false);

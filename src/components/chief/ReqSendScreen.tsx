@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowDown, ChevronLeft, Info } from "lucide-react";
 import { find_req_target, ReqTarget } from "@/lib/data/req_target";
 import { AuthUser, curr_user } from "@/lib/store/auth_store";
@@ -10,14 +10,11 @@ import AvatarCircle from "@/components/common/AvatarCircle";
 
 const MSG_MAX = 100;
 
-export default function ReqSendScreen({
-  jang_id,
-  memb_id,
-}: {
-  jang_id: string;
-  memb_id: string;
-}) {
+export default function ReqSendScreen() {
   const rout_nav = useRouter();
+  const search_params = useSearchParams();
+  const jang_id = search_params.get("jang_id") ?? "";
+  const memb_id = search_params.get("memb_id") ?? "";
   const [resd_item, setResdItem] = useState<ReqTarget | null | undefined>(undefined);
 
   const [msg_txt, setMsgTxt] = useState("");
@@ -149,7 +146,7 @@ export default function ReqSendScreen({
         </button>
         <button
           type="button"
-          onClick={() => rout_nav.push(`/chief/${jang_id}/blind/${memb_id}`)}
+          onClick={() => rout_nav.push(`/chief/blind?jang_id=${jang_id}&memb_id=${memb_id}`)}
           className="w-full rounded-2xl bg-[#6C63E0] py-3.5 text-sm font-bold text-white transition active:opacity-90"
         >
           주변인 테스트

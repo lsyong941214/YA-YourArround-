@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronLeft, ChevronRight, Crown, Users } from "lucide-react";
 import { AuthUser, curr_user, find_user } from "@/lib/store/auth_store";
 import { list_chf_of, list_res_of } from "@/lib/store/cntc_store";
@@ -11,8 +11,9 @@ import AvatarCircle from "@/components/common/AvatarCircle";
 
 const NAV_DELAY = 250;
 
-export default function CntcDetail({ uid }: { uid: string }) {
+export default function CntcDetail() {
   const rout_nav = useRouter();
+  const uid = useSearchParams().get("uid") ?? "";
   const [user_item, setUserItem] = useState<AuthUser | null | undefined>(undefined);
   const [link_list, setLinkList] = useState<AuthUser[]>([]);
   const [liked_set, setLikedSet] = useState<Set<string>>(new Set());
@@ -48,7 +49,7 @@ export default function CntcDetail({ uid }: { uid: string }) {
     setLikedSet((prev_set) => new Set(prev_set).add(memb_id));
     setTimeout(() => {
       setProfItem(null);
-      rout_nav.push(`/chief/${user_item.user_id}/request/${memb_id}`);
+      rout_nav.push(`/chief/request?jang_id=${user_item.user_id}&memb_id=${memb_id}`);
     }, NAV_DELAY);
   }
 

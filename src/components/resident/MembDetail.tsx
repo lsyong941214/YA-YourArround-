@@ -1,12 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import { find_memb } from "@/lib/data/memb_data";
 
-export default function MembDetail({ memb_id }: { memb_id: string }) {
+export default function MembDetail() {
   const rout_nav = useRouter();
+  const memb_id = useSearchParams().get("memb_id") ?? "";
   const [note_msg, setNoteMsg] = useState("");
   const memb_item = find_memb(memb_id);
 
