@@ -2,13 +2,18 @@
   "name": "jubyeon-web",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=24"
+  },
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "next build && ait build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "deploy": "ait deploy"
   },
   "dependencies": {
+    "@apps-in-toss/web-framework": "^3.5.0",
     "@supabase/supabase-js": "^2.112.1",
     "lucide-react": "0.383.0",
     "next": "14.2.5",
@@ -16,6 +21,7 @@
     "react-dom": "18.3.1"
   },
   "devDependencies": {
+    "@apps-in-toss/devtools": "^3.5.0",
     "@types/node": "20.14.10",
     "@types/react": "18.3.3",
     "@types/react-dom": "18.3.0",
