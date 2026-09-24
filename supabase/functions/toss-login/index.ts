@@ -8,13 +8,11 @@
  * (POST /api-partner/v1/apps-in-toss/user/oauth2/generate-token,
  *  GET  /api-partner/v1/apps-in-toss/user/oauth2/login-me)
  *
- * !! 배포 전 반드시 확인 !!
- *   이 API는 client_id/client_secret이 아니라 mTLS(클라이언트 인증서)로 인증한다
- *   ("인증서의 CN으로 미니앱을 식별"). 아래 requestTossApi()가 Deno.createHttpClient로
- *   인증서를 물리는 부분은 Deno API상으로는 맞지만, Supabase Edge Runtime(샌드박스된
- *   Deno 런타임)이 발신(outbound) mTLS를 실제로 지원하는지는 확인되지 않았다 - 반드시
- *   실제 배포 후 로그인 1회를 테스트해볼 것. 지원하지 않는다면 이 함수를 Supabase에서
- *   Node 기반 백엔드(Vercel Functions 등, https.Agent로 mTLS 지원)로 옮겨야 한다.
+ * mTLS 관련: 이 API는 client_id/client_secret이 아니라 mTLS(클라이언트 인증서)로
+ * 인증한다("인증서의 CN으로 미니앱을 식별"). Supabase Edge Runtime에서
+ * Deno.createHttpClient({ cert, key })로 실제 mTLS 발신이 되는 것까지 배포 테스트로
+ * 확인 완료(2026-09-24) - 토스 서버가 정식 비즈니스 에러(errorCode 4050, "인증서버에
+ * 등록된 미니앱이 아닙니다")로 정상 응답하는 것까지 확인했다.
  *
  * 배포 절차:
  *   1) 앱인토스 콘솔 > 서버 API 이용하기에서 클라이언트 인증서(cert/key)를 발급받는다
@@ -61,8 +59,7 @@ function json(body: unknown, status = 200): Response {
   });
 }
 
-// mTLS 클라이언트 인증서를 물린 fetch. Deno.createHttpClient가 Supabase Edge
-// Runtime에서 실제로 동작하는지는 배포 후 확인 필요(위 파일 상단 주석 참고).
+// mTLS 클라이언트 인증서를 물린 fetch.
 async function requestTossApi<T>(
   path: string,
   init: { method: "GET" | "POST"; body?: unknown; accessToken?: string }
@@ -93,9 +90,6 @@ async function requestTossApi<T>(
 }
 
 Deno.serve(async (req) => {
-  // TODO(디버깅용, 원인 확인되면 제거): 500 에러가 나는 정확한 지점을 찾기 위해
-  // 최상위를 try/catch로 감싸 에러 메시지/스택을 응답에 그대로 노출한다.
-  // 운영에서는 내부 에러 상세를 클라이언트에 노출하면 안 되니, 원인 파악 후 되돌릴 것.
   try {
     if (req.method !== "POST") return json({ error: "POST만 지원해요." }, 405);
 
@@ -147,16 +141,7 @@ Deno.serve(async (req) => {
 
     return json({ token_hash: data.properties.hashed_token });
   } catch (err) {
-    return json(
-      {
-        debug_error: err instanceof Error ? err.message : String(err),
-        debug_stack: err instanceof Error ? err.stack : undefined,
-        // 시크릿 자체가 비어있는지(길이 0) 필드명 문제였는지(길이는 정상) 구분용 -
-        // 내용은 절대 노출하지 않고 길이만 본다
-        debug_cert_len: TOSS_MTLS_CERT.length,
-        debug_key_len: TOSS_MTLS_KEY.length,
-      },
-      500
-    );
+    console.error("toss-login unexpected error:", err);
+    return json({ error: "요청 처리 중 오류가 발생했어요." }, 500);
   }
 });
