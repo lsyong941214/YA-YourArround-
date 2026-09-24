@@ -1,30 +1,58 @@
 /**
  * toss-login Edge Function
- * 클라이언트(TossAuth.login())가 받은 authorizationCode를 서버 사이드에서
- * 토스 사용자 식별자로 교환하고, Supabase 세션용 magiclink token_hash를 발급한다.
- * - client_id/client_secret은 반드시 이 함수(서버) 안에서만 쓴다 - 브라우저에 노출 금지
- * - service_role 키도 마찬가지로 이 함수 밖으로 나가지 않는다
+ * 클라이언트(TossAuth.login())가 받은 authorizationCode/referrer를 서버 사이드에서
+ * 토스 "AccessToken 받기" → "사용자 정보 받기" API로 교환해 userKey를 얻고,
+ * Supabase 세션용 magiclink token_hash를 발급한다.
  *
- * 배포 전 확인:
- *   1) TOSS_TOKEN_URL / 토큰 교환 요청·응답 형식 - 아래는 표준 OAuth
- *      Authorization Code Grant를 가정한 자리표시자다. 앱인토스 "토스 로그인"
- *      연동 가이드(콘솔 > 토스 로그인 설정)에서 정확한 스펙 확인 후 교체할 것.
- *   2) Supabase 프로젝트에 시크릿 등록:
- *        supabase secrets set TOSS_CLIENT_ID=... TOSS_CLIENT_SECRET=...
+ * 참고: 앱인토스 파트너 API(https://apps-in-toss-api.toss.im) OpenAPI 스펙 기준
+ * (POST /api-partner/v1/apps-in-toss/user/oauth2/generate-token,
+ *  GET  /api-partner/v1/apps-in-toss/user/oauth2/login-me)
+ *
+ * !! 배포 전 반드시 확인 !!
+ *   이 API는 client_id/client_secret이 아니라 mTLS(클라이언트 인증서)로 인증한다
+ *   ("인증서의 CN으로 미니앱을 식별"). 아래 requestTossApi()가 Deno.createHttpClient로
+ *   인증서를 물리는 부분은 Deno API상으로는 맞지만, Supabase Edge Runtime(샌드박스된
+ *   Deno 런타임)이 발신(outbound) mTLS를 실제로 지원하는지는 확인되지 않았다 - 반드시
+ *   실제 배포 후 로그인 1회를 테스트해볼 것. 지원하지 않는다면 이 함수를 Supabase에서
+ *   Node 기반 백엔드(Vercel Functions 등, https.Agent로 mTLS 지원)로 옮겨야 한다.
+ *
+ * 배포 절차:
+ *   1) 앱인토스 콘솔 > 서버 API 이용하기에서 클라이언트 인증서(cert/key)를 발급받는다
+ *   2) 시크릿 등록 (PEM 내용의 개행은 \n으로 이스케이프해서 한 줄로 저장):
+ *        supabase secrets set TOSS_MTLS_CERT="-----BEGIN CERTIFICATE-----\n...\n-----END CERTIFICATE-----"
+ *        supabase secrets set TOSS_MTLS_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----"
  *      (SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY는 Edge Function 런타임에 자동 주입됨)
  *   3) 배포: supabase functions deploy toss-login --no-verify-jwt
  *      (--no-verify-jwt: 로그인 전 호출이라 사용자 JWT가 아직 없음)
  */
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-// TODO: 앱인토스 콘솔의 토스 로그인 설정에서 발급받은 값과 실제 토큰 교환 엔드포인트로 교체
-const TOSS_TOKEN_URL = "https://TODO-토스-토큰-교환-엔드포인트-확인필요";
-const TOSS_CLIENT_ID = Deno.env.get("TOSS_CLIENT_ID") ?? "";
-const TOSS_CLIENT_SECRET = Deno.env.get("TOSS_CLIENT_SECRET") ?? "";
+const TOSS_API_BASE = "https://apps-in-toss-api.toss.im";
+const TOSS_MTLS_CERT = (Deno.env.get("TOSS_MTLS_CERT") ?? "").replace(/\\n/g, "\n");
+const TOSS_MTLS_KEY = (Deno.env.get("TOSS_MTLS_KEY") ?? "").replace(/\\n/g, "\n");
 
-// 토스 사용자 식별자를 Supabase auth.users의 합성 이메일로 매핑한다
+// 토스 사용자 식별자(userKey)를 Supabase auth.users의 합성 이메일로 매핑한다
 // (auth_store.ts의 login_email()과 동일한 패턴 - 실제 이메일이 없는 서비스라 합성 이메일을 쓴다)
 const AUTH_EMAIL_DOMAIN = "toss.jubyeon.local";
+
+type TossEnvelope<T> =
+  | { resultType: "SUCCESS"; success: T }
+  | { resultType: Exclude<string, "SUCCESS">; error: { errorCode: string; reason: string } };
+
+type GenerateTokenResult = {
+  accessToken: string;
+  expiresIn: number;
+  refreshToken: string;
+  scope: string;
+  tokenType: string;
+};
+
+type LoginMeResult = {
+  userKey: number;
+  name?: string;
+  phone?: string;
+  email?: string;
+};
 
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -33,41 +61,66 @@ function json(body: unknown, status = 200): Response {
   });
 }
 
+// mTLS 클라이언트 인증서를 물린 fetch. Deno.createHttpClient가 Supabase Edge
+// Runtime에서 실제로 동작하는지는 배포 후 확인 필요(위 파일 상단 주석 참고).
+async function requestTossApi<T>(
+  path: string,
+  init: { method: "GET" | "POST"; body?: unknown; accessToken?: string }
+): Promise<TossEnvelope<T>> {
+  const client = Deno.createHttpClient({
+    certChain: TOSS_MTLS_CERT,
+    privateKey: TOSS_MTLS_KEY,
+  });
+  try {
+    const res = await fetch(`${TOSS_API_BASE}${path}`, {
+      method: init.method,
+      client,
+      headers: {
+        "Content-Type": "application/json",
+        ...(init.accessToken ? { Authorization: `Bearer ${init.accessToken}` } : {}),
+      },
+      body: init.body ? JSON.stringify(init.body) : undefined,
+    });
+    return (await res.json()) as TossEnvelope<T>;
+  } finally {
+    client.close();
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method !== "POST") return json({ error: "POST만 지원해요." }, 405);
 
   let authorizationCode: string | undefined;
+  let referrer: string | undefined;
   try {
-    ({ authorizationCode } = await req.json());
+    ({ authorizationCode, referrer } = await req.json());
   } catch {
     return json({ error: "요청 본문이 올바르지 않아요." }, 400);
   }
-  if (!authorizationCode) return json({ error: "authorizationCode가 없어요." }, 400);
-
-  // 1) authorizationCode -> 토스 사용자 식별자 교환
-  // TODO: 아래 요청 필드명(grant_type/code/client_id/client_secret)과 응답에서
-  // 사용자 식별자를 꺼내는 키(userKey)는 실제 앱인토스 문서 확인 후 정확히 맞출 것
-  let toss_user_key: string | undefined;
-  try {
-    const token_res = await fetch(TOSS_TOKEN_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        grant_type: "authorization_code",
-        code: authorizationCode,
-        client_id: TOSS_CLIENT_ID,
-        client_secret: TOSS_CLIENT_SECRET,
-      }),
-    });
-    if (!token_res.ok) return json({ error: "토스 인증 서버 요청에 실패했어요." }, 502);
-    const token_json = await token_res.json();
-    toss_user_key = token_json.userKey ?? token_json.user_key;
-  } catch {
-    return json({ error: "토스 인증 서버와 통신하지 못했어요." }, 502);
+  if (!authorizationCode || !referrer) {
+    return json({ error: "authorizationCode/referrer가 없어요." }, 400);
   }
-  if (!toss_user_key) return json({ error: "토스 사용자 식별자를 받지 못했어요." }, 502);
 
-  // 2) 토스 식별자 -> Supabase 세션용 magiclink token_hash 발급
+  // 1) authorizationCode -> accessToken 교환
+  const token_env = await requestTossApi<GenerateTokenResult>(
+    "/api-partner/v1/apps-in-toss/user/oauth2/generate-token",
+    { method: "POST", body: { authorizationCode, referrer } }
+  );
+  if (token_env.resultType !== "SUCCESS") {
+    return json({ error: token_env.error.reason || "토스 인증에 실패했어요." }, 502);
+  }
+
+  // 2) accessToken -> 사용자 정보(userKey) 조회
+  const me_env = await requestTossApi<LoginMeResult>(
+    "/api-partner/v1/apps-in-toss/user/oauth2/login-me",
+    { method: "GET", accessToken: token_env.success.accessToken }
+  );
+  if (me_env.resultType !== "SUCCESS") {
+    return json({ error: me_env.error.reason || "사용자 정보 조회에 실패했어요." }, 502);
+  }
+  const toss_user_key = me_env.success.userKey;
+
+  // 3) userKey -> Supabase 세션용 magiclink token_hash 발급
   //    (generateLink는 email 사용자가 없으면 새로 만들고, 있으면 그대로 링크만 생성한다)
   const supabase = createClient(
     Deno.env.get("SUPABASE_URL") ?? "",
