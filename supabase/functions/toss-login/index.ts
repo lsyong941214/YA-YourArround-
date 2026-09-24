@@ -88,53 +88,66 @@ async function requestTossApi<T>(
 }
 
 Deno.serve(async (req) => {
-  if (req.method !== "POST") return json({ error: "POST만 지원해요." }, 405);
-
-  let authorizationCode: string | undefined;
-  let referrer: string | undefined;
+  // TODO(디버깅용, 원인 확인되면 제거): 500 에러가 나는 정확한 지점을 찾기 위해
+  // 최상위를 try/catch로 감싸 에러 메시지/스택을 응답에 그대로 노출한다.
+  // 운영에서는 내부 에러 상세를 클라이언트에 노출하면 안 되니, 원인 파악 후 되돌릴 것.
   try {
-    ({ authorizationCode, referrer } = await req.json());
-  } catch {
-    return json({ error: "요청 본문이 올바르지 않아요." }, 400);
-  }
-  if (!authorizationCode || !referrer) {
-    return json({ error: "authorizationCode/referrer가 없어요." }, 400);
-  }
+    if (req.method !== "POST") return json({ error: "POST만 지원해요." }, 405);
 
-  // 1) authorizationCode -> accessToken 교환
-  const token_env = await requestTossApi<GenerateTokenResult>(
-    "/api-partner/v1/apps-in-toss/user/oauth2/generate-token",
-    { method: "POST", body: { authorizationCode, referrer } }
-  );
-  if (token_env.resultType !== "SUCCESS") {
-    return json({ error: token_env.error.reason || "토스 인증에 실패했어요." }, 502);
+    let authorizationCode: string | undefined;
+    let referrer: string | undefined;
+    try {
+      ({ authorizationCode, referrer } = await req.json());
+    } catch {
+      return json({ error: "요청 본문이 올바르지 않아요." }, 400);
+    }
+    if (!authorizationCode || !referrer) {
+      return json({ error: "authorizationCode/referrer가 없어요." }, 400);
+    }
+
+    // 1) authorizationCode -> accessToken 교환
+    const token_env = await requestTossApi<GenerateTokenResult>(
+      "/api-partner/v1/apps-in-toss/user/oauth2/generate-token",
+      { method: "POST", body: { authorizationCode, referrer } }
+    );
+    if (token_env.resultType !== "SUCCESS") {
+      return json({ error: token_env.error.reason || "토스 인증에 실패했어요." }, 502);
+    }
+
+    // 2) accessToken -> 사용자 정보(userKey) 조회
+    const me_env = await requestTossApi<LoginMeResult>(
+      "/api-partner/v1/apps-in-toss/user/oauth2/login-me",
+      { method: "GET", accessToken: token_env.success.accessToken }
+    );
+    if (me_env.resultType !== "SUCCESS") {
+      return json({ error: me_env.error.reason || "사용자 정보 조회에 실패했어요." }, 502);
+    }
+    const toss_user_key = me_env.success.userKey;
+
+    // 3) userKey -> Supabase 세션용 magiclink token_hash 발급
+    //    (generateLink는 email 사용자가 없으면 새로 만들고, 있으면 그대로 링크만 생성한다)
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+    );
+    const email = `toss_${toss_user_key}@${AUTH_EMAIL_DOMAIN}`;
+
+    const { data, error } = await supabase.auth.admin.generateLink({
+      type: "magiclink",
+      email,
+    });
+    if (error || !data?.properties?.hashed_token) {
+      return json({ error: "세션 발급에 실패했어요." }, 500);
+    }
+
+    return json({ token_hash: data.properties.hashed_token });
+  } catch (err) {
+    return json(
+      {
+        debug_error: err instanceof Error ? err.message : String(err),
+        debug_stack: err instanceof Error ? err.stack : undefined,
+      },
+      500
+    );
   }
-
-  // 2) accessToken -> 사용자 정보(userKey) 조회
-  const me_env = await requestTossApi<LoginMeResult>(
-    "/api-partner/v1/apps-in-toss/user/oauth2/login-me",
-    { method: "GET", accessToken: token_env.success.accessToken }
-  );
-  if (me_env.resultType !== "SUCCESS") {
-    return json({ error: me_env.error.reason || "사용자 정보 조회에 실패했어요." }, 502);
-  }
-  const toss_user_key = me_env.success.userKey;
-
-  // 3) userKey -> Supabase 세션용 magiclink token_hash 발급
-  //    (generateLink는 email 사용자가 없으면 새로 만들고, 있으면 그대로 링크만 생성한다)
-  const supabase = createClient(
-    Deno.env.get("SUPABASE_URL") ?? "",
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
-  );
-  const email = `toss_${toss_user_key}@${AUTH_EMAIL_DOMAIN}`;
-
-  const { data, error } = await supabase.auth.admin.generateLink({
-    type: "magiclink",
-    email,
-  });
-  if (error || !data?.properties?.hashed_token) {
-    return json({ error: "세션 발급에 실패했어요." }, 500);
-  }
-
-  return json({ token_hash: data.properties.hashed_token });
 });
