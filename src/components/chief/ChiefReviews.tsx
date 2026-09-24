@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronLeft, Star } from "lucide-react";
 import { find_jang } from "@/lib/data/jang_data";
 import { avg_scr, jang_revw_list, RevwItem } from "@/lib/store/revw_store";
 
-export default function ChiefReviews({ jang_id }: { jang_id: string }) {
+export default function ChiefReviews() {
   const rout_nav = useRouter();
+  const jang_id = useSearchParams().get("jang_id") ?? "";
   const jang_item = find_jang(jang_id);
   const [revw_list, setRevwList] = useState<RevwItem[]>([]);
   const [scr_val, setScrVal] = useState(0);

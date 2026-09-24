@@ -23,7 +23,7 @@ export default function ChiefListScreen() {
   }, []);
 
   function go_uid(uid_val: string) {
-    rout_nav.push(`/cntc/${uid_val}`);
+    rout_nav.push(`/cntc?uid=${uid_val}`);
   }
 
   function go_invt() {

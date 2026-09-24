@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronLeft, Info } from "lucide-react";
 import { find_req_target, ReqTarget } from "@/lib/data/req_target";
 import { AuthUser, curr_user } from "@/lib/store/auth_store";
@@ -16,14 +16,11 @@ const INFO_LIST = [
   "테스트 결과는 당사자들만 확인할 수 있습니다.",
 ];
 
-export default function BlndReqScreen({
-  jang_id,
-  memb_id,
-}: {
-  jang_id: string;
-  memb_id: string;
-}) {
+export default function BlndReqScreen() {
   const rout_nav = useRouter();
+  const search_params = useSearchParams();
+  const jang_id = search_params.get("jang_id") ?? "";
+  const memb_id = search_params.get("memb_id") ?? "";
   const [resd_item, setResdItem] = useState<ReqTarget | null | undefined>(undefined);
 
   const [msg_txt, setMsgTxt] = useState("");

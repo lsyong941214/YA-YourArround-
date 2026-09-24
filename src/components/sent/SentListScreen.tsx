@@ -78,11 +78,11 @@ export default function SentListScreen() {
         setBlndSelId(sent_item.item.blnd_id);
         return;
       }
-      rout_nav.push(`/blind/${sent_item.item.blnd_id}`);
+      rout_nav.push(`/blind/review?blnd_id=${sent_item.item.blnd_id}`);
       return;
     }
     if (sent_item.item.stat === "r_acpt") {
-      rout_nav.push(`/matched/${sent_item.item.req_id}`);
+      rout_nav.push(`/matched?req_id=${sent_item.item.req_id}`);
       return;
     }
     setSelId(sent_item.item.req_id);
@@ -92,7 +92,7 @@ export default function SentListScreen() {
     if (!sel_entry) return;
     await updt_req(sel_entry.item.req_id, { stat: "r_acpt" });
     setSelId(null);
-    rout_nav.push(`/matched/${sel_entry.item.req_id}`);
+    rout_nav.push(`/matched?req_id=${sel_entry.item.req_id}`);
   }
 
   async function do_rjct() {
