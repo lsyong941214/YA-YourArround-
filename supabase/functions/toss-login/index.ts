@@ -67,10 +67,15 @@ async function requestTossApi<T>(
   path: string,
   init: { method: "GET" | "POST"; body?: unknown; accessToken?: string }
 ): Promise<TossEnvelope<T>> {
+  // Deno.createHttpClient의 mTLS 옵션 이름이 버전에 따라 바뀌어서(구버전
+  // certChain/privateKey -> 신버전 cert/key), 두 가지 이름을 모두 실어서
+  // 어느 런타임 버전이든 인증서가 실제로 실리게 한다(모르는 키는 무시되니 안전).
   const client = Deno.createHttpClient({
+    cert: TOSS_MTLS_CERT,
+    key: TOSS_MTLS_KEY,
     certChain: TOSS_MTLS_CERT,
     privateKey: TOSS_MTLS_KEY,
-  });
+  } as Deno.CreateHttpClientOptions);
   try {
     const res = await fetch(`${TOSS_API_BASE}${path}`, {
       method: init.method,
@@ -146,6 +151,10 @@ Deno.serve(async (req) => {
       {
         debug_error: err instanceof Error ? err.message : String(err),
         debug_stack: err instanceof Error ? err.stack : undefined,
+        // 시크릿 자체가 비어있는지(길이 0) 필드명 문제였는지(길이는 정상) 구분용 -
+        // 내용은 절대 노출하지 않고 길이만 본다
+        debug_cert_len: TOSS_MTLS_CERT.length,
+        debug_key_len: TOSS_MTLS_KEY.length,
       },
       500
     );
