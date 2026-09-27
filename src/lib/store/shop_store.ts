@@ -112,7 +112,8 @@ export async function save_shop_promo(inp: ShopInp): Promise<{ ok_flag: boolean;
   return { ok_flag: true };
 }
 
-// 홈 화면 홍보 슬롯(체크리스트 C)에서 쓰는 승인된 가게 목록
+// 홈 화면 홍보 슬롯(체크리스트 C)에서 쓰는 승인된 가게 목록 - RLS(shop_promo_select_approved)가
+// 활성 구독이 있는 가게만 이미 걸러준다(구독 만료되면 여기서도 자동으로 빠진다)
 export async function list_shop_promo_approved(): Promise<ShopPromo[]> {
   const { data, error } = await supabase
     .from("shop_promotions")
@@ -122,4 +123,106 @@ export async function list_shop_promo_approved(): Promise<ShopPromo[]> {
     .limit(20);
   if (error || !data) return [];
   return (data as ShopRow[]).map(row_to_shop);
+}
+
+// ============================================================
+// 가게 홍보 구독 (체크리스트 B3) - 요금표 조회 / 내 구독 현황 / 쿠폰으로 구독 활성화
+// ============================================================
+export const SUB_DURATIONS = [1, 3, 6, 9] as const;
+export type SubDuration = (typeof SUB_DURATIONS)[number];
+
+export type SubPlan = {
+  duration_months: SubDuration;
+  price: number;
+  is_active: boolean;
+};
+
+type SubPlanRow = { duration_months: SubDuration; price: number; is_active: boolean };
+
+// 구독 화면에 보여줄 요금표 - 로그인한 누구나 조회 가능(관리자만 수정)
+export async function list_sub_plans(): Promise<SubPlan[]> {
+  const { data, error } = await supabase
+    .from("shop_sub_plans")
+    .select("duration_months, price, is_active")
+    .order("duration_months", { ascending: true });
+  if (error || !data) return [];
+  return data as SubPlanRow[];
+}
+
+export type ShopSub = {
+  sub_id: string;
+  duration_months: number;
+  price_applied: number;
+  coupon_id: string | null;
+  ends_at: number;
+  cancelled: boolean;
+};
+
+type SubRow = {
+  id: string;
+  duration_months: number;
+  price_applied: number;
+  coupon_id: string | null;
+  ends_at: string;
+  status: "active" | "canceled";
+};
+
+// 해당 가게의 가장 최근 구독 이력 1건 (없으면 null - 아직 한 번도 구독한 적 없음)
+export async function my_shop_subscription(shop_id: string): Promise<ShopSub | null> {
+  const { data, error } = await supabase
+    .from("shop_subscriptions")
+    .select("id, duration_months, price_applied, coupon_id, ends_at, status")
+    .eq("shop_id", shop_id)
+    .order("ends_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error || !data) return null;
+  const row = data as SubRow;
+  return {
+    sub_id: row.id,
+    duration_months: row.duration_months,
+    price_applied: row.price_applied,
+    coupon_id: row.coupon_id,
+    ends_at: new Date(row.ends_at).getTime(),
+    cancelled: row.status === "canceled",
+  };
+}
+
+export type RedeemStat =
+  | "ok"
+  | "no_auth"
+  | "no_shop"
+  | "not_owner"
+  | "no_plan"
+  | "bad_code"
+  | "inactive"
+  | "expired"
+  | "sold_out";
+
+const REDEEM_MSG: Record<RedeemStat, string> = {
+  ok: "구독이 적용됐어요.",
+  no_auth: "로그인이 만료되었어요. 다시 로그인해주세요.",
+  no_shop: "가게 정보를 찾을 수 없어요.",
+  not_owner: "본인 가게에만 쿠폰을 적용할 수 있어요.",
+  no_plan: "해당 기간의 요금이 아직 준비되지 않았어요.",
+  bad_code: "존재하지 않는 쿠폰 코드예요.",
+  inactive: "사용이 중지된 쿠폰이에요.",
+  expired: "기간이 지난 쿠폰이에요.",
+  sold_out: "이미 다 사용된 쿠폰이에요.",
+};
+
+// 쿠폰 코드로 구독을 활성화한다 - 정식 결제(PG) 연동 전까지는 이 경로가 유일한 구독 활성화 수단
+export async function redeem_coupon(
+  shop_id: string,
+  code: string,
+  duration: SubDuration
+): Promise<{ ok_flag: boolean; msg: string }> {
+  const { data, error } = await supabase.rpc("redeem_shop_coupon", {
+    p_shop_id: shop_id,
+    p_code: code.trim(),
+    p_duration: duration,
+  });
+  if (error) return { ok_flag: false, msg: "쿠폰 적용에 실패했어요." };
+  const stat = (data?.stat ?? "bad_code") as RedeemStat;
+  return { ok_flag: stat === "ok", msg: REDEEM_MSG[stat] ?? "쿠폰 적용에 실패했어요." };
 }

@@ -10,21 +10,26 @@
  */
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, ShieldCheck, Store } from "lucide-react";
+import { AlertTriangle, ShieldCheck, Store, Ticket } from "lucide-react";
 import { AcctStat } from "@/lib/store/auth_store";
 import {
+  AdmCoupon,
   AdmReport,
   AdmShop,
+  create_coupon,
   is_curr_admin,
+  list_coupons_admin,
   list_reports_admin,
   list_shops_admin,
   RptStat,
   set_acct_stat,
+  set_coupon_active,
   set_report_stat,
   set_shop_stat,
+  update_sub_plan,
 } from "@/lib/store/admin_store";
 import { RPT_RSN_LBL } from "@/lib/store/safe_store";
-import { ShopStat } from "@/lib/store/shop_store";
+import { list_sub_plans, ShopStat, SubDuration, SubPlan } from "@/lib/store/shop_store";
 
 const SHOP_STAT_LBL: Record<ShopStat, string> = { pending: "대기중", approved: "승인됨", rejected: "반려됨" };
 const SHOP_STAT_TONE: Record<ShopStat, string> = {
@@ -59,12 +64,19 @@ function fmt_elapsed(made_at: number): string {
 export default function AdminScreen() {
   const rout_nav = useRouter();
   const [gate_stat, setGateStat] = useState<"chk" | "deny" | "ok">("chk");
-  const [tab_val, setTabVal] = useState<"rept" | "shop">("rept");
+  const [tab_val, setTabVal] = useState<"rept" | "shop" | "sub">("rept");
   const [rept_list, setReptList] = useState<AdmReport[]>([]);
   const [shop_list, setShopList] = useState<AdmShop[]>([]);
+  const [plan_list, setPlanList] = useState<SubPlan[]>([]);
+  const [cpn_list, setCpnList] = useState<AdmCoupon[]>([]);
   const [busy_id, setBusyId] = useState<string | null>(null);
   const [rjct_open_id, setRjctOpenId] = useState<string | null>(null);
   const [rjct_txt, setRjctTxt] = useState("");
+  const [new_cpn_code, setNewCpnCode] = useState("");
+  const [new_cpn_pct, setNewCpnPct] = useState("100");
+  const [new_cpn_max, setNewCpnMax] = useState("");
+  const [cpn_err, setCpnErr] = useState("");
+  const [cpn_busy, setCpnBusy] = useState(false);
 
   async function load_list() {
     setReptList(await list_reports_admin());
@@ -72,6 +84,11 @@ export default function AdminScreen() {
 
   async function load_shop_list() {
     setShopList(await list_shops_admin());
+  }
+
+  async function load_sub_data() {
+    setPlanList(await list_sub_plans());
+    setCpnList(await list_coupons_admin());
   }
 
   useEffect(() => {
@@ -84,8 +101,47 @@ export default function AdminScreen() {
       setGateStat("ok");
       load_list();
       load_shop_list();
+      load_sub_data();
     })();
   }, []);
+
+  async function do_plan_save(duration_months: SubDuration, price: number, is_active: boolean) {
+    setBusyId(`plan_${duration_months}`);
+    await update_sub_plan(duration_months, price, is_active);
+    await load_sub_data();
+    setBusyId(null);
+  }
+
+  async function do_cpn_toggle(cpn_id: string, is_active: boolean) {
+    setBusyId(cpn_id);
+    await set_coupon_active(cpn_id, is_active);
+    setCpnList((prev) => prev.map((c) => (c.cpn_id === cpn_id ? { ...c, is_active } : c)));
+    setBusyId(null);
+  }
+
+  async function do_cpn_create() {
+    const pct_val = Number(new_cpn_pct);
+    if (!new_cpn_code.trim() || !Number.isFinite(pct_val) || pct_val < 1 || pct_val > 100) {
+      setCpnErr("코드와 할인율(1~100)을 확인해주세요.");
+      return;
+    }
+    setCpnErr("");
+    setCpnBusy(true);
+    const { ok_flag, err_msg } = await create_coupon({
+      code: new_cpn_code,
+      discount_pct: pct_val,
+      max_uses: new_cpn_max.trim() ? Number(new_cpn_max) : undefined,
+    });
+    setCpnBusy(false);
+    if (!ok_flag) {
+      setCpnErr(err_msg ?? "쿠폰 생성에 실패했어요.");
+      return;
+    }
+    setNewCpnCode("");
+    setNewCpnPct("100");
+    setNewCpnMax("");
+    load_sub_data();
+  }
 
   async function do_shop_stat(shop_id: string, stat: ShopStat, reason?: string) {
     setBusyId(shop_id);
@@ -144,11 +200,11 @@ export default function AdminScreen() {
         <h1 className="flex items-center gap-1.5 text-lg font-bold text-gray-900">
           <ShieldCheck className="h-5 w-5 text-[#F26B12]" /> 관리자
         </h1>
-        <div className="mt-3 grid grid-cols-2 gap-2 rounded-xl bg-[#FFF3E9] p-1">
+        <div className="mt-3 grid grid-cols-3 gap-2 rounded-xl bg-[#FFF3E9] p-1">
           <button
             type="button"
             onClick={() => setTabVal("rept")}
-            className={`rounded-lg py-2 text-xs font-bold transition ${
+            className={`rounded-lg py-2 text-[11px] font-bold transition ${
               tab_val === "rept" ? "bg-[#F26B12] text-white" : "text-[#F26B12]"
             }`}
           >
@@ -157,11 +213,20 @@ export default function AdminScreen() {
           <button
             type="button"
             onClick={() => setTabVal("shop")}
-            className={`rounded-lg py-2 text-xs font-bold transition ${
+            className={`rounded-lg py-2 text-[11px] font-bold transition ${
               tab_val === "shop" ? "bg-[#F26B12] text-white" : "text-[#F26B12]"
             }`}
           >
-            가게 홍보 심사 {shop_pend_cnt > 0 && `(${shop_pend_cnt})`}
+            가게 심사 {shop_pend_cnt > 0 && `(${shop_pend_cnt})`}
+          </button>
+          <button
+            type="button"
+            onClick={() => setTabVal("sub")}
+            className={`rounded-lg py-2 text-[11px] font-bold transition ${
+              tab_val === "sub" ? "bg-[#F26B12] text-white" : "text-[#F26B12]"
+            }`}
+          >
+            구독 요금 관리
           </button>
         </div>
         {tab_val === "rept" && (
@@ -251,6 +316,94 @@ export default function AdminScreen() {
               )}
             </div>
           ))}
+        </div>
+      )}
+
+      {tab_val === "sub" && (
+        <div className="space-y-4 px-4 pt-4">
+          <div className="rounded-2xl border border-gray-100 bg-white p-4">
+            <p className="text-sm font-bold text-gray-900">구독 요금표</p>
+            <p className="mt-0.5 text-[11px] text-gray-400">
+              가격을 바꿔도 이미 구독 중인 가게에는 다음 갱신부터 적용돼요.
+            </p>
+            <div className="mt-3 space-y-2">
+              {plan_list.map((p) => (
+                <PlanRow
+                  key={p.duration_months}
+                  plan={p}
+                  busy={busy_id === `plan_${p.duration_months}`}
+                  onSave={do_plan_save}
+                />
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-gray-100 bg-white p-4">
+            <p className="flex items-center gap-1.5 text-sm font-bold text-gray-900">
+              <Ticket className="h-4 w-4 text-[#F26B12]" /> 쿠폰 발급
+            </p>
+            <div className="mt-3 grid grid-cols-3 gap-2">
+              <input
+                value={new_cpn_code}
+                onChange={(e) => setNewCpnCode(e.target.value)}
+                placeholder="코드"
+                className="col-span-2 rounded-xl border border-gray-200 p-2.5 text-xs text-gray-800 outline-none focus:border-[#F26B12]"
+              />
+              <input
+                value={new_cpn_pct}
+                onChange={(e) => setNewCpnPct(e.target.value)}
+                placeholder="할인%"
+                inputMode="numeric"
+                className="rounded-xl border border-gray-200 p-2.5 text-xs text-gray-800 outline-none focus:border-[#F26B12]"
+              />
+            </div>
+            <input
+              value={new_cpn_max}
+              onChange={(e) => setNewCpnMax(e.target.value)}
+              placeholder="최대 사용 횟수 (비우면 무제한)"
+              inputMode="numeric"
+              className="mt-2 w-full rounded-xl border border-gray-200 p-2.5 text-xs text-gray-800 outline-none focus:border-[#F26B12]"
+            />
+            {cpn_err && <p className="mt-1.5 text-[11px] text-red-400">{cpn_err}</p>}
+            <button
+              type="button"
+              disabled={cpn_busy}
+              onClick={do_cpn_create}
+              className="mt-2 w-full rounded-xl bg-[#F26B12] py-2.5 text-xs font-bold text-white disabled:opacity-40"
+            >
+              쿠폰 만들기
+            </button>
+
+            <div className="mt-4 space-y-2">
+              {cpn_list.length === 0 && <p className="text-[11px] text-gray-400">발급된 쿠폰이 없어요.</p>}
+              {cpn_list.map((c) => (
+                <div
+                  key={c.cpn_id}
+                  className="flex items-center justify-between rounded-xl border border-gray-100 px-3 py-2"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-xs font-bold text-gray-900">
+                      {c.code} <span className="font-normal text-gray-400">· {c.discount_pct}%</span>
+                    </p>
+                    <p className="text-[11px] text-gray-400">
+                      사용 {c.used_count}
+                      {c.max_uses !== null ? `/${c.max_uses}` : ""}회
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={busy_id === c.cpn_id}
+                    onClick={() => do_cpn_toggle(c.cpn_id, !c.is_active)}
+                    className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold disabled:opacity-40 ${
+                      c.is_active ? "bg-green-50 text-green-600" : "bg-gray-100 text-gray-400"
+                    }`}
+                  >
+                    {c.is_active ? "사용중" : "중지됨"}
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       )}
 
@@ -346,5 +499,49 @@ export default function AdminScreen() {
       </div>
       )}
     </main>
+  );
+}
+
+function PlanRow({
+  plan,
+  busy,
+  onSave,
+}: {
+  plan: SubPlan;
+  busy: boolean;
+  onSave: (duration_months: SubDuration, price: number, is_active: boolean) => void;
+}) {
+  const [price_txt, setPriceTxt] = useState(String(plan.price));
+  const [active_val, setActiveVal] = useState(plan.is_active);
+  const chg_flag = Number(price_txt) !== plan.price || active_val !== plan.is_active;
+
+  return (
+    <div className="flex items-center gap-2">
+      <span className="w-14 shrink-0 text-xs font-bold text-gray-700">{plan.duration_months}개월</span>
+      <input
+        value={price_txt}
+        onChange={(e) => setPriceTxt(e.target.value)}
+        inputMode="numeric"
+        className="w-24 rounded-xl border border-gray-200 p-2 text-xs text-gray-800 outline-none focus:border-[#F26B12]"
+      />
+      <span className="text-[11px] text-gray-400">원</span>
+      <button
+        type="button"
+        onClick={() => setActiveVal((v) => !v)}
+        className={`ml-auto rounded-full px-2.5 py-1 text-[11px] font-bold ${
+          active_val ? "bg-green-50 text-green-600" : "bg-gray-100 text-gray-400"
+        }`}
+      >
+        {active_val ? "노출중" : "숨김"}
+      </button>
+      <button
+        type="button"
+        disabled={!chg_flag || busy}
+        onClick={() => onSave(plan.duration_months, Number(price_txt) || 0, active_val)}
+        className="rounded-full bg-[#F26B12] px-3 py-1 text-[11px] font-bold text-white disabled:opacity-30"
+      >
+        저장
+      </button>
+    </div>
   );
 }

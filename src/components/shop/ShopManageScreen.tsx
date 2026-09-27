@@ -8,9 +8,21 @@
  */
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, Camera, ChevronLeft } from "lucide-react";
+import { AlertTriangle, Camera, ChevronLeft, Ticket } from "lucide-react";
 import { curr_user } from "@/lib/store/auth_store";
-import { my_shop_promo, save_shop_promo, SHOP_CATEG_LIST, ShopPromo } from "@/lib/store/shop_store";
+import {
+  list_sub_plans,
+  my_shop_promo,
+  my_shop_subscription,
+  redeem_coupon,
+  save_shop_promo,
+  SHOP_CATEG_LIST,
+  ShopPromo,
+  ShopSub,
+  SubDuration,
+  SubPlan,
+  SUB_DURATIONS,
+} from "@/lib/store/shop_store";
 import { upld_img } from "@/lib/supabase/stor_upld";
 import { BAD_WORD_MSG, has_bad_word } from "@/lib/text_filt";
 
@@ -18,7 +30,7 @@ const DESC_MAX = 120;
 
 const STAT_LBL: Record<ShopPromo["status"], string> = {
   pending: "심사 대기중",
-  approved: "승인됨 · 홈 화면에 노출 중",
+  approved: "승인됨",
   rejected: "반려됨",
 };
 const STAT_TONE: Record<ShopPromo["status"], string> = {
@@ -45,6 +57,17 @@ export default function ShopManageScreen() {
   const [done_msg, setDoneMsg] = useState("");
   const file_ref = useRef<HTMLInputElement>(null);
 
+  const [plan_list, setPlanList] = useState<SubPlan[]>([]);
+  const [sub_item, setSubItem] = useState<ShopSub | null>(null);
+  const [dur_val, setDurVal] = useState<SubDuration>(1);
+  const [cpn_code, setCpnCode] = useState("");
+  const [cpn_busy, setCpnBusy] = useState(false);
+  const [cpn_msg, setCpnMsg] = useState("");
+
+  async function load_sub(shop_id: string) {
+    setSubItem(await my_shop_subscription(shop_id));
+  }
+
   useEffect(() => {
     (async () => {
       const user_now = await curr_user();
@@ -53,6 +76,7 @@ export default function ShopManageScreen() {
         return;
       }
       setGateStat("ok");
+      setPlanList(await list_sub_plans());
       const shop_now = await my_shop_promo();
       if (shop_now) {
         setMyShop(shop_now);
@@ -63,9 +87,23 @@ export default function ShopManageScreen() {
         setDescTxt(shop_now.description);
         setBizRegNo(shop_now.biz_reg_no ?? "");
         setImgUrl(shop_now.img_url);
+        await load_sub(shop_now.shop_id);
       }
     })();
   }, []);
+
+  async function do_redeem() {
+    if (!my_shop || !cpn_code.trim()) return;
+    setCpnMsg("");
+    setCpnBusy(true);
+    const { ok_flag, msg } = await redeem_coupon(my_shop.shop_id, cpn_code, dur_val);
+    setCpnBusy(false);
+    setCpnMsg(msg);
+    if (ok_flag) {
+      setCpnCode("");
+      await load_sub(my_shop.shop_id);
+    }
+  }
 
   async function do_file(ev_chg: React.ChangeEvent<HTMLInputElement>) {
     const f_item = ev_chg.target.files?.[0];
@@ -109,6 +147,7 @@ export default function ShopManageScreen() {
     }
     const shop_now = await my_shop_promo();
     setMyShop(shop_now);
+    if (shop_now) await load_sub(shop_now.shop_id);
     setDoneMsg("등록했어요. 관리자 심사 후 홈 화면에 노출돼요.");
   }
 
@@ -153,6 +192,20 @@ export default function ShopManageScreen() {
       )}
       {my_shop?.status === "rejected" && my_shop.reject_reason && (
         <p className="mx-5 mt-2 text-xs leading-relaxed text-red-400">반려 사유: {my_shop.reject_reason}</p>
+      )}
+
+      {my_shop && (
+        <SubSection
+          plan_list={plan_list}
+          sub_item={sub_item}
+          dur_val={dur_val}
+          setDurVal={setDurVal}
+          cpn_code={cpn_code}
+          setCpnCode={setCpnCode}
+          cpn_busy={cpn_busy}
+          cpn_msg={cpn_msg}
+          onRedeem={do_redeem}
+        />
       )}
 
       <section className="mt-4 flex flex-col items-center">
@@ -255,5 +308,101 @@ export default function ShopManageScreen() {
         </button>
       </section>
     </main>
+  );
+}
+
+// 구독 현황 + (결제 연동 전까지 유일한 활성화 수단인) 쿠폰 코드 입력
+function SubSection({
+  plan_list,
+  sub_item,
+  dur_val,
+  setDurVal,
+  cpn_code,
+  setCpnCode,
+  cpn_busy,
+  cpn_msg,
+  onRedeem,
+}: {
+  plan_list: SubPlan[];
+  sub_item: ShopSub | null;
+  dur_val: SubDuration;
+  setDurVal: (d: SubDuration) => void;
+  cpn_code: string;
+  setCpnCode: (v: string) => void;
+  cpn_busy: boolean;
+  cpn_msg: string;
+  onRedeem: () => void;
+}) {
+  const sub_active = !!sub_item && !sub_item.cancelled && sub_item.ends_at > Date.now();
+  const cur_plan = sub_item ? plan_list.find((p) => p.duration_months === sub_item.duration_months) : undefined;
+  const price_chg =
+    sub_active && sub_item && !sub_item.coupon_id && cur_plan && cur_plan.price !== sub_item.price_applied;
+
+  return (
+    <div className="mx-5 mt-2 rounded-2xl border border-gray-100 p-4">
+      <p className="flex items-center gap-1.5 text-sm font-bold text-gray-900">
+        <Ticket className="h-4 w-4 text-[#F26B12]" /> 홍보 구독
+      </p>
+
+      {sub_active && sub_item ? (
+        <>
+          <p className="mt-2 text-xs text-gray-600">
+            {sub_item.duration_months}개월 · {sub_item.price_applied.toLocaleString()}원 · 만료{" "}
+            {new Date(sub_item.ends_at).toLocaleDateString("ko-KR")}
+          </p>
+          {price_chg && cur_plan && (
+            <p className="mt-1 text-[11px] leading-relaxed text-amber-600">
+              다음 갱신부터 요금이 {cur_plan.price.toLocaleString()}원으로 변경돼요.
+            </p>
+          )}
+        </>
+      ) : (
+        <p className="mt-1 text-[11px] leading-relaxed text-gray-400">
+          구독이 있어야 홈 화면에 노출돼요. 정식 결제는 준비 중이라, 지금은 쿠폰 코드로만 구독을
+          활성화할 수 있어요.
+        </p>
+      )}
+
+      {!sub_active && (
+        <>
+          <div className="mt-3 grid grid-cols-4 gap-1.5">
+            {SUB_DURATIONS.map((d) => {
+              const p_item = plan_list.find((p) => p.duration_months === d);
+              return (
+                <button
+                  key={d}
+                  type="button"
+                  onClick={() => setDurVal(d)}
+                  className={`rounded-xl border py-2 text-center transition ${
+                    dur_val === d ? "border-[#F26B12] bg-[#FFF3E9]" : "border-gray-200"
+                  }`}
+                >
+                  <p className="text-xs font-bold text-gray-900">{d}개월</p>
+                  <p className="text-[10px] text-gray-400">{(p_item?.price ?? 0).toLocaleString()}원</p>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="mt-2 flex gap-1.5">
+            <input
+              value={cpn_code}
+              onChange={(e) => setCpnCode(e.target.value)}
+              placeholder="쿠폰 코드"
+              className="flex-1 rounded-xl border border-gray-200 p-2.5 text-xs text-gray-800 outline-none focus:border-[#F26B12]"
+            />
+            <button
+              type="button"
+              disabled={!cpn_code.trim() || cpn_busy}
+              onClick={onRedeem}
+              className="shrink-0 rounded-xl bg-[#F26B12] px-4 text-xs font-bold text-white disabled:opacity-40"
+            >
+              적용
+            </button>
+          </div>
+          {cpn_msg && <p className="mt-1.5 text-[11px] text-gray-500">{cpn_msg}</p>}
+        </>
+      )}
+    </div>
   );
 }

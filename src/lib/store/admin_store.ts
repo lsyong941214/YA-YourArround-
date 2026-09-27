@@ -9,7 +9,7 @@
  */
 import { AcctStat } from "@/lib/store/auth_store";
 import { RptRsn } from "@/lib/store/safe_store";
-import { ShopStat } from "@/lib/store/shop_store";
+import { ShopStat, SubDuration } from "@/lib/store/shop_store";
 import { supabase } from "@/lib/supabase/client";
 
 export type RptStat = "open" | "in_prog" | "done";
@@ -166,5 +166,93 @@ export async function set_shop_stat(
       reviewed_at: new Date().toISOString(),
     })
     .eq("id", shop_id);
+  return !error;
+}
+
+// ============================================================
+// 가게 홍보 구독 요금표/쿠폰 관리 (체크리스트 B3) - 관리자만 접근(RLS로도 강제됨)
+// ============================================================
+export async function update_sub_plan(
+  duration_months: SubDuration,
+  price: number,
+  is_active: boolean
+): Promise<boolean> {
+  const { data: sess_data } = await supabase.auth.getUser();
+  const me_uid = sess_data.user?.id;
+  const { error } = await supabase
+    .from("shop_sub_plans")
+    .update({ price, is_active, updated_by: me_uid ?? null, updated_at: new Date().toISOString() })
+    .eq("duration_months", duration_months);
+  return !error;
+}
+
+export type AdmCoupon = {
+  cpn_id: string;
+  code: string;
+  discount_pct: number;
+  max_uses: number | null;
+  used_count: number;
+  valid_until: number | null;
+  is_active: boolean;
+  made_at: number;
+};
+
+type CpnRow = {
+  id: string;
+  code: string;
+  discount_pct: number;
+  max_uses: number | null;
+  used_count: number;
+  valid_until: string | null;
+  is_active: boolean;
+  created_at: string;
+};
+
+export async function list_coupons_admin(): Promise<AdmCoupon[]> {
+  const { data, error } = await supabase
+    .from("shop_coupons")
+    .select("id, code, discount_pct, max_uses, used_count, valid_until, is_active, created_at")
+    .order("created_at", { ascending: false });
+  if (error || !data) return [];
+  return (data as CpnRow[]).map((row) => ({
+    cpn_id: row.id,
+    code: row.code,
+    discount_pct: row.discount_pct,
+    max_uses: row.max_uses,
+    used_count: row.used_count,
+    valid_until: row.valid_until ? new Date(row.valid_until).getTime() : null,
+    is_active: row.is_active,
+    made_at: new Date(row.created_at).getTime(),
+  }));
+}
+
+export type NewCoupon = {
+  code: string;
+  discount_pct: number;
+  max_uses?: number;
+  valid_until?: string; // YYYY-MM-DD
+};
+
+export async function create_coupon(inp: NewCoupon): Promise<{ ok_flag: boolean; err_msg?: string }> {
+  const { data: sess_data } = await supabase.auth.getUser();
+  const me_uid = sess_data.user?.id;
+  const { error } = await supabase.from("shop_coupons").insert({
+    code: inp.code.trim().toUpperCase(),
+    discount_pct: inp.discount_pct,
+    max_uses: inp.max_uses ?? null,
+    valid_until: inp.valid_until ? new Date(inp.valid_until).toISOString() : null,
+    created_by: me_uid ?? null,
+  });
+  if (error) {
+    return {
+      ok_flag: false,
+      err_msg: error.code === "23505" ? "이미 사용 중인 코드예요." : "쿠폰 생성에 실패했어요.",
+    };
+  }
+  return { ok_flag: true };
+}
+
+export async function set_coupon_active(cpn_id: string, is_active: boolean): Promise<boolean> {
+  const { error } = await supabase.from("shop_coupons").update({ is_active }).eq("id", cpn_id);
   return !error;
 }
