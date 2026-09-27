@@ -1,0 +1,14 @@
+{
+  "name": "주변",
+  "short_name": "주변",
+  "description": "내 주변의 사람들과 신뢰로 연결되는 시작",
+  "start_url": "/home",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#FFF8F3",
+  "theme_color": "#F26B12",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
