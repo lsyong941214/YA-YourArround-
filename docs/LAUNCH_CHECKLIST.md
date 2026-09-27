@@ -13,17 +13,23 @@
 상태 표기: ✅ 구현됨 / 🔶 부분 구현 / ❌ 미구현(개발 필요) / 📄 비개발(법무·운영 항목)
 
 ## A. 배포 방향 전환 — 앱인토스 미니앱 → PWA/네이티브 앱
-- ❌ 미구현 — mTLS/토스 로그인(`supabase/functions/toss-login`, `src/lib/auth/toss_auth.ts`,
+- 🔶 부분 구현 (2026-09-27) — PWA 1단계 완료: `public/manifest.json`(이름/아이콘/
+  테마컬러 `#F26B12`/`display: standalone`) + 최소 서비스워커(`public/sw.js`, 네트워크
+  우선 + 오프라인 캐시 폴백, Supabase API는 다른 origin이라 캐시 제외) 추가. 아이콘은
+  `docs/assets/app-icon.webp`에서 뽑은 192/512/apple-touch 3종(`public/icons/`).
+  루트 레이아웃(`layout.tsx`)에 manifest/아이콘/theme-color 메타데이터와 서비스워커
+  등록 컴포넌트(`PwaRegister.tsx`)를 연결했다 — 브라우저에서 "홈 화면에 추가"로 설치 가능.
+  mTLS/토스 로그인(`supabase/functions/toss-login`, `src/lib/auth/toss_auth.ts`,
   `apps-in-toss.config.ts`)까지는 동작 확인했지만 방향 전환으로 보류.
-- TODO
+- TODO (남은 것)
   - [ ] 기존 토스 로그인 연동 코드 유지/제거 여부 결정 (당장 삭제하지 않아도 무해하지만,
         `LoginScreen.tsx`의 "토스로 시작하기" 버튼은 로그인 방식 재정의 전까지 숨김 처리 검토)
   - [ ] 로그인 방식 재정의 — 로컬 ID/PW만 유지할지, 카카오/네이버 등 소셜 로그인을 다시
         붙일지 결정 (`src/lib/auth/soc_auth.ts`는 이번 세션 초반에 토스로 교체하며 삭제됨)
   - [ ] `next.config.js`의 `output: "export"`를 계속 쓸지 결정 — PWA는 Vercel SSR 그대로도
         되지만, 향후 Capacitor로 네이티브 앱까지 만들려면 정적 export가 필요
-  - [ ] PWA manifest.json + 서비스워커 추가 (`next-pwa` 등), 아이콘/스플래시 이미지 세팅
-        (`docs/assets/app-icon.webp` 재사용 가능)
+  - [ ] 실제 기기(Android Chrome/iOS Safari)에서 설치 테스트 — 이 세션은 Supabase
+        환경변수가 없는 샌드박스라 빌드 타입체크까지만 확인, 실제 프리뷰 배포로 확인 필요
   - [ ] (후속) Capacitor 프로젝트 초기화 후 iOS/Android 플랫폼 추가, 스토어 등록 준비
         (Apple Developer/Google Play Console 계정, 개인정보처리방침 URL — 9번과 연계)
 
