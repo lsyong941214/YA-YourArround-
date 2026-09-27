@@ -59,11 +59,10 @@
   - [ ] 카드 클릭 시 상세 화면 또는 외부 링크(지도 앱 등) 이동 처리
 
 ## D. 가게 사장 온보딩 & 홍보 등록/심사 화면
-- ❌ 미구현
-- 결정 필요
-  - [ ] 가게 사장을 별도 역할로 둘지, 기존 온보딩(`OnbdScreen`)으로 `res`(주민)로 가입
-        후 부가 기능(가게 등록)만 얹을지 — 요청 내용상 후자로 이해했습니다("주변인으로
-        등록하고 나서" 등록)
+- 🔶 부분 구현 (2026-09-27) — 결정 완료: 가게 사장도 이웃을 소개할 수 있는 **이장님**으로
+  가입한다(별도 역할 없음). 온보딩(`OnbdScreen.tsx`)에 "가게를 운영하고 있어요" 체크박스를
+  추가해 체크 시 이장님 역할로 고정되고, `profiles.has_shop`(`supabase/alter_has_shop.sql`)에
+  저장된다. 이 값을 아래 "내 가게 등록" 진입 조건으로 쓸 예정.
 - TODO
   - [ ] `shop_promotions` 테이블 설계 (id, owner_id → profiles.id, shop_name, category,
         region, biz_hours, description, img_url, biz_reg_no, status('pending'/'approved'/
