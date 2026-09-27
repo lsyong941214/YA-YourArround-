@@ -198,6 +198,33 @@ create index idx_user_blocks_blocked on public.user_blocks (blocked_id);
 comment on table public.user_blocks is '차단 목록(blocker_id -> blocked_id). 연락처/추천 목록 조회 시 클라이언트가 이 목록으로 걸러낸다.';
 
 -- ============================================================
+-- shop_promotions: 이장의 가게 홍보 등록/심사 (체크리스트 D)
+-- 가게 사장도 이웃을 소개하는 이장으로 가입한다(profiles.has_shop) - owner_id는 항상 이장이어야
+-- 하고, 승인(approved)된 건만 홈 화면 홍보 슬롯(체크리스트 C)에 노출된다.
+-- ============================================================
+create table public.shop_promotions (
+  id            uuid primary key default gen_random_uuid(),
+  owner_id      uuid not null unique references public.profiles(id) on delete cascade,
+  shop_name     text not null,
+  category      text not null,
+  region        text not null,
+  biz_hours     text not null default '',
+  description   text not null default '',
+  img_url       text,
+  biz_reg_no    text,
+  status        text not null default 'pending' check (status in ('pending', 'approved', 'rejected')),
+  reject_reason text not null default '',
+  reviewed_by   uuid references public.profiles(id),
+  reviewed_at   timestamptz,
+  created_at    timestamptz not null default now()
+);
+create index idx_shop_promotions_owner on public.shop_promotions (owner_id);
+create index idx_shop_promotions_status on public.shop_promotions (status, created_at);
+
+comment on table public.shop_promotions is '이장의 가게 홍보 등록/심사(이장당 1건, owner_id unique). status는 관리자(/admin)만
+바꿀 수 있고(shop_promo_guard 트리거), approved인 건만 홈 화면 홍보 슬롯에 노출된다.';
+
+-- ============================================================
 -- Row Level Security
 -- ============================================================
 alter table public.profiles enable row level security;
@@ -210,6 +237,7 @@ alter table public.invite_codes enable row level security;
 alter table public.chat_messages enable row level security;
 alter table public.reports enable row level security;
 alter table public.user_blocks enable row level security;
+alter table public.shop_promotions enable row level security;
 
 -- profiles: 로그인한 누구나 다른 프로필을 조회 가능(추천/탐색 화면에 필요), 본인만 등록/수정
 create policy "profiles_select_authenticated" on public.profiles
@@ -349,6 +377,84 @@ create policy "blocks_select_own" on public.user_blocks
   for select using (auth.uid() = blocker_id);
 create policy "blocks_delete_own" on public.user_blocks
   for delete using (auth.uid() = blocker_id);
+
+-- shop_promotions: 본인 것은 상태 무관 조회/등록/수정 가능, 승인된 건은 누구나 조회 가능
+-- (홈 화면 홍보 슬롯), 관리자는 전체 조회 및 심사(상태 변경) 가능.
+create policy "shop_promo_insert_own" on public.shop_promotions
+  for insert with check (auth.uid() = owner_id);
+create policy "shop_promo_select_own" on public.shop_promotions
+  for select using (auth.uid() = owner_id);
+create policy "shop_promo_select_approved" on public.shop_promotions
+  for select using (status = 'approved');
+create policy "shop_promo_select_admin" on public.shop_promotions
+  for select using (
+    exists (select 1 from public.profiles p where p.id = auth.uid() and p.is_admin)
+  );
+create policy "shop_promo_update_own" on public.shop_promotions
+  for update using (auth.uid() = owner_id);
+create policy "shop_promo_update_admin" on public.shop_promotions
+  for update using (
+    exists (select 1 from public.profiles p where p.id = auth.uid() and p.is_admin)
+  );
+
+-- shop_promo_role_chk: owner_id가 가리키는 profiles의 실제 user_role이 'chief'인지 검증
+-- (가게 사장도 이웃을 소개하는 이장으로 가입해야 한다는 D번 결정 사항을 DB 레벨까지 강제)
+create or replace function public.shop_promo_role_chk()
+returns trigger
+language plpgsql
+set search_path = public
+as $$
+declare
+  ownr_role text;
+begin
+  select user_role into ownr_role from public.profiles where id = new.owner_id;
+  if ownr_role is distinct from 'chief' then
+    raise exception '가게 홍보는 이장님만 등록할 수 있습니다';
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists shop_promo_role_chk on public.shop_promotions;
+create trigger shop_promo_role_chk
+  before insert on public.shop_promotions
+  for each row execute function public.shop_promo_role_chk();
+
+-- shop_promo_guard: shop_promo_update_own 정책이 열어주는 구멍(본인이 status를 바로
+-- 'approved'로 바꿔버리는 것)을 막는다. 관리자가 아닌 쓰기는 항상 status를 'pending'으로
+-- 되돌리고(등록/재등록 모두 심사 대기 상태) reviewed_* 값은 그대로 두거나(수정 시) 비운다
+-- (최초 등록 시) - 심사 이력은 관리자만 남길 수 있다.
+create or replace function public.shop_promo_guard()
+returns trigger
+language plpgsql
+set search_path = public
+as $$
+declare
+  actr_admn boolean;
+begin
+  if auth.role() = 'authenticated' then
+    select is_admin into actr_admn from public.profiles where id = auth.uid();
+    if not coalesce(actr_admn, false) then
+      new.status := 'pending';
+      if tg_op = 'UPDATE' then
+        new.reject_reason := old.reject_reason;
+        new.reviewed_by := old.reviewed_by;
+        new.reviewed_at := old.reviewed_at;
+      else
+        new.reject_reason := '';
+        new.reviewed_by := null;
+        new.reviewed_at := null;
+      end if;
+    end if;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists shop_promo_guard on public.shop_promotions;
+create trigger shop_promo_guard
+  before insert or update on public.shop_promotions
+  for each row execute function public.shop_promo_guard();
 
 -- ============================================================
 -- use_invt_code: 주민이 초대코드를 입력해 이장과 연결한다
