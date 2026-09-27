@@ -19,16 +19,20 @@
   `docs/assets/app-icon.webp`에서 뽑은 192/512/apple-touch 3종(`public/icons/`).
   루트 레이아웃(`layout.tsx`)에 manifest/아이콘/theme-color 메타데이터와 서비스워커
   등록 컴포넌트(`PwaRegister.tsx`)를 연결했다 — 브라우저에서 "홈 화면에 추가"로 설치 가능.
-  mTLS/토스 로그인(`supabase/functions/toss-login`, `src/lib/auth/toss_auth.ts`,
-  `apps-in-toss.config.ts`)까지는 동작 확인했지만 방향 전환으로 보류.
+  mTLS/토스 로그인까지는 동작 확인했지만 방향 전환으로 보류.
+  - (2026-09-27) 결정 완료: 로그인 방식은 **소셜 로그인(카카오/네이버/구글) + ID/PW**로
+    복구, 토스 로그인은 제거. `LoginScreen.tsx`를 토스 로그인 이전 버전으로 되돌리고
+    `soc_auth.ts`를 복원, `toss_auth.ts`와 Supabase Edge Function(`toss-login`)은 삭제.
+    소셜 로그인 3종은 여전히 각 사 Client ID 발급 전 스텁 상태(버튼 클릭 → 완료 흐름만
+    동작, 실제 인가 요청은 TODO) — 실 연동은 별도 작업.
+  - (2026-09-27) 결정 완료: `next.config.js`의 `output: "export"`는 계속 유지 — 향후
+    Capacitor로 네이티브 앱까지 만들 계획이라 정적 export가 필요.
 - TODO (남은 것)
-  - [ ] 기존 토스 로그인 연동 코드 유지/제거 여부 결정 (당장 삭제하지 않아도 무해하지만,
-        `LoginScreen.tsx`의 "토스로 시작하기" 버튼은 로그인 방식 재정의 전까지 숨김 처리 검토)
-  - [ ] 로그인 방식 재정의 — 로컬 ID/PW만 유지할지, 카카오/네이버 등 소셜 로그인을 다시
-        붙일지 결정 (`src/lib/auth/soc_auth.ts`는 이번 세션 초반에 토스로 교체하며 삭제됨)
-  - [ ] `next.config.js`의 `output: "export"`를 계속 쓸지 결정 — PWA는 Vercel SSR 그대로도
-        되지만, 향후 Capacitor로 네이티브 앱까지 만들려면 정적 export가 필요
-  - [ ] 실제 기기(Android Chrome/iOS Safari)에서 설치 테스트 — 이 세션은 Supabase
+  - [ ] 카카오/네이버/구글 각 사 Client ID/Secret 발급 후 실제 SDK 연동 (`soc_auth.ts`의
+        `kkao_auth`/`nvr_auth`/`gogl_auth` TODO 참고)
+  - [ ] `apps-in-toss.config.ts`와 package.json/next.config.js의 AIT CLI 관련 설정은
+        아직 안 건드림 — 앱인토스 SDK/CLI 전체를 걷어낼지 별도 결정 필요
+  - [ ] 실제 기기(Android Chrome/iOS Safari)에서 PWA 설치 테스트 — 이 세션은 Supabase
         환경변수가 없는 샌드박스라 빌드 타입체크까지만 확인, 실제 프리뷰 배포로 확인 필요
   - [ ] (후속) Capacitor 프로젝트 초기화 후 iOS/Android 플랫폼 추가, 스토어 등록 준비
         (Apple Developer/Google Play Console 계정, 개인정보처리방침 URL — 9번과 연계)
