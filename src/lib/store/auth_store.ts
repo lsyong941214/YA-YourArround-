@@ -191,11 +191,16 @@ export async function do_logout(): Promise<void> {
  */
 export async function make_acct(
   login_id: string,
-  passwd: string
+  passwd: string,
+  tos_agree: boolean
 ): Promise<{ ok_flag: boolean; err_msg?: string }> {
+  if (!tos_agree) {
+    return { ok_flag: false, err_msg: "이용약관 및 개인정보 처리방침에 동의해주세요." };
+  }
   const { data: sign_data, error: sign_err } = await supabase.auth.signUp({
     email: login_email(login_id),
     password: passwd,
+    options: { data: { tos_agreed_at: new Date().toISOString() } },
   });
   if (sign_err || !sign_data.user) {
     return {
