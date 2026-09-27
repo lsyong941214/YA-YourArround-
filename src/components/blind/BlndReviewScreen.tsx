@@ -1,14 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import { BlndReq, find_req, game_go, side_of, sub_blnd, updt_req } from "@/lib/store/blnd_store";
 import { curr_user } from "@/lib/store/auth_store";
 import BlndGameScreen from "./BlndGameScreen";
 
-export default function BlndReviewScreen({ blnd_id }: { blnd_id: string }) {
+export default function BlndReviewScreen() {
   const rout_nav = useRouter();
+  const blnd_id = useSearchParams().get("blnd_id") ?? "";
   const [blnd_item, setBlndItem] = useState<BlndReq | undefined | null>(null);
 
   const [my_user, setMyUser] = useState<{ user_id: string } | null | undefined>(undefined);

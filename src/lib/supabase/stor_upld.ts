@@ -12,7 +12,7 @@ import { supabase } from "@/lib/supabase/client";
 const BUCK_ID = "prof-img";
 const SIZE_MAX = 5 * 1024 * 1024; // 5MB
 
-export type ImgKind = "avat" | "albm";
+export type ImgKind = "avat" | "albm" | "shop";
 
 function file_ext(file_nm: string): string {
   const dot_idx = file_nm.lastIndexOf(".");

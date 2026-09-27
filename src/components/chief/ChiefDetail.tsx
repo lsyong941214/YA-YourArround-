@@ -1,15 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Bell, ChevronLeft, Heart, Star, Users } from "lucide-react";
 import { find_jang } from "@/lib/data/jang_data";
 import { has_req } from "@/lib/store/matc_store";
 
 const NAV_DELAY = 250;
 
-export default function ChiefDetail({ jang_id }: { jang_id: string }) {
+export default function ChiefDetail() {
   const rout_nav = useRouter();
+  const jang_id = useSearchParams().get("jang_id") ?? "";
   const jang_item = find_jang(jang_id);
   const [liked_set, setLikedSet] = useState<Set<string>>(new Set());
 
@@ -40,7 +41,7 @@ export default function ChiefDetail({ jang_id }: { jang_id: string }) {
   function do_hert(memb_id: string) {
     setLikedSet((prev_set) => new Set(prev_set).add(memb_id));
     setTimeout(() => {
-      rout_nav.push(`/chief/${jang_id}/request/${memb_id}`);
+      rout_nav.push(`/chief/request?jang_id=${jang_id}&memb_id=${memb_id}`);
     }, NAV_DELAY);
   }
 
@@ -102,7 +103,7 @@ export default function ChiefDetail({ jang_id }: { jang_id: string }) {
       <section className="mt-4 grid grid-cols-2 gap-3 px-5">
         <button
           type="button"
-          onClick={() => rout_nav.push(`/chief/${jang_id}/reviews`)}
+          onClick={() => rout_nav.push(`/chief/reviews?jang_id=${jang_id}`)}
           className="rounded-2xl bg-white p-4 text-left shadow-sm transition active:opacity-90"
         >
           <div className="flex items-center gap-1 text-xs text-gray-400">

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronLeft, Send, UserRound } from "lucide-react";
 import { find_req, MatcReq } from "@/lib/store/matc_store";
 import { curr_user } from "@/lib/store/auth_store";
@@ -50,8 +50,9 @@ function fmt_time(made_at: number): string {
   return new Date(made_at).toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" });
 }
 
-export default function ChatScreen({ req_id }: { req_id: string }) {
+export default function ChatScreen() {
   const rout_nav = useRouter();
+  const req_id = useSearchParams().get("req_id") ?? "";
   const [req_item, setReqItem] = useState<MatcReq | undefined | null>(null);
   const [my_id, setMyId] = useState<string | null | undefined>(undefined);
   const [msg_list, setMsgList] = useState<ChatMsg[]>([]);

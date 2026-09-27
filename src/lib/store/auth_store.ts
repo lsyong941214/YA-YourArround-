@@ -34,6 +34,7 @@ export type AuthUser = {
   user_job?: string;
   user_mbti?: string;
   user_reg?: string;
+  has_shop: boolean;
   tag_list: string[];
   user_img: string | null;
   phot_list: string[];
@@ -54,6 +55,7 @@ type ProfRow = {
   user_job: string | null;
   user_mbti: string | null;
   user_reg: string | null;
+  has_shop: boolean;
   tag_list: string[];
   avatar_url: string | null;
   photo_urls: string[];
@@ -96,6 +98,7 @@ function row_to_user(row: ProfRow): AuthUser {
     user_job: row.user_job ?? undefined,
     user_mbti: row.user_mbti ?? undefined,
     user_reg: row.user_reg ?? undefined,
+    has_shop: row.has_shop,
     tag_list: row.tag_list ?? [],
     user_img: row.avatar_url,
     phot_list: row.photo_urls ?? [],
@@ -188,11 +191,16 @@ export async function do_logout(): Promise<void> {
  */
 export async function make_acct(
   login_id: string,
-  passwd: string
+  passwd: string,
+  tos_agree: boolean
 ): Promise<{ ok_flag: boolean; err_msg?: string }> {
+  if (!tos_agree) {
+    return { ok_flag: false, err_msg: "이용약관 및 개인정보 처리방침에 동의해주세요." };
+  }
   const { data: sign_data, error: sign_err } = await supabase.auth.signUp({
     email: login_email(login_id),
     password: passwd,
+    options: { data: { tos_agreed_at: new Date().toISOString() } },
   });
   if (sign_err || !sign_data.user) {
     return {
@@ -213,6 +221,7 @@ export type ProfInp = {
   user_job?: string;
   user_mbti?: string;
   user_reg?: string;
+  has_shop?: boolean;
   tag_list?: string[];
   user_bio?: string;
   user_img?: string | null;
@@ -236,6 +245,7 @@ export async function make_prof(inp: ProfInp): Promise<{ user?: AuthUser; err_ms
     user_job: inp.user_job ?? null,
     user_mbti: inp.user_mbti ?? null,
     user_reg: inp.user_reg ?? null,
+    has_shop: inp.has_shop ?? false,
     tag_list: inp.tag_list ?? [],
     user_bio: inp.user_bio ?? "",
     avatar_url: inp.user_img ?? null,
@@ -271,6 +281,7 @@ export async function updt_curr(patch: Partial<AuthUser>): Promise<void> {
   if (patch.user_job !== undefined) upd_row.user_job = patch.user_job;
   if (patch.user_mbti !== undefined) upd_row.user_mbti = patch.user_mbti;
   if (patch.user_reg !== undefined) upd_row.user_reg = patch.user_reg;
+  if (patch.has_shop !== undefined) upd_row.has_shop = patch.has_shop;
   if (patch.tag_list !== undefined) upd_row.tag_list = patch.tag_list;
   if (patch.user_img !== undefined) upd_row.avatar_url = patch.user_img;
   if (patch.phot_list !== undefined) upd_row.photo_urls = patch.phot_list;

@@ -320,7 +320,7 @@ function DoneView({ blnd_id }: { blnd_id: string }) {
       <p className="text-sm font-bold text-gray-900">두 분 모두 선택을 마쳤어요!</p>
       <button
         type="button"
-        onClick={() => rout_nav.push(`/blind/${blnd_id}/result`)}
+        onClick={() => rout_nav.push(`/blind/result?blnd_id=${blnd_id}`)}
         className="mt-2 rounded-full bg-[#6C63E0] px-6 py-3 text-sm font-bold text-white shadow-md transition active:opacity-90"
       >
         이제 결과를 보러 갈까요?

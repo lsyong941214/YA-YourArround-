@@ -19,6 +19,7 @@ import { AuthRole, AuthUser, curr_user, updt_curr } from "@/lib/store/auth_store
 import { list_chf_of, list_res_of } from "@/lib/store/cntc_store";
 import AvatarCircle from "@/components/common/AvatarCircle";
 import ProfEditModal from "./ProfEditModal";
+import ShopPromoSection from "./ShopPromoSection";
 
 export default function HomeScreen() {
   const rout_nav = useRouter();
@@ -110,6 +111,10 @@ export default function HomeScreen() {
 
   function go_prop() {
     rout_nav.push("/proposal");
+  }
+
+  function go_guid() {
+    rout_nav.push("/guide");
   }
 
   const role_lbl = user_role === "res" ? "주민" : "이장님";
@@ -249,6 +254,7 @@ export default function HomeScreen() {
           <p className="mt-1 text-xs text-gray-400">서비스 이용 방법을 한눈에 확인해보세요!</p>
           <button
             type="button"
+            onClick={go_guid}
             className="mt-3 rounded-xl bg-[#F26B12] px-4 py-2 text-xs font-bold text-white transition active:opacity-90"
           >
             가이드 보기
@@ -256,6 +262,8 @@ export default function HomeScreen() {
         </div>
         <FoxReadIcon className="h-16 w-16 shrink-0" />
       </section>
+
+      <ShopPromoSection my_reg={me_item.user_reg} />
 
       {/* 연결된 주민 (이장님 역할일 때만 노출) */}
       {user_role === "chief" && (

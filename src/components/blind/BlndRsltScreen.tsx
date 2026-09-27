@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronLeft, Handshake, X } from "lucide-react";
 import { curr_user } from "@/lib/store/auth_store";
 import { get_mbti_cpat } from "@/lib/data/mbti_cpat";
@@ -41,8 +41,9 @@ const TIER_TAG: Record<BlndTier, string> = {
   best: "천생연분",
 };
 
-export default function BlndRsltScreen({ blnd_id }: { blnd_id: string }) {
+export default function BlndRsltScreen() {
   const rout_nav = useRouter();
+  const blnd_id = useSearchParams().get("blnd_id") ?? "";
   const [item, setItem] = useState<BlndReq | undefined | null>(null);
   const [my_user, setMyUser] = useState<{ user_id: string } | null | undefined>(undefined);
   const [busy_flag, setBusyFlag] = useState(false);
@@ -82,7 +83,7 @@ export default function BlndRsltScreen({ blnd_id }: { blnd_id: string }) {
   // 아직 둘 다 게임을 안 끝냈으면 결과를 볼 수 없다 - 게임 화면으로 돌려보낸다
   useEffect(() => {
     if (item && !both_picked(item)) {
-      rout_nav.replace(`/blind/${blnd_id}`);
+      rout_nav.replace(`/blind/review?blnd_id=${blnd_id}`);
     }
   }, [item, blnd_id, rout_nav]);
 
@@ -198,7 +199,7 @@ export default function BlndRsltScreen({ blnd_id }: { blnd_id: string }) {
         {show_msg_btn && (
           <button
             type="button"
-            onClick={() => rout_nav.push(`/chat/${item.link_mtc_id}`)}
+            onClick={() => rout_nav.push(`/chat?req_id=${item.link_mtc_id}`)}
             className="mt-4 w-full rounded-2xl bg-[#6C63E0] py-3.5 text-sm font-bold text-white transition active:opacity-90"
           >
             메시지하기
@@ -342,7 +343,7 @@ function DonePanel({ item }: { item: BlndReq }) {
         <p className="mt-1 text-xs text-emerald-600">두 분 다 확인요청을 보내서 바로 연결됐어요.</p>
         <button
           type="button"
-          onClick={() => rout_nav.push(`/matched/${item.link_mtc_id}`)}
+          onClick={() => rout_nav.push(`/matched?req_id=${item.link_mtc_id}`)}
           className="mt-4 w-full rounded-2xl bg-[#6C63E0] py-3 text-sm font-bold text-white transition active:opacity-90"
         >
           매칭 화면으로 이동
@@ -358,7 +359,7 @@ function DonePanel({ item }: { item: BlndReq }) {
       {item.link_mtc_id && (
         <button
           type="button"
-          onClick={() => rout_nav.push(`/chat/${item.link_mtc_id}`)}
+          onClick={() => rout_nav.push(`/chat?req_id=${item.link_mtc_id}`)}
           className="mt-4 w-full rounded-2xl bg-[#6C63E0] py-3 text-sm font-bold text-white transition active:opacity-90"
         >
           연락하기

@@ -10,17 +10,28 @@
  */
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, ShieldCheck } from "lucide-react";
+import { AlertTriangle, ShieldCheck, Store } from "lucide-react";
 import { AcctStat } from "@/lib/store/auth_store";
 import {
   AdmReport,
+  AdmShop,
   is_curr_admin,
   list_reports_admin,
+  list_shops_admin,
   RptStat,
   set_acct_stat,
   set_report_stat,
+  set_shop_stat,
 } from "@/lib/store/admin_store";
 import { RPT_RSN_LBL } from "@/lib/store/safe_store";
+import { ShopStat } from "@/lib/store/shop_store";
+
+const SHOP_STAT_LBL: Record<ShopStat, string> = { pending: "대기중", approved: "승인됨", rejected: "반려됨" };
+const SHOP_STAT_TONE: Record<ShopStat, string> = {
+  pending: "bg-amber-50 text-amber-600",
+  approved: "bg-green-50 text-green-600",
+  rejected: "bg-red-50 text-red-500",
+};
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -48,11 +59,19 @@ function fmt_elapsed(made_at: number): string {
 export default function AdminScreen() {
   const rout_nav = useRouter();
   const [gate_stat, setGateStat] = useState<"chk" | "deny" | "ok">("chk");
+  const [tab_val, setTabVal] = useState<"rept" | "shop">("rept");
   const [rept_list, setReptList] = useState<AdmReport[]>([]);
+  const [shop_list, setShopList] = useState<AdmShop[]>([]);
   const [busy_id, setBusyId] = useState<string | null>(null);
+  const [rjct_open_id, setRjctOpenId] = useState<string | null>(null);
+  const [rjct_txt, setRjctTxt] = useState("");
 
   async function load_list() {
     setReptList(await list_reports_admin());
+  }
+
+  async function load_shop_list() {
+    setShopList(await list_shops_admin());
   }
 
   useEffect(() => {
@@ -64,8 +83,22 @@ export default function AdminScreen() {
       }
       setGateStat("ok");
       load_list();
+      load_shop_list();
     })();
   }, []);
+
+  async function do_shop_stat(shop_id: string, stat: ShopStat, reason?: string) {
+    setBusyId(shop_id);
+    const ok_flag = await set_shop_stat(shop_id, stat, reason);
+    if (ok_flag) {
+      setShopList((prev) =>
+        prev.map((s) => (s.shop_id === shop_id ? { ...s, status: stat, reject_reason: reason ?? "" } : s))
+      );
+      setRjctOpenId(null);
+      setRjctTxt("");
+    }
+    setBusyId(null);
+  }
 
   async function do_rept_stat(rept_id: string, stat: RptStat) {
     setBusyId(rept_id);
@@ -103,25 +136,125 @@ export default function AdminScreen() {
 
   const open_cnt = rept_list.filter((r) => r.stat === "open").length;
   const overdue_cnt = rept_list.filter((r) => r.stat === "open" && Date.now() - r.made_at > DAY_MS).length;
+  const shop_pend_cnt = shop_list.filter((s) => s.status === "pending").length;
 
   return (
     <main className="min-h-dvh w-full bg-[#FAFAFA] pb-10">
       <header className="bg-white px-5 pb-4 pt-6">
         <h1 className="flex items-center gap-1.5 text-lg font-bold text-gray-900">
-          <ShieldCheck className="h-5 w-5 text-[#F26B12]" /> 신고 관리
+          <ShieldCheck className="h-5 w-5 text-[#F26B12]" /> 관리자
         </h1>
-        <div className="mt-3 flex gap-2 text-xs">
-          <span className="rounded-full bg-gray-100 px-3 py-1.5 font-medium text-gray-600">
-            대기중 {open_cnt}건
-          </span>
-          {overdue_cnt > 0 && (
-            <span className="rounded-full bg-red-50 px-3 py-1.5 font-bold text-red-500">
-              24시간 초과 {overdue_cnt}건
-            </span>
-          )}
+        <div className="mt-3 grid grid-cols-2 gap-2 rounded-xl bg-[#FFF3E9] p-1">
+          <button
+            type="button"
+            onClick={() => setTabVal("rept")}
+            className={`rounded-lg py-2 text-xs font-bold transition ${
+              tab_val === "rept" ? "bg-[#F26B12] text-white" : "text-[#F26B12]"
+            }`}
+          >
+            신고 관리 {open_cnt > 0 && `(${open_cnt})`}
+          </button>
+          <button
+            type="button"
+            onClick={() => setTabVal("shop")}
+            className={`rounded-lg py-2 text-xs font-bold transition ${
+              tab_val === "shop" ? "bg-[#F26B12] text-white" : "text-[#F26B12]"
+            }`}
+          >
+            가게 홍보 심사 {shop_pend_cnt > 0 && `(${shop_pend_cnt})`}
+          </button>
         </div>
+        {tab_val === "rept" && (
+          <div className="mt-3 flex gap-2 text-xs">
+            <span className="rounded-full bg-gray-100 px-3 py-1.5 font-medium text-gray-600">
+              대기중 {open_cnt}건
+            </span>
+            {overdue_cnt > 0 && (
+              <span className="rounded-full bg-red-50 px-3 py-1.5 font-bold text-red-500">
+                24시간 초과 {overdue_cnt}건
+              </span>
+            )}
+          </div>
+        )}
       </header>
 
+      {tab_val === "shop" && (
+        <div className="space-y-3 px-4 pt-4">
+          {shop_list.length === 0 && (
+            <p className="pt-10 text-center text-xs text-gray-400">등록된 가게 홍보가 없어요.</p>
+          )}
+          {shop_list.map((s) => (
+            <div key={s.shop_id} className="rounded-2xl border border-gray-100 bg-white p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Store className="h-4 w-4 text-gray-400" />
+                  <span className="text-sm font-bold text-gray-900">{s.shop_name}</span>
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${SHOP_STAT_TONE[s.status]}`}
+                  >
+                    {SHOP_STAT_LBL[s.status]}
+                  </span>
+                </div>
+              </div>
+              <p className="mt-1.5 text-xs text-gray-400">
+                {s.category} · {s.region} · {s.ownr_name}님
+              </p>
+              {s.biz_hours && <p className="mt-1 text-xs text-gray-500">영업시간: {s.biz_hours}</p>}
+              {s.description && <p className="mt-1.5 text-xs leading-relaxed text-gray-600">{s.description}</p>}
+              {s.status === "rejected" && s.reject_reason && (
+                <p className="mt-1.5 text-xs text-red-400">반려 사유: {s.reject_reason}</p>
+              )}
+
+              <div className="mt-3 flex flex-wrap gap-1.5">
+                {s.status !== "approved" && (
+                  <button
+                    type="button"
+                    disabled={busy_id === s.shop_id}
+                    onClick={() => do_shop_stat(s.shop_id, "approved")}
+                    className="rounded-full border border-green-200 bg-green-50 px-3 py-1.5 text-[11px] font-bold text-green-600 disabled:opacity-40"
+                  >
+                    승인
+                  </button>
+                )}
+                {s.status !== "rejected" && rjct_open_id !== s.shop_id && (
+                  <button
+                    type="button"
+                    disabled={busy_id === s.shop_id}
+                    onClick={() => {
+                      setRjctOpenId(s.shop_id);
+                      setRjctTxt("");
+                    }}
+                    className="rounded-full border border-red-200 bg-red-50 px-3 py-1.5 text-[11px] font-bold text-red-500 disabled:opacity-40"
+                  >
+                    반려
+                  </button>
+                )}
+              </div>
+
+              {rjct_open_id === s.shop_id && (
+                <div className="mt-2 flex gap-1.5">
+                  <input
+                    value={rjct_txt}
+                    onChange={(ev_chg) => setRjctTxt(ev_chg.target.value.slice(0, 200))}
+                    placeholder="반려 사유를 입력해주세요"
+                    className="flex-1 rounded-xl border border-gray-200 p-2.5 text-xs text-gray-800 outline-none focus:border-[#F26B12]"
+                  />
+                  <button
+                    type="button"
+                    disabled={!rjct_txt.trim() || busy_id === s.shop_id}
+                    onClick={() => do_shop_stat(s.shop_id, "rejected", rjct_txt.trim())}
+                    className="shrink-0 rounded-xl bg-red-500 px-3 text-xs font-bold text-white disabled:opacity-40"
+                  >
+                    반려 확정
+                  </button>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {tab_val === "rept" && (
       <div className="space-y-3 px-4 pt-4">
         {rept_list.length === 0 && (
           <p className="pt-10 text-center text-xs text-gray-400">접수된 신고가 없어요.</p>
@@ -211,6 +344,7 @@ export default function AdminScreen() {
           );
         })}
       </div>
+      )}
     </main>
   );
 }

@@ -10,8 +10,9 @@
  */
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft } from "lucide-react";
+import { Check, ChevronLeft } from "lucide-react";
 import { login_cred, make_acct, sess_stat, stat_path } from "@/lib/store/auth_store";
+import TermsModal, { TermsTab } from "@/components/terms/TermsModal";
 
 export default function LocalLoginScreen() {
   const rout_nav = useRouter();
@@ -25,6 +26,9 @@ export default function LocalLoginScreen() {
   const [new_pass, setNewPass] = useState("");
   const [new_err, setNewErr] = useState("");
   const [new_busy, setNewBusy] = useState(false);
+  const [svc_agree, setSvcAgree] = useState(false);
+  const [priv_agree, setPrivAgree] = useState(false);
+  const [terms_tab, setTermsTab] = useState<TermsTab | null>(null);
 
   // 로그인/가입 이후 갈 곳은 세션 상태가 정한다 (프로필 없으면 온보딩, 있으면 홈)
   async function go_next() {
@@ -42,10 +46,12 @@ export default function LocalLoginScreen() {
     await go_next();
   }
 
+  const tos_ok = svc_agree && priv_agree;
+
   async function do_make_acct() {
-    if (!new_lgid.trim() || !new_pass.trim()) return;
+    if (!new_lgid.trim() || !new_pass.trim() || !tos_ok) return;
     setNewBusy(true);
-    const { ok_flag, err_msg } = await make_acct(new_lgid.trim(), new_pass.trim());
+    const { ok_flag, err_msg } = await make_acct(new_lgid.trim(), new_pass.trim(), tos_ok);
     if (!ok_flag) {
       setNewBusy(false);
       setNewErr(err_msg ?? "가입에 실패했어요.");
@@ -142,15 +148,62 @@ export default function LocalLoginScreen() {
         </div>
         {new_err && <p className="mt-1.5 text-xs text-red-400">{new_err}</p>}
 
+        <div className="mt-4 space-y-2">
+          <AgreeRow
+            checked={svc_agree}
+            onToggle={() => setSvcAgree((v_val) => !v_val)}
+            onView={() => setTermsTab("svc")}
+            lbl_txt="[필수] 이용약관 동의"
+          />
+          <AgreeRow
+            checked={priv_agree}
+            onToggle={() => setPrivAgree((v_val) => !v_val)}
+            onView={() => setTermsTab("priv")}
+            lbl_txt="[필수] 개인정보 수집·이용 동의"
+          />
+        </div>
+
         <button
           type="button"
           onClick={do_make_acct}
-          disabled={!new_lgid.trim() || !new_pass.trim() || new_busy}
+          disabled={!new_lgid.trim() || !new_pass.trim() || !tos_ok || new_busy}
           className="mt-4 w-full rounded-2xl bg-[#F26B12] py-3.5 text-sm font-bold text-white transition active:opacity-90 disabled:opacity-40"
         >
           {new_busy ? "계정 만드는 중..." : "계정 만들고 프로필 입력하기"}
         </button>
       </section>
+
+      {terms_tab && <TermsModal init_tab={terms_tab} onClose={() => setTermsTab(null)} />}
     </main>
+  );
+}
+
+function AgreeRow({
+  checked,
+  onToggle,
+  onView,
+  lbl_txt,
+}: {
+  checked: boolean;
+  onToggle: () => void;
+  onView: () => void;
+  lbl_txt: string;
+}) {
+  return (
+    <div className="flex items-center justify-between">
+      <button type="button" onClick={onToggle} className="flex items-center gap-2">
+        <span
+          className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${
+            checked ? "border-[#F26B12] bg-[#F26B12] text-white" : "border-gray-300"
+          }`}
+        >
+          {checked && <Check className="h-3 w-3" strokeWidth={3} />}
+        </span>
+        <span className="text-xs text-gray-600">{lbl_txt}</span>
+      </button>
+      <button type="button" onClick={onView} className="text-[11px] text-gray-400 underline">
+        보기
+      </button>
+    </div>
   );
 }

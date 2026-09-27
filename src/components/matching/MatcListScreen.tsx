@@ -34,7 +34,7 @@ export default function MatcListScreen() {
     if (matc_is_prog(r_item.stat)) {
       setSelId(r_item.req_id);
     } else {
-      rout_nav.push(`/matching/${r_item.req_id}`);
+      rout_nav.push(`/matching/review?req_id=${r_item.req_id}`);
     }
   }
 

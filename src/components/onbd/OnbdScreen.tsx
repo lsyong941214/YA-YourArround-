@@ -10,7 +10,7 @@
  */
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Camera } from "lucide-react";
+import { Camera, Check } from "lucide-react";
 import { AuthRole, calc_age, make_prof, sess_stat, stat_path } from "@/lib/store/auth_store";
 import { MBTI_LIST } from "@/lib/data/mbti_list";
 import { upld_img } from "@/lib/supabase/stor_upld";
@@ -30,6 +30,7 @@ export default function OnbdScreen() {
   const [user_job, setUserJob] = useState("");
   const [user_reg, setUserReg] = useState("");
   const [user_bio, setUserBio] = useState("");
+  const [has_shop, setHasShop] = useState(false);
   const [img_url, setImgUrl] = useState<string | null>(null);
   const [img_busy, setImgBusy] = useState(false);
   const [save_busy, setSaveBusy] = useState(false);
@@ -63,6 +64,14 @@ export default function OnbdScreen() {
     setImgUrl(up_url);
   }
 
+  // 가게를 운영 중이면 이웃을 소개하는 이장님으로 가입해야 나중에 마이페이지에서 가게
+  // 홍보 등록(심사)까지 이어갈 수 있다 - 체크 시 역할을 이장님으로 맞춰준다.
+  function do_shop_togl() {
+    const next_flag = !has_shop;
+    setHasShop(next_flag);
+    if (next_flag) setUserRole("chief");
+  }
+
   const done_flag =
     !!img_url && !!user_name.trim() && !!birth_dt && !!mbti_val && !img_busy && !save_busy;
 
@@ -88,6 +97,7 @@ export default function OnbdScreen() {
       user_reg: user_reg.trim() || undefined,
       user_bio: user_bio.trim(),
       user_img: img_url,
+      has_shop,
     });
     setSaveBusy(false);
     if (!user) {
@@ -165,7 +175,8 @@ export default function OnbdScreen() {
           <button
             type="button"
             onClick={() => setUserRole("chief")}
-            className={`rounded-xl border py-2.5 text-sm font-bold transition ${
+            disabled={has_shop}
+            className={`rounded-xl border py-2.5 text-sm font-bold transition disabled:opacity-100 ${
               user_role === "chief"
                 ? "border-[#F26B12] bg-[#FFF3E9] text-[#F26B12]"
                 : "border-gray-200 text-gray-400"
@@ -174,6 +185,27 @@ export default function OnbdScreen() {
             이장님
           </button>
         </div>
+
+        <button
+          type="button"
+          onClick={do_shop_togl}
+          className="mt-2 flex w-full items-start gap-2 rounded-xl border border-gray-200 p-3 text-left"
+        >
+          <span
+            className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border ${
+              has_shop ? "border-[#F26B12] bg-[#F26B12] text-white" : "border-gray-300"
+            }`}
+          >
+            {has_shop && <Check className="h-3 w-3" strokeWidth={3} />}
+          </span>
+          <span className="text-xs leading-relaxed text-gray-500">
+            <span className="font-bold text-gray-800">가게를 운영하고 있어요</span>
+            <br />
+            가게 사장님도 이웃을 소개하는 이장님이 될 수 있어요. 체크하면{" "}
+            <span className="font-bold text-[#F26B12]">이장님</span>으로 가입되고, 가입 후
+            마이페이지에서 내 가게를 홍보용으로 등록해 심사를 받을 수 있어요.
+          </span>
+        </button>
 
         <div className="mt-4 grid grid-cols-2 gap-2">
           <div>

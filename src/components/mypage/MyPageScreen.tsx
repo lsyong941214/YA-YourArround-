@@ -119,6 +119,17 @@ export default function MyPageScreen() {
       </section>
 
       <section className="mx-5 mt-4 flex flex-col gap-2">
+        {user_item.user_role === "chief" && (
+          <button
+            type="button"
+            onClick={() => rout_nav.push("/shop")}
+            className="flex items-center justify-between rounded-2xl bg-white p-4 text-left shadow-sm transition active:opacity-90"
+          >
+            <span className="text-sm font-bold text-gray-900">내 가게 홍보 등록/관리</span>
+            <ChevronRight className="h-4 w-4 text-gray-300" />
+          </button>
+        )}
+
         <button
           type="button"
           onClick={() => rout_nav.push("/login/local")}
