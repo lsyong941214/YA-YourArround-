@@ -19,6 +19,7 @@ import { AuthRole, AuthUser, curr_user, updt_curr } from "@/lib/store/auth_store
 import { list_chf_of, list_res_of } from "@/lib/store/cntc_store";
 import AvatarCircle from "@/components/common/AvatarCircle";
 import ProfEditModal from "./ProfEditModal";
+import ShopPromoSection from "./ShopPromoSection";
 
 export default function HomeScreen() {
   const rout_nav = useRouter();
@@ -261,6 +262,8 @@ export default function HomeScreen() {
         </div>
         <FoxReadIcon className="h-16 w-16 shrink-0" />
       </section>
+
+      <ShopPromoSection my_reg={me_item.user_reg} />
 
       {/* 연결된 주민 (이장님 역할일 때만 노출) */}
       {user_role === "chief" && (
