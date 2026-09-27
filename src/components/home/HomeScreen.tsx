@@ -112,6 +112,10 @@ export default function HomeScreen() {
     rout_nav.push("/proposal");
   }
 
+  function go_guid() {
+    rout_nav.push("/guide");
+  }
+
   const role_lbl = user_role === "res" ? "주민" : "이장님";
   const matc_lbl = user_role === "res" ? "남은 매칭 횟수" : "진행중인 매칭";
   // 남은 매칭 횟수 = 총 시도 가능 횟수 - 소진된(=거절되지 않은) 시도 - 대기중/수락 대기중/수락완료는
@@ -249,6 +253,7 @@ export default function HomeScreen() {
           <p className="mt-1 text-xs text-gray-400">서비스 이용 방법을 한눈에 확인해보세요!</p>
           <button
             type="button"
+            onClick={go_guid}
             className="mt-3 rounded-xl bg-[#F26B12] px-4 py-2 text-xs font-bold text-white transition active:opacity-90"
           >
             가이드 보기

@@ -26,6 +26,7 @@ type ProfRow = {
   user_job: string | null;
   user_mbti: string | null;
   user_reg: string | null;
+  has_shop: boolean;
   tag_list: string[];
   avatar_url: string | null;
   photo_urls: string[];
@@ -48,6 +49,7 @@ function row_to_user(row: ProfRow): AuthUser {
     user_job: row.user_job ?? undefined,
     user_mbti: row.user_mbti ?? undefined,
     user_reg: row.user_reg ?? undefined,
+    has_shop: row.has_shop,
     tag_list: row.tag_list ?? [],
     user_img: row.avatar_url,
     phot_list: row.photo_urls ?? [],

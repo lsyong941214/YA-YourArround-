@@ -24,6 +24,9 @@ create table public.profiles (
   user_job      text,
   user_mbti     text,
   user_reg      text,
+  -- 가입 시 "가게를 운영 중"으로 표시한 이장 계정 - 마이페이지의 가게 홍보 등록 화면
+  -- 진입 조건으로 쓴다(체크리스트 D. 가게 사장 온보딩/홍보 등록). 주민 역할이면 의미 없음.
+  has_shop      boolean not null default false,
   tag_list      text[] not null default '{}',
   user_bio      text not null default '',
   avatar_url    text,                          -- Supabase Storage 프로필 사진 URL
