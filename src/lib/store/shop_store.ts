@@ -226,3 +226,88 @@ export async function redeem_coupon(
   const stat = (data?.stat ?? "bad_code") as RedeemStat;
   return { ok_flag: stat === "ok", msg: REDEEM_MSG[stat] ?? "쿠폰 적용에 실패했어요." };
 }
+
+// ============================================================
+// 가게 등록 심사 세부 체크리스트 (음식점/카페 입점 심사 기준) - 가게 주인은 자기 가게 이력만
+// 조회 가능(반려 사유를 보여주는 것과 같은 투명성 원칙). 기록(추가)은 관리자만 shop_admin_store에서.
+// ============================================================
+export const CHECK_TYPE_LIST = [
+  "biz_reg_verify",
+  "biz_status",
+  "food_biz_report",
+  "onl_sale_report",
+  "addr_verify",
+  "img_origin",
+  "label_compliance",
+  "admin_penalty",
+  "payer_match",
+  "categ_fit",
+] as const;
+export type CheckType = (typeof CHECK_TYPE_LIST)[number];
+
+export const CHECK_TYPE_LBL: Record<CheckType, string> = {
+  biz_reg_verify: "사업자등록번호 진위확인",
+  biz_status: "휴폐업 상태",
+  food_biz_report: "영업신고증(식품위생법)",
+  onl_sale_report: "통신판매업 신고",
+  addr_verify: "주소 실존/좌표 확인",
+  img_origin: "사진 도용 여부",
+  label_compliance: "원산지·알레르기 표시",
+  admin_penalty: "위생 행정처분 이력",
+  payer_match: "결제자 명의 일치",
+  categ_fit: "업종 적합성",
+};
+
+export type CheckResult = "pending" | "pass" | "fail" | "skip";
+
+export type ReviewCheck = {
+  check_id: string;
+  check_type: CheckType;
+  method: "manual" | "auto";
+  result: CheckResult;
+  note: string;
+  evidence_url: string | null;
+  made_at: number;
+};
+
+type CheckRow = {
+  id: string;
+  check_type: CheckType;
+  method: "manual" | "auto";
+  result: CheckResult;
+  note: string;
+  evidence_url: string | null;
+  created_at: string;
+};
+
+function row_to_check(row: CheckRow): ReviewCheck {
+  return {
+    check_id: row.id,
+    check_type: row.check_type,
+    method: row.method,
+    result: row.result,
+    note: row.note,
+    evidence_url: row.evidence_url,
+    made_at: new Date(row.created_at).getTime(),
+  };
+}
+
+// 항목별 최신 이력만 남긴다(append-only 테이블이라 과거 재검증 이력은 더 있을 수 있음)
+function latest_per_type(rows: ReviewCheck[]): ReviewCheck[] {
+  const seen = new Map<CheckType, ReviewCheck>();
+  for (const row of rows) {
+    if (!seen.has(row.check_type)) seen.set(row.check_type, row);
+  }
+  return Array.from(seen.values());
+}
+
+// 내 가게의 심사 체크리스트 현재 상태(항목별 최신 1건씩)
+export async function my_review_checks(shop_id: string): Promise<ReviewCheck[]> {
+  const { data, error } = await supabase
+    .from("shop_review_checks")
+    .select("id, check_type, method, result, note, evidence_url, created_at")
+    .eq("shop_id", shop_id)
+    .order("created_at", { ascending: false });
+  if (error || !data) return [];
+  return latest_per_type((data as CheckRow[]).map(row_to_check));
+}

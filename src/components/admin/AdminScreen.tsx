@@ -10,9 +10,10 @@
  */
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, ShieldCheck, Store, Ticket } from "lucide-react";
+import { AlertTriangle, ChevronDown, ChevronUp, ShieldCheck, Store, Ticket } from "lucide-react";
 import { AcctStat } from "@/lib/store/auth_store";
 import {
+  add_review_check,
   AdmCoupon,
   AdmReport,
   AdmShop,
@@ -20,6 +21,7 @@ import {
   is_curr_admin,
   list_coupons_admin,
   list_reports_admin,
+  list_review_checks_admin,
   list_shops_admin,
   RptStat,
   set_acct_stat,
@@ -29,7 +31,17 @@ import {
   update_sub_plan,
 } from "@/lib/store/admin_store";
 import { RPT_RSN_LBL } from "@/lib/store/safe_store";
-import { list_sub_plans, ShopStat, SubDuration, SubPlan } from "@/lib/store/shop_store";
+import {
+  CHECK_TYPE_LBL,
+  CHECK_TYPE_LIST,
+  CheckResult,
+  CheckType,
+  list_sub_plans,
+  ReviewCheck,
+  ShopStat,
+  SubDuration,
+  SubPlan,
+} from "@/lib/store/shop_store";
 
 const SHOP_STAT_LBL: Record<ShopStat, string> = { pending: "대기중", approved: "승인됨", rejected: "반려됨" };
 const SHOP_STAT_TONE: Record<ShopStat, string> = {
@@ -77,6 +89,10 @@ export default function AdminScreen() {
   const [new_cpn_max, setNewCpnMax] = useState("");
   const [cpn_err, setCpnErr] = useState("");
   const [cpn_busy, setCpnBusy] = useState(false);
+  const [chk_open_id, setChkOpenId] = useState<string | null>(null);
+  const [chk_map, setChkMap] = useState<Record<string, ReviewCheck[]>>({});
+  const [chk_busy_key, setChkBusyKey] = useState<string | null>(null);
+  const [chk_note_map, setChkNoteMap] = useState<Record<string, string>>({});
 
   async function load_list() {
     setReptList(await list_reports_admin());
@@ -141,6 +157,29 @@ export default function AdminScreen() {
     setNewCpnPct("100");
     setNewCpnMax("");
     load_sub_data();
+  }
+
+  async function load_checks(shop_id: string) {
+    setChkMap((prev) => ({ ...prev, [shop_id]: [] }));
+    const list = await list_review_checks_admin(shop_id);
+    setChkMap((prev) => ({ ...prev, [shop_id]: list }));
+  }
+
+  function toggle_chk(shop_id: string) {
+    const next = chk_open_id === shop_id ? null : shop_id;
+    setChkOpenId(next);
+    if (next && !chk_map[shop_id]) load_checks(shop_id);
+  }
+
+  async function do_chk(shop_id: string, check_type: CheckType, result: CheckResult) {
+    const key = `${shop_id}:${check_type}`;
+    setChkBusyKey(key);
+    const ok_flag = await add_review_check(shop_id, check_type, result, chk_note_map[key] ?? "");
+    if (ok_flag) {
+      await load_checks(shop_id);
+      setChkNoteMap((prev) => ({ ...prev, [key]: "" }));
+    }
+    setChkBusyKey(null);
   }
 
   async function do_shop_stat(shop_id: string, stat: ShopStat, reason?: string) {
@@ -271,6 +310,18 @@ export default function AdminScreen() {
               )}
 
               <div className="mt-3 flex flex-wrap gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => toggle_chk(s.shop_id)}
+                  className="flex items-center gap-0.5 rounded-full border border-gray-200 px-3 py-1.5 text-[11px] font-bold text-gray-600"
+                >
+                  심사 체크리스트
+                  {chk_open_id === s.shop_id ? (
+                    <ChevronUp className="h-3.5 w-3.5" />
+                  ) : (
+                    <ChevronDown className="h-3.5 w-3.5" />
+                  )}
+                </button>
                 {s.status !== "approved" && (
                   <button
                     type="button"
@@ -295,6 +346,74 @@ export default function AdminScreen() {
                   </button>
                 )}
               </div>
+
+              {chk_open_id === s.shop_id && (
+                <div className="mt-2 space-y-2 rounded-xl bg-gray-50 p-3">
+                  {CHECK_TYPE_LIST.map((ct) => {
+                    const cur = chk_map[s.shop_id]?.find((c) => c.check_type === ct);
+                    const key = `${s.shop_id}:${ct}`;
+                    return (
+                      <div key={ct} className="border-b border-gray-100 pb-2 last:border-0 last:pb-0">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] font-bold text-gray-700">{CHECK_TYPE_LBL[ct]}</span>
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                              cur?.result === "pass"
+                                ? "bg-green-50 text-green-600"
+                                : cur?.result === "fail"
+                                  ? "bg-red-50 text-red-500"
+                                  : cur?.result === "skip"
+                                    ? "bg-gray-100 text-gray-400"
+                                    : "bg-amber-50 text-amber-600"
+                            }`}
+                          >
+                            {cur?.result === "pass"
+                              ? "통과"
+                              : cur?.result === "fail"
+                                ? "미흡"
+                                : cur?.result === "skip"
+                                  ? "생략"
+                                  : "확인중"}
+                          </span>
+                        </div>
+                        {cur?.note && <p className="mt-0.5 text-[10px] text-gray-400">{cur.note}</p>}
+                        <div className="mt-1.5 flex gap-1">
+                          <input
+                            value={chk_note_map[key] ?? ""}
+                            onChange={(e) => setChkNoteMap((prev) => ({ ...prev, [key]: e.target.value }))}
+                            placeholder="메모(선택)"
+                            className="flex-1 rounded-lg border border-gray-200 bg-white px-2 py-1 text-[11px] text-gray-800 outline-none focus:border-[#F26B12]"
+                          />
+                          <button
+                            type="button"
+                            disabled={chk_busy_key === key}
+                            onClick={() => do_chk(s.shop_id, ct, "pass")}
+                            className="shrink-0 rounded-lg bg-green-50 px-2 text-[11px] font-bold text-green-600 disabled:opacity-40"
+                          >
+                            통과
+                          </button>
+                          <button
+                            type="button"
+                            disabled={chk_busy_key === key}
+                            onClick={() => do_chk(s.shop_id, ct, "fail")}
+                            className="shrink-0 rounded-lg bg-red-50 px-2 text-[11px] font-bold text-red-500 disabled:opacity-40"
+                          >
+                            미흡
+                          </button>
+                          <button
+                            type="button"
+                            disabled={chk_busy_key === key}
+                            onClick={() => do_chk(s.shop_id, ct, "skip")}
+                            className="shrink-0 rounded-lg bg-gray-100 px-2 text-[11px] font-bold text-gray-400 disabled:opacity-40"
+                          >
+                            생략
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
 
               {rjct_open_id === s.shop_id && (
                 <div className="mt-2 flex gap-1.5">

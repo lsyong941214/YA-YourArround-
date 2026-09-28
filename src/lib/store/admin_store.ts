@@ -9,7 +9,7 @@
  */
 import { AcctStat } from "@/lib/store/auth_store";
 import { RptRsn } from "@/lib/store/safe_store";
-import { ShopStat, SubDuration } from "@/lib/store/shop_store";
+import { CheckResult, CheckType, ReviewCheck, ShopStat, SubDuration } from "@/lib/store/shop_store";
 import { supabase } from "@/lib/supabase/client";
 
 export type RptStat = "open" | "in_prog" | "done";
@@ -254,5 +254,64 @@ export async function create_coupon(inp: NewCoupon): Promise<{ ok_flag: boolean;
 
 export async function set_coupon_active(cpn_id: string, is_active: boolean): Promise<boolean> {
   const { error } = await supabase.from("shop_coupons").update({ is_active }).eq("id", cpn_id);
+  return !error;
+}
+
+// ============================================================
+// 가게 등록 심사 세부 체크리스트 (음식점/카페 입점 심사 기준) - 관리자만 기록(insert)할 수 있다
+// (RLS checks_insert_admin으로도 강제됨). 조회는 shop_store.my_review_checks와 같은 로직이라
+// 여기서도 항목별 최신 1건씩만 남긴다.
+// ============================================================
+type CheckAdmRow = {
+  id: string;
+  check_type: CheckType;
+  method: "manual" | "auto";
+  result: CheckResult;
+  note: string;
+  evidence_url: string | null;
+  created_at: string;
+};
+
+export async function list_review_checks_admin(shop_id: string): Promise<ReviewCheck[]> {
+  const { data, error } = await supabase
+    .from("shop_review_checks")
+    .select("id, check_type, method, result, note, evidence_url, created_at")
+    .eq("shop_id", shop_id)
+    .order("created_at", { ascending: false });
+  if (error || !data) return [];
+  const seen = new Map<CheckType, ReviewCheck>();
+  for (const row of data as CheckAdmRow[]) {
+    if (seen.has(row.check_type)) continue;
+    seen.set(row.check_type, {
+      check_id: row.id,
+      check_type: row.check_type,
+      method: row.method,
+      result: row.result,
+      note: row.note,
+      evidence_url: row.evidence_url,
+      made_at: new Date(row.created_at).getTime(),
+    });
+  }
+  return Array.from(seen.values());
+}
+
+// 체크 항목을 기록한다 - append-only라 새 행을 추가하는 방식이고(재검증하면 이력이 쌓인다),
+// method는 지금은 항상 'manual'(외부 API 연동 전까지)
+export async function add_review_check(
+  shop_id: string,
+  check_type: CheckType,
+  result: CheckResult,
+  note: string
+): Promise<boolean> {
+  const { data: sess_data } = await supabase.auth.getUser();
+  const me_uid = sess_data.user?.id;
+  const { error } = await supabase.from("shop_review_checks").insert({
+    shop_id,
+    check_type,
+    method: "manual",
+    result,
+    note: note.trim(),
+    checked_by: me_uid ?? null,
+  });
   return !error;
 }

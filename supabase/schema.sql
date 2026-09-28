@@ -220,9 +220,14 @@ create table public.shop_promotions (
 );
 create index idx_shop_promotions_owner on public.shop_promotions (owner_id);
 create index idx_shop_promotions_status on public.shop_promotions (status, created_at);
+-- 동일 사업자등록번호로 여러 계정이 중복 등록하는 어뷰징을 DB 제약만으로 막는다(반려된 건은
+-- 제외해서 반려 후 재신청까지 막지는 않는다) - 심사 기준 "1계정 제한" 항목에 대응
+create unique index idx_shop_promotions_biz_reg_no_uniq on public.shop_promotions (biz_reg_no)
+  where biz_reg_no is not null and status <> 'rejected';
 
 comment on table public.shop_promotions is '이장의 가게 홍보 등록/심사(이장당 1건, owner_id unique). status는 관리자(/admin)만
-바꿀 수 있고(shop_promo_guard 트리거), approved인 건만 홈 화면 홍보 슬롯에 노출된다.';
+바꿀 수 있고(shop_promo_guard 트리거), approved인 건만 홈 화면 홍보 슬롯에 노출된다. biz_reg_no는
+가게 주인의 등록/수정 시 shop_promo_guard 트리거가 필수로 강제한다(관리자 심사 액션은 예외).';
 
 -- ============================================================
 -- shop_sub_plans: 가게 홍보 구독 요금표(기간별) - 관리자가 /admin에서 가격을 바꾼다.
@@ -287,6 +292,42 @@ comment on table public.shop_subscriptions is '가게 홍보 구독 이력. "현
 정책)이 이 테이블의 활성 구독 존재 여부를 함께 확인한다.';
 
 -- ============================================================
+-- shop_review_checks: 가게 등록 심사 세부 체크리스트 항목 이력 (체크리스트 D 확장 - 음식점/카페
+-- 입점 심사 기준). 체크 항목 하나당 행 하나, append-only(수정 없이 새로 insert)로 쌓는다 -
+-- "현재 상태"는 shop_id + check_type별 가장 최근(created_at desc) 행으로 판단한다. 이렇게 하면
+-- 재검증할 때마다 이력이 자연히 남는다(5번 항목 "처리 이력 없음" 문제를 여기선 처음부터 피함).
+-- method는 'manual'로 시작하고, 나중에 외부 API(국세청 사업자등록정보 진위확인 등)를 붙이면 그
+-- 항목만 method='auto'인 행이 생기기 시작한다 - 화면/로직은 그대로 두고 데이터만 바뀌는 구조다.
+-- ============================================================
+create table public.shop_review_checks (
+  id           uuid primary key default gen_random_uuid(),
+  shop_id      uuid not null references public.shop_promotions(id) on delete cascade,
+  check_type   text not null check (check_type in (
+                 'biz_reg_verify',   -- 사업자등록번호 진위확인(국세청 API)
+                 'biz_status',       -- 휴폐업 상태
+                 'food_biz_report',  -- 영업신고증(식품위생법)
+                 'onl_sale_report',  -- 통신판매업 신고
+                 'addr_verify',      -- 주소 실존/좌표 검증
+                 'img_origin',       -- 이미지 도용 여부(역이미지 검색)
+                 'label_compliance', -- 원산지·알레르기 등 표시 고지사항
+                 'admin_penalty',    -- 위생 행정처분 이력
+                 'payer_match',      -- 결제자 명의 일치(PG 연동 후)
+                 'categ_fit'         -- 업종 적합성(플랫폼 성격에 맞는지)
+               )),
+  method       text not null default 'manual' check (method in ('manual', 'auto')),
+  result       text not null default 'pending' check (result in ('pending', 'pass', 'fail', 'skip')),
+  note         text not null default '',
+  evidence_url text, -- 영업신고증 사본 등 첨부 파일(prof-img 버킷 재사용)
+  checked_by   uuid references public.profiles(id),
+  created_at   timestamptz not null default now()
+);
+create index idx_shop_review_checks_shop on public.shop_review_checks (shop_id, check_type, created_at desc);
+
+comment on table public.shop_review_checks is '가게 등록 심사 세부 체크리스트(사업자 진위/영업신고증/주소/이미지 도용 등) 이력.
+append-only - shop_id+check_type별 최신 행이 현재 상태다. 관리자만 기록하고(checks_insert_admin), 가게
+주인은 자기 가게 것만 조회할 수 있다(반려 사유를 보여주는 것과 같은 투명성 원칙).';
+
+-- ============================================================
 -- Row Level Security
 -- ============================================================
 alter table public.profiles enable row level security;
@@ -303,6 +344,7 @@ alter table public.shop_promotions enable row level security;
 alter table public.shop_sub_plans enable row level security;
 alter table public.shop_coupons enable row level security;
 alter table public.shop_subscriptions enable row level security;
+alter table public.shop_review_checks enable row level security;
 
 -- profiles: 로그인한 누구나 다른 프로필을 조회 가능(추천/탐색 화면에 필요), 본인만 등록/수정
 create policy "profiles_select_authenticated" on public.profiles
@@ -508,6 +550,9 @@ begin
   if auth.role() = 'authenticated' then
     select is_admin into actr_admn from public.profiles where id = auth.uid();
     if not coalesce(actr_admn, false) then
+      if new.biz_reg_no is null or btrim(new.biz_reg_no) = '' then
+        raise exception '사업자등록번호를 입력해주세요';
+      end if;
       new.status := 'pending';
       if tg_op = 'UPDATE' then
         new.reject_reason := old.reject_reason;
@@ -569,6 +614,21 @@ create policy "subs_insert_admin" on public.shop_subscriptions
   );
 create policy "subs_update_admin" on public.shop_subscriptions
   for update using (
+    exists (select 1 from public.profiles p where p.id = auth.uid() and p.is_admin)
+  );
+
+-- shop_review_checks: 가게 주인은 자기 가게 심사 이력만 조회(반려 사유처럼 투명하게 보여준다).
+-- 기록(추가)은 관리자만 - append-only라 update/delete 정책은 두지 않는다.
+create policy "checks_select_own" on public.shop_review_checks
+  for select using (
+    exists (select 1 from public.shop_promotions sp where sp.id = shop_id and sp.owner_id = auth.uid())
+  );
+create policy "checks_select_admin" on public.shop_review_checks
+  for select using (
+    exists (select 1 from public.profiles p where p.id = auth.uid() and p.is_admin)
+  );
+create policy "checks_insert_admin" on public.shop_review_checks
+  for insert with check (
     exists (select 1 from public.profiles p where p.id = auth.uid() and p.is_admin)
   );
 
@@ -637,6 +697,28 @@ $$;
 
 revoke all on function public.redeem_shop_coupon(uuid, text, int) from public;
 grant execute on function public.redeem_shop_coupon(uuid, text, int) to authenticated;
+
+-- shop_sub_renew_recheck: 구독이 새로 생길 때마다(최초 구독/갱신) 시간이 지나며 값이 바뀔 수 있는
+-- 항목(휴폐업 여부/행정처분 이력)을 재검증 대기(pending)로 다시 큐잉한다. 별도 배치 서버 없이
+-- "구독 갱신 시점 = 재검증 시점"으로 삼는다 - /admin 가게 심사 탭에서 대기 목록으로 보인다.
+create or replace function public.shop_sub_renew_recheck()
+returns trigger
+language plpgsql
+set search_path = public
+as $$
+begin
+  insert into public.shop_review_checks (shop_id, check_type, method, result)
+  values
+    (new.shop_id, 'biz_status', 'manual', 'pending'),
+    (new.shop_id, 'admin_penalty', 'manual', 'pending');
+  return new;
+end;
+$$;
+
+drop trigger if exists shop_sub_renew_recheck on public.shop_subscriptions;
+create trigger shop_sub_renew_recheck
+  after insert on public.shop_subscriptions
+  for each row execute function public.shop_sub_renew_recheck();
 
 -- ============================================================
 -- use_invt_code: 주민이 초대코드를 입력해 이장과 연결한다

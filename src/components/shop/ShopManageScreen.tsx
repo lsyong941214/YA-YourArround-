@@ -8,13 +8,16 @@
  */
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, Camera, ChevronLeft, Ticket } from "lucide-react";
+import { AlertTriangle, Camera, CheckCircle2, ChevronLeft, Circle, Ticket, XCircle } from "lucide-react";
 import { curr_user } from "@/lib/store/auth_store";
 import {
+  CHECK_TYPE_LBL,
   list_sub_plans,
+  my_review_checks,
   my_shop_promo,
   my_shop_subscription,
   redeem_coupon,
+  ReviewCheck,
   save_shop_promo,
   SHOP_CATEG_LIST,
   ShopPromo,
@@ -63,9 +66,11 @@ export default function ShopManageScreen() {
   const [cpn_code, setCpnCode] = useState("");
   const [cpn_busy, setCpnBusy] = useState(false);
   const [cpn_msg, setCpnMsg] = useState("");
+  const [check_list, setCheckList] = useState<ReviewCheck[]>([]);
 
   async function load_sub(shop_id: string) {
     setSubItem(await my_shop_subscription(shop_id));
+    setCheckList(await my_review_checks(shop_id));
   }
 
   useEffect(() => {
@@ -120,7 +125,8 @@ export default function ShopManageScreen() {
     setImgUrl(up_url);
   }
 
-  const done_flag = !!shop_name.trim() && !!region_val.trim() && !img_busy && !save_busy;
+  const done_flag =
+    !!shop_name.trim() && !!region_val.trim() && !!biz_reg_no.trim() && !img_busy && !save_busy;
 
   async function do_save() {
     if (!done_flag) return;
@@ -138,7 +144,7 @@ export default function ShopManageScreen() {
       biz_hours: biz_hours.trim(),
       description: desc_txt.trim(),
       img_url,
-      biz_reg_no: biz_reg_no.trim() || null,
+      biz_reg_no: biz_reg_no.trim(),
     });
     setSaveBusy(false);
     if (!ok_flag) {
@@ -193,6 +199,8 @@ export default function ShopManageScreen() {
       {my_shop?.status === "rejected" && my_shop.reject_reason && (
         <p className="mx-5 mt-2 text-xs leading-relaxed text-red-400">반려 사유: {my_shop.reject_reason}</p>
       )}
+
+      {my_shop && check_list.length > 0 && <CheckSection check_list={check_list} />}
 
       {my_shop && (
         <SubSection
@@ -274,13 +282,16 @@ export default function ShopManageScreen() {
           className="mt-1 w-full rounded-xl border border-gray-200 p-3 text-sm text-gray-800 outline-none focus:border-[#F26B12]"
         />
 
-        <label className="mt-4 block text-xs font-medium text-gray-500">사업자등록번호 (선택)</label>
+        <label className="mt-4 block text-xs font-medium text-gray-500">사업자등록번호 *</label>
         <input
           value={biz_reg_no}
           onChange={(ev_chg) => setBizRegNo(ev_chg.target.value)}
           placeholder="예) 000-00-00000"
           className="mt-1 w-full rounded-xl border border-gray-200 p-3 text-sm text-gray-800 outline-none focus:border-[#F26B12]"
         />
+        <p className="mt-1 text-[11px] leading-relaxed text-gray-400">
+          입점 심사(사업자 실체 확인)에 필요해요. 동일 사업자번호로는 한 계정만 등록할 수 있어요.
+        </p>
 
         <label className="mt-4 block text-xs font-medium text-gray-500">한줄 소개</label>
         <textarea
@@ -308,6 +319,37 @@ export default function ShopManageScreen() {
         </button>
       </section>
     </main>
+  );
+}
+
+// 심사 체크리스트 현황 - 관리자가 항목별로 기록한 결과를 읽기 전용으로 보여준다(반려 사유처럼
+// 투명하게). 아직 기록이 없는 항목은 표시하지 않는다(전부 pending인 접수 직후엔 섹션 자체가 숨음).
+function CheckSection({ check_list }: { check_list: ReviewCheck[] }) {
+  return (
+    <div className="mx-5 mt-2 rounded-2xl border border-gray-100 p-4">
+      <p className="text-sm font-bold text-gray-900">심사 체크리스트</p>
+      <div className="mt-2 space-y-1.5">
+        {check_list.map((c) => (
+          <div key={c.check_type} className="flex items-center justify-between text-xs">
+            <span className="text-gray-600">{CHECK_TYPE_LBL[c.check_type]}</span>
+            <span
+              className={`flex items-center gap-1 font-bold ${
+                c.result === "pass"
+                  ? "text-green-600"
+                  : c.result === "fail"
+                    ? "text-red-500"
+                    : "text-gray-400"
+              }`}
+            >
+              {c.result === "pass" && <CheckCircle2 className="h-3.5 w-3.5" />}
+              {c.result === "fail" && <XCircle className="h-3.5 w-3.5" />}
+              {(c.result === "pending" || c.result === "skip") && <Circle className="h-3.5 w-3.5" />}
+              {c.result === "pass" ? "통과" : c.result === "fail" ? "미흡" : c.result === "skip" ? "생략" : "확인중"}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
