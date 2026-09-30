@@ -1,6 +1,6 @@
 # apps/ios — iOS 앱 작업 규칙
 
-루트 `CLAUDE.md`를 먼저 따른다. 이 파일은 iOS 전용 규칙이다.
+`docs/rules/RULE_00_COMMON.md`(공통 규칙)를 먼저 따른다. 이 파일은 iOS 전용 규칙이다.
 
 ## 스택 (결정 사항)
 
@@ -20,7 +20,7 @@ Zubyeon/
 ├─ Data/<Domain>/       # XxxRepository protocol + 구현, DTO, SwiftData 모델
 ├─ Data/API/            # APIClient(URLSession), 공통 헤더·오류 매핑, Idempotency-Key
 ├─ Data/Auth|Realtime|Storage/  # supabase-swift 래퍼
-├─ Bridge/              # WKWebView 브리지(docs/BRIDGE_SPEC.md)
+├─ Bridge/              # WKWebView 브리지(docs/specs/SPEC_05_BRIDGE.md)
 └─ Core/                # RemoteConfig, 로깅
 ```
 Scheme/Configuration: `Dev`, `Pilot`(번들 ID·API 주소 분리). 번들 ID는 착수 시 확정.

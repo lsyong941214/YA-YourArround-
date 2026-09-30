@@ -1,6 +1,6 @@
 # supabase — 백엔드(DB·RLS·DB 함수·Edge Functions) 작업 규칙
 
-루트 `CLAUDE.md`를 먼저 따른다. Supabase Cloud(관리형, 서울 리전)를 쓰고 자체 설치하지 않는다.
+`docs/rules/RULE_00_COMMON.md`(공통 규칙)를 먼저 따른다. Supabase Cloud(관리형, 서울 리전)를 쓰고 자체 설치하지 않는다.
 
 ## 구조
 
@@ -23,9 +23,9 @@ supabase/
 - 새 스키마로 시작한다. 기존 웹의 `schema.sql`/`alter_*.sql`은 **참고만**(상태 전이·검증 로직 아이디어), 복사 금지.
 - 변경은 항상 새 마이그레이션 파일. **이미 적용된 마이그레이션 수정 금지.**
 - 테이블·컬럼은 `snake_case` 완전한 단어, `id uuid default gen_random_uuid()`, `created_at/updated_at timestamptz`.
-- 상태 값은 `text + check` 제약(값은 `docs/DOMAIN_MODEL.md`의 API 값과 동일).
+- 상태 값은 `text + check` 제약(값은 `docs/specs/SPEC_02_DOMAIN_MODEL.md`의 API 값과 동일).
 - 모든 테이블 `enable row level security`. 정책 없는 테이블은 접근 불가 상태로 둔다.
-- 운영 반영 전 백업(`docs/QA_RELEASE.md`).
+- 운영 반영 전 백업(`docs/specs/SPEC_07_QA_RELEASE.md`).
 
 ## DB 함수/RPC
 

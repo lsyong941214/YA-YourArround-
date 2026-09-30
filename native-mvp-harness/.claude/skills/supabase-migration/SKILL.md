@@ -5,7 +5,7 @@ description: 주변 앱 Supabase에 테이블·컬럼·RLS 정책·DB 함수(RPC
 
 # Supabase 마이그레이션 절차
 
-먼저 읽기: `supabase/CLAUDE.md`, `docs/DOMAIN_MODEL.md`, `docs/AUTH_SESSION.md` 5절.
+먼저 읽기: `docs/rules/RULE_30_BACKEND.md`, `docs/specs/SPEC_02_DOMAIN_MODEL.md`, `docs/specs/SPEC_04_AUTH_SESSION.md` 5절.
 
 ## 1. 파일 만들기
 

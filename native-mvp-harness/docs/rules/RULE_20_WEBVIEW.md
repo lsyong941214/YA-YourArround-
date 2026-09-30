@@ -1,6 +1,6 @@
 # apps/web — 공용 웹뷰 + 공개 웹 작업 규칙
 
-루트 `CLAUDE.md`를 먼저 따른다.
+`docs/rules/RULE_00_COMMON.md`(공통 규칙)를 먼저 따른다.
 
 ## 역할
 

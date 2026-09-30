@@ -1,6 +1,6 @@
 # apps/android — Android 앱 작업 규칙
 
-루트 `CLAUDE.md`를 먼저 따른다. 이 파일은 Android 전용 규칙이다.
+`docs/rules/RULE_00_COMMON.md`(공통 규칙)를 먼저 따른다. 이 파일은 Android 전용 규칙이다.
 
 ## 스택 (결정 사항)
 
@@ -22,7 +22,7 @@ app/src/main/java/<applicationId>/
 ├─ data/<domain>/       # XxxRepository(인터페이스+구현), 원격 DTO, 로컬 Entity
 ├─ data/api/            # ApiClient(Ktor), 공통 헤더·오류 매핑, Idempotency-Key 생성
 ├─ data/auth|realtime|storage/  # supabase-kt 래퍼
-├─ bridge/              # 웹뷰 브리지(docs/BRIDGE_SPEC.md)
+├─ bridge/              # 웹뷰 브리지(docs/specs/SPEC_05_BRIDGE.md)
 └─ core/                # 설정(RemoteConfig), 로깅, 디스패처
 ```
 `applicationId`는 착수 시 확정(`dev`/`pilot` flavor는 접미사 분리).

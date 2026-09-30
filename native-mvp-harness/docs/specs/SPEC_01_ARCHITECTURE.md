@@ -5,7 +5,7 @@
 ```
 [Android 앱]   [iOS 앱]              ← 네이티브: 서비스 핵심 기능
      │  ▲          │  ▲
-     │  └ 웹뷰 ────┘  └ 브리지(docs/BRIDGE_SPEC.md)
+     │  └ 웹뷰 ────┘  └ 브리지(docs/specs/SPEC_05_BRIDGE.md)
      │        [apps/web: 공용 웹뷰·공개 웹]   [apps/admin: 관리자 웹]
      ▼                    ▼                          ▼
           [Supabase Edge Functions  /v1/*  — 유일한 업무 API]
@@ -16,7 +16,7 @@
           [Storage(private, signed URL)]  [Realtime(변경 신호)]
 ```
 
-- 앱 ↔ 서버: HTTPS JSON(`docs/API_CONTRACT.md`). Supabase SDK는 Auth·Storage 업로드·Realtime 구독에만 쓰고 Repository 안에 가둔다.
+- 앱 ↔ 서버: HTTPS JSON(`docs/specs/SPEC_03_API_CONTRACT.md`). Supabase SDK는 Auth·Storage 업로드·Realtime 구독에만 쓰고 Repository 안에 가둔다.
 - 웹뷰 ↔ 앱: 브리지 메시지. 웹뷰는 로그인 토큰을 갖지 않는다.
 - 관리자 웹 ↔ 서버: `/v1/admin/*` API. 관리자 역할 + TOTP MFA(aal2) 필수.
 
@@ -24,19 +24,21 @@
 
 ```
 /
-├─ CLAUDE.md
+├─ CLAUDE.md          (Claude Code 진입점 — docs/rules 문서를 불러오는 목차만)
 ├─ apps/
-│  ├─ android/   (Gradle, CLAUDE.md)
-│  ├─ ios/       (Xcode/SPM, CLAUDE.md)
-│  ├─ web/       (pnpm workspace, CLAUDE.md)
-│  └─ admin/     (pnpm workspace, CLAUDE.md)
+│  ├─ android/   (Gradle)
+│  ├─ ios/       (Xcode/SPM)
+│  ├─ web/       (pnpm workspace)
+│  └─ admin/     (pnpm workspace)
 ├─ packages/
 │  ├─ api-contract/   openapi.yaml, schemas/*.json, examples/*.json, bridge/*.json
 │  └─ design-tokens/  tokens.json → build/{compose,swiftui,tailwind}
 ├─ supabase/
-│  ├─ CLAUDE.md
 │  ├─ migrations/  functions/  tests/  seed.sql
-├─ docs/          (이 문서들, 화면 명세, 권한표, 테스트 결과)
+├─ docs/
+│  ├─ rules/     RULE_00~30  작업 규칙(공통·영역별)
+│  ├─ specs/     SPEC_01~07  설계 기준
+│  └─ (화면 명세, 권한표, 테스트 결과)
 └─ .claude/skills/
 ```
 

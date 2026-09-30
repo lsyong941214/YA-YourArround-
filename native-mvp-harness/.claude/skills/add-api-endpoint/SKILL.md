@@ -5,11 +5,11 @@ description: 주변 앱에 업무 API(Edge Function 경로)를 새로 추가하�
 
 # API 추가 절차
 
-먼저 읽기: `docs/API_CONTRACT.md`, `docs/DOMAIN_MODEL.md`, `supabase/CLAUDE.md`.
+먼저 읽기: `docs/specs/SPEC_03_API_CONTRACT.md`, `docs/specs/SPEC_02_DOMAIN_MODEL.md`, `docs/rules/RULE_30_BACKEND.md`.
 
 ## 1. 설계 확인 (코드 작성 전)
 
-- 이 API가 바꾸는 상태 전이를 `docs/DOMAIN_MODEL.md`에서 찾는다. 없으면 문서에 먼저 추가하고 사용자에게 확인받는다.
+- 이 API가 바꾸는 상태 전이를 `docs/specs/SPEC_02_DOMAIN_MODEL.md`에서 찾는다. 없으면 문서에 먼저 추가하고 사용자에게 확인받는다.
 - 누가 호출할 수 있는지(역할·당사자 조건), 차단·정지 시 동작, 한도(원격 설정)를 한 줄씩 적는다.
 - 기존 API 변경이면: **필드 추가만** 가능한지 확인. 의미 변경이면 `/v2` 경로를 제안하고 멈춘다.
 

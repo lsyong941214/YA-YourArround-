@@ -5,11 +5,11 @@ description: 기존 웹(lsyong941214/YA-YourArround-)의 화면을 참고해 And
 
 # 네이티브 화면 이식 절차
 
-먼저 읽기: `docs/ARCHITECTURE.md` 3절(화면 ID·참고 웹 컴포넌트), `docs/DESIGN_SYSTEM.md`, 해당 플랫폼 `CLAUDE.md`.
+먼저 읽기: `docs/specs/SPEC_01_ARCHITECTURE.md` 3절(화면 ID·참고 웹 컴포넌트), `docs/specs/SPEC_06_DESIGN_SYSTEM.md`, 해당 플랫폼 규칙(`docs/rules/RULE_10_ANDROID.md`, `docs/rules/RULE_11_IOS.md`).
 
 ## 1. 원형 파악
 
-1. `docs/ARCHITECTURE.md`에서 화면 ID와 "기존 웹 참고" 컴포넌트를 찾는다.
+1. `docs/specs/SPEC_01_ARCHITECTURE.md`에서 화면 ID와 "기존 웹 참고" 컴포넌트를 찾는다.
 2. 기존 웹 컴포넌트(`src/components/...`)를 읽고 **정리만** 한다:
    - 보여주는 정보(필드), 사용자 행동(버튼), 상태별 분기(로딩·빈·오류·권한 없음)
    - 사용자 문구(존댓말 톤 유지)
@@ -23,7 +23,7 @@ description: 기존 웹(lsyong941214/YA-YourArround-)의 화면을 참고해 And
 
 ## 3. 디자인 변환
 
-- 웹 클래스 → 토큰: `rounded-2xl bg-white p-4 shadow-sm` → `ZCard`, `bg-[#F26B12]` 버튼 → `PrimaryButton`, `text-xs text-gray-400` → `type.caption` + `text.tertiary` (`docs/DESIGN_SYSTEM.md` 5절 대응표).
+- 웹 클래스 → 토큰: `rounded-2xl bg-white p-4 shadow-sm` → `ZCard`, `bg-[#F26B12]` 버튼 → `PrimaryButton`, `text-xs text-gray-400` → `type.caption` + `text.tertiary` (`docs/specs/SPEC_06_DESIGN_SYSTEM.md` 5절 대응표).
 - 공통 컴포넌트가 없으면 `designsystem/`(Android)·`DesignSystem/`(iOS)에 **양쪽 같은 이름으로** 추가.
 - 터치 영역 48dp/44pt, 글자 확대 200% 확인.
 - 네비게이션·뒤로가기·시트·키보드는 OS 관례로(웹 모양 복제 금지).

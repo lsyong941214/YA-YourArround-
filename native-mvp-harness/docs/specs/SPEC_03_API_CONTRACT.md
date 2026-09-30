@@ -9,7 +9,7 @@ packages/api-contract/
 ├─ openapi.yaml            # OpenAPI 3.1 — 경로, 요청/응답, 오류 코드
 ├─ schemas/*.json          # JSON Schema (openapi.yaml에서 $ref)
 ├─ examples/<operationId>/ # 성공·실패 예제 JSON (최소 1개씩)
-├─ bridge/*.json           # 브리지 명령 스키마 (docs/BRIDGE_SPEC.md)
+├─ bridge/*.json           # 브리지 명령 스키마 (docs/specs/SPEC_05_BRIDGE.md)
 └─ CHANGELOG.md            # 계약 변경 이력 (추가/폐기 예정/버전)
 ```
 
@@ -97,7 +97,7 @@ packages/api-contract/
 - **추가만 자유.** 선택 필드·새 enum 값·새 operation 추가는 같은 버전.
 - 의미 변경·삭제·필수화는 금지. 필요하면 `/v2/...` 경로를 새로 만들고, `CHANGELOG.md`에 폐기 예정 표시 후 두 버전을 함께 운영.
 - 새 enum 값을 추가할 때는 이전 앱이 `unknown`으로 받아도 문제가 없는지 PR에 적는다.
-- Android 신규/iOS 이전 버전(및 반대) 조합에서 동작해야 한다(`docs/QA_RELEASE.md`).
+- Android 신규/iOS 이전 버전(및 반대) 조합에서 동작해야 한다(`docs/specs/SPEC_07_QA_RELEASE.md`).
 
 ## 8. 처리 순서 (예: 매칭 수락)
 
