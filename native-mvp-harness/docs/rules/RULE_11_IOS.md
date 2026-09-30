@@ -38,6 +38,9 @@ Scheme/Configuration: `Dev`, `Pilot`(번들 ID·API 주소 분리). 번들 ID는
 - 이미지 업로드 전: 긴 변 1080px, JPEG ≤1MB, 메타데이터(위치 포함) 제거.
 - 웹뷰: `WKScriptMessageHandlerWithReply`, 메인 프레임·허용 출처만, 외부 링크는 `SFSafariViewController`/시스템 브라우저.
 - Apple 로그인은 `AuthenticationServices` 네이티브, OAuth 공급자는 `ASWebAuthenticationSession`.
+- 연락처(초대코드 발급, `SPEC_04` 4절): `CNContactPickerViewController` 다중 선택 — 연락처 권한 요청 없이 사용자가 고른 항목만 받는다. `CNContactStore` 전체 조회 금지. 읽은 연락처는 저장·로그 금지.
+- 초대 문자는 `MFMessageComposeViewController`(여러 수신자 가능)로 사용자가 직접 보낸다. 불가 기기는 공유 시트.
+- 휴대폰 번호 정규화·검증 후 서버 전송(서버도 재검증).
 
 ## 명령어 (Mac 필요)
 

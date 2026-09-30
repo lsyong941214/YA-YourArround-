@@ -41,6 +41,9 @@ app/src/main/java/<applicationId>/
 - 이미지 업로드 전: 긴 변 1080px 리사이즈, JPEG 압축(≤1MB), EXIF 제거.
 - 웹뷰: `WebViewCompat.addWebMessageListener`만 사용, `addJavascriptInterface` 금지, 허용 출처 밖 이동은 Custom Tabs로.
 - 뒤로가기는 시스템 제스처/Predictive Back 관례를 따른다.
+- 연락처(초대코드 발급, `SPEC_04` 4절): 다중 선택은 `READ_CONTACTS` 런타임 권한 + 앱 내 선택 목록. 권한 요청 전 목적 안내 화면, 거부해도 번호 직접 입력으로 동작. 단건은 권한 없는 `ACTION_PICK`. 읽은 연락처는 Room·DataStore·로그에 남기지 않는다.
+- 초대 문자는 `Intent.ACTION_SENDTO`(smsto:)로 OS 문자 앱을 연다. 여러 명이면 번호별로 순서대로 열거나 공유 시트를 쓴다. `SEND_SMS` 권한은 쓰지 않는다(Play 정책 제한).
+- 휴대폰 번호는 `libphonenumber`로 정규화·검증 후 서버에 보낸다(서버도 재검증).
 
 ## 명령어
 

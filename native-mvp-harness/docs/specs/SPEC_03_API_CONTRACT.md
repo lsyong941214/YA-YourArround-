@@ -21,13 +21,17 @@ packages/api-contract/
 - 기본 주소: `https://<project>.supabase.co/functions/v1/api` 아래 `/v1/...`
 - Edge Function 하나(`api`)가 라우터로 경로를 나눈다. 기능별 파일은 `supabase/functions/api/routes/`.
 - 자원 중심 경로 + 상태 전이는 동사 하위 경로:
-  - `GET /v1/me`, `PATCH /v1/me/profile`
-  - `POST /v1/invites`, `POST /v1/invites/redeem`
-  - `POST /v1/match-requests`, `POST /v1/match-requests/{id}/chief-decision`, `POST /v1/match-requests/{id}/resident-decision`
-  - `POST /v1/blind-tests`, `POST /v1/blind-tests/{id}/answers`, `POST /v1/blind-tests/{id}/actions`
-  - `GET /v1/chat-rooms/{id}/messages?after=`, `POST /v1/chat-rooms/{id}/messages`
-  - `POST /v1/reports`, `POST /v1/blocks`, `DELETE /v1/blocks/{user_id}`
-  - `GET /v1/config`, `GET /v1/public/notices` (공개), `/v1/admin/*` (관리자)
+  - 계정·프로필: `GET /v1/me`, `PATCH /v1/me/profile`, `PUT /v1/me/profile-visibility`, `GET /v1/me/profile-viewers`
+  - 입력 보조: `GET /v1/regions?q=` (시군구 검색), `GET /v1/companies?q=` (회사명 검색)
+  - 초대: `POST /v1/invites/batch` (번호 목록 → 번호별 코드), `GET /v1/invites`, `POST /v1/invites/{id}/revoke`, `POST /v1/invites/redeem` (code + 본인 번호)
+  - 이장 네트워크: `GET /v1/chief-links`, `DELETE /v1/chief-links/{chief_id}`, `GET /v1/chiefs/{id}` (프로필), `GET /v1/chiefs/{id}/residents` (요약 카드)
+  - 소개 요청·대기열: `POST /v1/intro-requests`, `POST /v1/intro-requests/{id}/decision`, `POST /v1/queue-entries`, `DELETE /v1/queue-entries/{id}`, `GET /v1/queue?chief_id=` (연결된 이장들의 대기열)
+  - 프로필 열람: `GET /v1/residents/{id}/profile` (공개 범위 적용), `POST /v1/profile-view-requests`, `POST /v1/profile-view-requests/{id}/decision`
+  - 소개 제안: `POST /v1/proposals`, `POST /v1/proposals/{id}/chief-decision`, `POST /v1/proposals/{id}/resident-decision`, `POST /v1/proposals/{id}/cancel`, `GET /v1/proposals`
+  - 주변인 테스트: `GET /v1/blind-tests/{id}`, `POST /v1/blind-tests/{id}/answers`, `POST /v1/blind-tests/{id}/actions`
+  - 채팅: `GET /v1/chat-rooms`, `GET /v1/chat-rooms/{id}/messages?after=`, `POST /v1/chat-rooms/{id}/messages`
+  - 안전: `POST /v1/reports`, `POST /v1/blocks`, `DELETE /v1/blocks/{user_id}`
+  - 설정·콘텐츠: `GET /v1/config`, `GET /v1/content/onboarding?kind=welcome|role_guide`, `GET /v1/public/notices` (공개), `/v1/admin/*` (관리자)
 - 경로 세그먼트는 `kebab-case`, JSON 필드는 `snake_case`.
 
 ## 3. 공통 헤더
@@ -53,7 +57,7 @@ packages/api-contract/
 ```json
 {
   "error": {
-    "code": "match_request_invalid_state",
+    "code": "proposal_invalid_state",
     "message": "이미 처리된 요청이에요.",
     "retryable": false,
     "request_id": "uuid",
@@ -81,6 +85,15 @@ packages/api-contract/
 | `feature_disabled` | 503 | false | 원격 설정으로 기능 중단·점검 |
 | `upgrade_required` | 426 | false | `min_app_version` 미만 |
 | `content_blocked` | 422 | false | 금칙어 |
+| `invite_invalid` | 422 | false | 코드 없음·만료·사용됨·**번호 불일치**(구분하지 않음) |
+| `invite_locked` | 423 | false | 번호 불일치 횟수 초과로 코드 잠김 |
+| `phone_invalid` | 422 | false | 휴대폰 번호 형식 오류 |
+| `profile_view_required` | 403 | false | 승인제 주민 — 열람 허락이 먼저 필요 |
+| `view_request_pending` | 409 | false | 이미 열람 요청 대기 중 |
+| `view_request_cooldown` | 429 | false | 거절 후 재요청 대기 기간 |
+| `chief_link_required` | 403 | false | 연결되지 않은 이장의 주민·대기열 |
+| `queue_entry_busy` | 409 | false | 해당 주민이 이미 다른 제안 진행 중 |
+| `profile_incomplete` | 422 | false | 대기열 등록에 필요한 프로필 항목 누락 |
 | `internal_error` | 500 | true | 서버 오류 |
 
 ## 6. 데이터 규칙
@@ -99,8 +112,14 @@ packages/api-contract/
 - 새 enum 값을 추가할 때는 이전 앱이 `unknown`으로 받아도 문제가 없는지 PR에 적는다.
 - Android 신규/iOS 이전 버전(및 반대) 조합에서 동작해야 한다(`docs/specs/SPEC_07_QA_RELEASE.md`).
 
-## 8. 처리 순서 (예: 매칭 수락)
+## 8. 개인정보가 들어오는 요청
 
-앱 요청 → Edge Function: 토큰·헤더·입력 스키마 검증 → DB 함수 `accept_match_request(p_request_id, p_actor, p_idempotency_key)` 호출
-→ DB 함수 안: 당사자·현재 상태·차단·정지 확인 → 상태 변경 + 대화방 생성 + `notification_outbox` 기록 (한 트랜잭션)
+- `POST /v1/invites/batch`, `POST /v1/invites/redeem`의 휴대폰 번호는 **요청 본문에서만** 받는다(URL·쿼리 금지). 서버는 HMAC 계산에만 쓰고 저장·로그·오류 메시지·응답에 넣지 않는다.
+- 요청 로그 미들웨어는 이 두 경로의 본문을 기록하지 않는다(테스트로 확인).
+- `GET /v1/residents/{id}/profile`은 공개 범위에 따라 응답 필드가 달라진다: 허락 전 `{ age, height_cm, region_name, visibility: "summary" }`, 허락 후 전체. 클라이언트는 `visibility` 값으로 화면을 나눈다.
+
+## 9. 처리 순서 (예: 소개 제안 주민 수락)
+
+앱 요청 → Edge Function: 토큰·헤더·입력 스키마 검증 → DB 함수 `respond_proposal(p_proposal_id, p_decision, p_idempotency_key)` 호출
+→ DB 함수 안: 당사자·현재 상태·차단·정지·이장 연결 확인 → 응답 기록 → 두 주민 모두 수락이면 `matched`(또는 `testing`) + 대기열 항목 갱신 + 대화방 생성 + `notification_outbox` 기록 (한 트랜잭션)
 → 공통 응답 형식으로 반환 → 별도 발송 함수가 outbox를 읽어 FCM 발송·재시도.

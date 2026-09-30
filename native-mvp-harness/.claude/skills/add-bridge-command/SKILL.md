@@ -5,7 +5,7 @@ description: 네이티브 앱과 공용 웹뷰 사이 브리지 명령을 추가
 
 # 브리지 명령 추가 절차
 
-먼저 읽기: `docs/specs/SPEC_05_BRIDGE.md`, `docs/specs/SPEC_04_AUTH_SESSION.md` 6절.
+먼저 읽기: `docs/specs/SPEC_05_BRIDGE.md`, `docs/specs/SPEC_04_AUTH_SESSION.md` 9절.
 
 ## 0. 꼭 필요한지 판단
 
